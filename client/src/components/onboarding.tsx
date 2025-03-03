@@ -32,13 +32,16 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
+      <header className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             <div className="flex items-center">
-              <div className="text-primary-500 font-serif font-bold text-3xl">
+              <div className="text-white font-serif font-bold text-3xl">
                 Sundial
               </div>
+            </div>
+            <div className="hidden md:block">
+              <p className="text-blue-100 italic">Map your life's journey through time</p>
             </div>
           </div>
         </div>
@@ -46,10 +49,10 @@ const Onboarding = () => {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white overflow-hidden shadow rounded-lg divide-y divide-gray-200">
-            <div className="px-4 py-5 sm:px-6">
-              <h2 className="text-lg font-medium text-gray-900">Welcome to Sundial</h2>
-              <p className="mt-1 text-sm text-gray-500">Let's set up your profile to get started</p>
+          <div className="bg-white overflow-hidden shadow-lg rounded-lg divide-y divide-gray-200 border border-blue-100">
+            <div className="px-4 py-5 sm:px-6 bg-blue-50">
+              <h2 className="text-xl font-semibold text-blue-800">Welcome to Sundial</h2>
+              <p className="mt-1 text-sm text-blue-600">Let's set up your profile to get started with your time journey</p>
             </div>
             <div className="px-4 py-5 sm:p-6">
               <form onSubmit={handleSubmit}>
@@ -98,7 +101,7 @@ const Onboarding = () => {
                         onChange={handleChange}
                         min="1" 
                         max="120" 
-                        className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" 
+                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-3 border bg-white" 
                         placeholder="85" 
                         required 
                       />
@@ -118,7 +121,7 @@ const Onboarding = () => {
                         min="1" 
                         max="24" 
                         step="0.5" 
-                        className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" 
+                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-3 border bg-white" 
                         placeholder="8" 
                         required 
                       />
@@ -140,9 +143,9 @@ const Onboarding = () => {
         </div>
       </main>
 
-      <footer className="bg-white">
+      <footer className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-inner">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-white">
             Sundial: Life Time Management. Visualize and optimize your lifetime.
           </p>
         </div>
