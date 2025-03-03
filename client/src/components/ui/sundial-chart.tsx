@@ -90,8 +90,8 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
     const plateArc = d3.arc()
       .innerRadius(0)
       .outerRadius(radius)
-      .startAngle(0)
-      .endAngle(Math.PI);
+      .startAngle(Math.PI)
+      .endAngle(2 * Math.PI);
     
     sundial.append("path")
       .attr("d", plateArc as any)
@@ -104,7 +104,8 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
     const hourAngle = Math.PI / hourMarks;
     
     for (let hour = 0; hour <= hourMarks; hour++) {
-      const angle = hour * hourAngle;
+      // Adjust angle to start from left (Math.PI) and progress to right (2*Math.PI)
+      const angle = Math.PI + hour * hourAngle;
       const lineLength = radius * 0.9;
       const x2 = lineLength * Math.cos(angle);
       const y2 = lineLength * Math.sin(angle);
@@ -157,9 +158,9 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
       .attr("offset", "100%")
       .attr("stop-color", "#4B5563");
     
-    // Gnomon
+    // Gnomon - pointing left (to birth side) to match orientation
     sundial.append("path")
-      .attr("d", `M0,0 L${gnomonHeight},0 L0,${-gnomonBase} Z`)
+      .attr("d", `M0,0 L${-gnomonHeight},0 L0,${-gnomonBase} Z`)
       .attr("fill", "url(#gnomon-gradient)")
       .attr("stroke", "#4B5563")
       .attr("stroke-width", 1);
@@ -209,8 +210,8 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
       const arcGenerator = d3.arc()
         .innerRadius(innerRadius)
         .outerRadius(currentOuterRadius)
-        .startAngle(0) // Start at the right
-        .endAngle(Math.PI); // End at the left (180 degrees around)
+        .startAngle(Math.PI) // Start at the left (birth)
+        .endAngle(2 * Math.PI); // End at the right (end)
       
       // Add the activity arc
       const arc = sundial.append("path")
@@ -260,7 +261,8 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
     
     // Calculate shadow angle based on percentage of life lived
     const percentLived = calculatePercentageLived(userData);
-    const shadowAngle = Math.PI - (percentLived / 100) * Math.PI; // Angle for the shadow (from left to right)
+    // Angle for the shadow from left (birth, Math.PI) to right (end, 2*Math.PI)
+    const shadowAngle = Math.PI + (percentLived / 100) * Math.PI;
     
     // Draw the shadow line (shows current time/progress)
     const shadowLength = radius * 0.95;

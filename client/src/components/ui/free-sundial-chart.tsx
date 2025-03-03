@@ -59,8 +59,8 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
     const plateArc = d3.arc()
       .innerRadius(0)
       .outerRadius(radius)
-      .startAngle(0)
-      .endAngle(Math.PI);
+      .startAngle(Math.PI)
+      .endAngle(2 * Math.PI);
     
     sundial.append("path")
       .attr("d", plateArc as any)
@@ -73,7 +73,8 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
     const hourAngle = Math.PI / hourMarks;
     
     for (let hour = 0; hour <= hourMarks; hour++) {
-      const angle = hour * hourAngle;
+      // Adjust angle to start from left (Math.PI) and progress to right (2*Math.PI)
+      const angle = Math.PI + hour * hourAngle;
       const lineLength = radius * 0.9;
       const x2 = lineLength * Math.cos(angle);
       const y2 = lineLength * Math.sin(angle);
@@ -126,9 +127,9 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .attr("offset", "100%")
       .attr("stop-color", "#4B5563");
     
-    // Gnomon
+    // Gnomon - pointing left (to birth side) to match orientation
     sundial.append("path")
-      .attr("d", `M0,0 L${gnomonHeight},0 L0,${-gnomonBase} Z`)
+      .attr("d", `M0,0 L${-gnomonHeight},0 L0,${-gnomonBase} Z`)
       .attr("fill", "url(#gnomon-gradient-free)")
       .attr("stroke", "#4B5563")
       .attr("stroke-width", 1);
@@ -137,8 +138,8 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
     const bannerArc = d3.arc()
       .innerRadius(radius * 0.75)
       .outerRadius(radius * 0.9)
-      .startAngle(0)
-      .endAngle(Math.PI);
+      .startAngle(Math.PI)
+      .endAngle(2 * Math.PI);
     
     sundial.append("path")
       .attr("d", bannerArc as any)
@@ -158,7 +159,8 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .text("Sign up for more features");
     
     // Calculate shadow angle based on percentage of life lived
-    const shadowAngle = Math.PI - (percentageLived / 100) * Math.PI; // Angle for the shadow (from left to right)
+    // Angle for the shadow from left (birth, Math.PI) to right (end, 2*Math.PI)
+    const shadowAngle = Math.PI + (percentageLived / 100) * Math.PI;
     
     // Draw the shadow line (shows current time/progress)
     const shadowLength = radius * 0.95;
