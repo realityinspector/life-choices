@@ -1,22 +1,34 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import { useUser, UserProvider } from "./context/user-context";
-import Onboarding from "./components/onboarding";
+import FreeSundialPage from "@/pages/free-sundial";
+import LoginPage from "@/pages/login";
 
 function Router() {
   const { isUserSetup } = useUser();
+  const [location] = useLocation();
 
-  if (!isUserSetup) {
-    return <Onboarding />;
+  // Free routes that don't require authentication
+  const freeRoutes = ["/", "/login"];
+
+  // Check if we're on a free route
+  const isOnFreeRoute = freeRoutes.includes(location);
+
+  // If the user is not set up and not on a free route, redirect to login
+  if (!isUserSetup && !isOnFreeRoute) {
+    window.location.href = "/login";
+    return null;
   }
 
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={FreeSundialPage} />
+      <Route path="/login" component={LoginPage} />
+      {isUserSetup && <Route path="/dashboard" component={Home} />}
       <Route component={NotFound} />
     </Switch>
   );
