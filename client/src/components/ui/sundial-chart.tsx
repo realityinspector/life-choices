@@ -284,9 +284,9 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
       .attr("r", 5)
       .attr("fill", shadowColor);
     
-    // Add percentage and current position text near the shadow
-    const textX = shadowX * 0.7;
-    const textY = shadowY * 0.7 - 15; // Offset a bit above the shadow line
+    // Add percentage and current position text near the shadow - adjusted for proper placement
+    const textX = shadowX * 0.6;
+    const textY = shadowY * 0.6; // Adjusted position for better visibility
     
     sundial.append("text")
       .attr("x", textX)

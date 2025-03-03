@@ -134,12 +134,12 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .attr("stroke", "#4B5563")
       .attr("stroke-width", 1);
       
-    // Add the info banner arc
+    // Add the info banner arc - at the top of the semicircle
     const bannerArc = d3.arc()
       .innerRadius(radius * 0.75)
       .outerRadius(radius * 0.9)
-      .startAngle(Math.PI)
-      .endAngle(2 * Math.PI);
+      .startAngle(Math.PI * 1.25)
+      .endAngle(Math.PI * 1.75);
     
     sundial.append("path")
       .attr("d", bannerArc as any)
@@ -148,9 +148,15 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .attr("stroke", "#3b82f6")
       .attr("stroke-width", 1);
     
+    // Position the text directly over the banner
+    const bannerTextAngle = Math.PI * 1.5; // Middle of the banner arc
+    const bannerTextRadius = radius * 0.825;
+    const bannerTextX = bannerTextRadius * Math.cos(bannerTextAngle);
+    const bannerTextY = bannerTextRadius * Math.sin(bannerTextAngle);
+    
     sundial.append("text")
-      .attr("x", 0)
-      .attr("y", -radius * 0.825)
+      .attr("x", bannerTextX)
+      .attr("y", bannerTextY)
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "middle")
       .attr("fill", "#1e40af")
@@ -182,9 +188,9 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .attr("r", 5)
       .attr("fill", shadowColor);
     
-    // Add percentage and current position text near the shadow
-    const textX = shadowX * 0.7;
-    const textY = shadowY * 0.7 - 15; // Offset a bit above the shadow line
+    // Add percentage and current position text near the shadow - adjusted for proper placement
+    const textX = shadowX * 0.6;
+    const textY = shadowY * 0.6; // Adjusted position for better visibility
     
     sundial.append("text")
       .attr("x", textX)
