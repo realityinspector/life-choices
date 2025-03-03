@@ -55,12 +55,12 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .attr("offset", "100%")
       .attr("stop-color", "#E5E7EB");
     
-    // Draw the sundial plate (half circle)
+    // Draw the sundial plate (half circle) from left to right
     const plateArc = d3.arc()
       .innerRadius(0)
       .outerRadius(radius)
-      .startAngle(Math.PI)
-      .endAngle(2 * Math.PI);
+      .startAngle(-Math.PI/2)
+      .endAngle(Math.PI/2);
     
     sundial.append("path")
       .attr("d", plateArc as any)
@@ -73,8 +73,8 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
     const hourAngle = Math.PI / hourMarks;
     
     for (let hour = 0; hour <= hourMarks; hour++) {
-      // Adjust angle to start from left (Math.PI) and progress to right (2*Math.PI)
-      const angle = Math.PI + hour * hourAngle;
+      // Adjust angle to start from left (-Math.PI/2) and progress to right (Math.PI/2)
+      const angle = -Math.PI/2 + hour * (Math.PI / hourMarks);
       const lineLength = radius * 0.9;
       const x2 = lineLength * Math.cos(angle);
       const y2 = lineLength * Math.sin(angle);
@@ -127,9 +127,9 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .attr("offset", "100%")
       .attr("stop-color", "#4B5563");
     
-    // Gnomon - pointing left (to birth side) to match orientation
+    // Gnomon - pointing toward birth side (left in new orientation)
     sundial.append("path")
-      .attr("d", `M0,0 L${-gnomonHeight},0 L0,${-gnomonBase} Z`)
+      .attr("d", `M0,0 L${-gnomonHeight},0 L0,${gnomonBase} Z`)
       .attr("fill", "url(#gnomon-gradient-free)")
       .attr("stroke", "#4B5563")
       .attr("stroke-width", 1);
@@ -138,8 +138,8 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
     const bannerArc = d3.arc()
       .innerRadius(radius * 0.75)
       .outerRadius(radius * 0.9)
-      .startAngle(Math.PI * 1.25)
-      .endAngle(Math.PI * 1.75);
+      .startAngle(-Math.PI/4)  // Adjusted for horizontal orientation
+      .endAngle(Math.PI/4);    // Adjusted for horizontal orientation
     
     sundial.append("path")
       .attr("d", bannerArc as any)
@@ -149,7 +149,7 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .attr("stroke-width", 1);
     
     // Position the text directly over the banner
-    const bannerTextAngle = Math.PI * 1.5; // Middle of the banner arc
+    const bannerTextAngle = 0; // Middle of the banner arc, straight up in new orientation
     const bannerTextRadius = radius * 0.825;
     const bannerTextX = bannerTextRadius * Math.cos(bannerTextAngle);
     const bannerTextY = bannerTextRadius * Math.sin(bannerTextAngle);
@@ -165,8 +165,8 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .text("Sign up for more features");
     
     // Calculate shadow angle based on percentage of life lived
-    // Angle for the shadow from left (birth, Math.PI) to right (end, 2*Math.PI)
-    const shadowAngle = Math.PI + (percentageLived / 100) * Math.PI;
+    // Angle for the shadow from left (birth, -Math.PI/2) to right (end, Math.PI/2)
+    const shadowAngle = -Math.PI/2 + (percentageLived / 100) * Math.PI;
     
     // Draw the shadow line (shows current time/progress)
     const shadowLength = radius * 0.95;
@@ -202,10 +202,10 @@ const FreeSundialChart = ({ userData, className = "" }: FreeSundialChartProps) =
       .attr("font-weight", "bold")
       .text(`${Math.round(percentageLived)}%`);
     
-    // Digital time display at the bottom
+    // Digital time display at the bottom - adjusted for new orientation
     sundial.append("foreignObject")
       .attr("x", -radius/2)
-      .attr("y", radius * 0.6)
+      .attr("y", radius * 0.3)  // Moved up to fit better in the new orientation
       .attr("width", radius)
       .attr("height", 60)
       .html(`
