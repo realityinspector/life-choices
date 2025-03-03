@@ -1,86 +1,110 @@
-import { UserData, ActivityInsert, User, Activity } from "@shared/schema";
+import { UserData, ActivityInsert, User, Activity, users, activities, InsertUser } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import session from "express-session";
+import pgSessionPkg from "connect-pg-simple";
+import { pool, db } from "./db";
+
+// Import connect-pg-simple with CommonJS-style import
+const PostgresSessionStore = pgSessionPkg(session);
 
 export interface IStorage {
   // User methods
-  getUser(): Promise<UserData | undefined>;
-  createUser(userData: UserData): Promise<UserData>;
-  updateUser(userData: UserData): Promise<UserData>;
-  deleteUser(): Promise<void>;
+  getUser(id?: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(userData: InsertUser): Promise<User>;
+  updateUser(id: number, userData: Partial<UserData>): Promise<User>;
+  deleteUser(id?: number): Promise<void>;
   
   // Activity methods
-  getActivities(): Promise<Activity[]>;
+  getActivities(userId?: number): Promise<Activity[]>;
   getActivity(id: number): Promise<Activity | undefined>;
-  createActivity(activity: ActivityInsert): Promise<Activity>;
+  createActivity(activity: ActivityInsert & { userId: number }): Promise<Activity>;
   updateActivity(id: number, activity: ActivityInsert): Promise<Activity | undefined>;
   deleteActivity(id: number): Promise<void>;
-  deleteAllActivities(): Promise<void>;
+  deleteAllActivities(userId?: number): Promise<void>;
+  
+  // Session store
+  sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private user?: UserData;
-  private activities: Map<number, Activity>;
-  private nextActivityId: number;
-
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+  
   constructor() {
-    this.activities = new Map();
-    this.nextActivityId = 1;
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
   }
 
-  // User methods
-  async getUser(): Promise<UserData | undefined> {
-    return this.user;
+  async getUser(id?: number): Promise<User | undefined> {
+    if (!id) return undefined;
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
   }
 
-  async createUser(userData: UserData): Promise<UserData> {
-    this.user = userData;
-    return userData;
+  async createUser(userData: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(userData).returning();
+    return result[0];
   }
 
-  async updateUser(userData: UserData): Promise<UserData> {
-    this.user = userData;
-    return userData;
+  async updateUser(id: number, userData: Partial<UserData>): Promise<User> {
+    const result = await db.update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    return result[0];
   }
 
-  async deleteUser(): Promise<void> {
-    this.user = undefined;
-    this.activities.clear();
+  async deleteUser(id?: number): Promise<void> {
+    if (!id) return;
+    await db.delete(users).where(eq(users.id, id));
+    await this.deleteAllActivities(id); // Cascade delete user's activities
   }
 
-  // Activity methods
-  async getActivities(): Promise<Activity[]> {
-    return Array.from(this.activities.values());
+  async getActivities(userId?: number): Promise<Activity[]> {
+    if (!userId) return [];
+    return db.select().from(activities).where(eq(activities.userId, userId));
   }
 
   async getActivity(id: number): Promise<Activity | undefined> {
-    return this.activities.get(id);
+    const result = await db.select().from(activities).where(eq(activities.id, id));
+    return result[0];
   }
 
-  async createActivity(activityData: ActivityInsert): Promise<Activity> {
-    const id = this.nextActivityId++;
-    const userId = 1; // Simple userId for in-memory storage
-    const activity: Activity = { ...activityData, id, userId };
-    this.activities.set(id, activity);
-    return activity;
+  async createActivity(activityData: ActivityInsert & { userId: number }): Promise<Activity> {
+    const result = await db.insert(activities).values(activityData).returning();
+    return result[0];
   }
 
   async updateActivity(id: number, activityData: ActivityInsert): Promise<Activity | undefined> {
-    if (!this.activities.has(id)) {
+    const existingActivity = await this.getActivity(id);
+    
+    if (!existingActivity) {
       return undefined;
     }
     
-    const existingActivity = this.activities.get(id)!;
-    const updatedActivity: Activity = { ...activityData, id, userId: existingActivity.userId };
-    this.activities.set(id, updatedActivity);
-    return updatedActivity;
+    const result = await db.update(activities)
+      .set({ ...activityData })
+      .where(eq(activities.id, id))
+      .returning();
+    
+    return result[0];
   }
 
   async deleteActivity(id: number): Promise<void> {
-    this.activities.delete(id);
+    await db.delete(activities).where(eq(activities.id, id));
   }
 
-  async deleteAllActivities(): Promise<void> {
-    this.activities.clear();
+  async deleteAllActivities(userId?: number): Promise<void> {
+    if (!userId) return;
+    await db.delete(activities).where(eq(activities.userId, userId));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
