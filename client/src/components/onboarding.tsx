@@ -62,7 +62,7 @@ const Onboarding = () => {
                         id="name" 
                         value={userData.name}
                         onChange={handleChange}
-                        className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" 
+                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-3 border bg-white" 
                         placeholder="John Doe" 
                         required 
                       />
@@ -79,7 +79,7 @@ const Onboarding = () => {
                         onChange={handleChange}
                         min="1" 
                         max="120" 
-                        className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border" 
+                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-3 border bg-white" 
                         placeholder="35" 
                         required 
                       />
@@ -128,7 +128,7 @@ const Onboarding = () => {
                   <div className="flex justify-end">
                     <button 
                       type="submit" 
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                      className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       Start Using Sundial
                     </button>
