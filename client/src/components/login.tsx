@@ -219,30 +219,32 @@ const Login = () => {
 
           <Card className="shadow-lg border-0">
             <CardHeader>
+              <CardTitle className="text-xl font-semibold mb-2">
+                {activeTab === "login" ? "Welcome back" : "Create your account"}
+              </CardTitle>
+              <CardDescription className="mb-4">
+                {activeTab === "login" 
+                  ? "Sign in to access your Sundial dashboard" 
+                  : "Start managing your lifetime effectively"
+                }
+              </CardDescription>
+              
               <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login">Sign In</TabsTrigger>
                   <TabsTrigger value="register">Create Account</TabsTrigger>
                 </TabsList>
                 
-                <CardTitle className="mt-4 text-xl font-semibold">
-                  {activeTab === "login" ? "Welcome back" : "Create your account"}
-                </CardTitle>
-                <CardDescription>
-                  {activeTab === "login" 
-                    ? "Sign in to access your Sundial dashboard" 
-                    : "Start managing your lifetime effectively"
-                  }
-                </CardDescription>
+                <TabsContent value="login">
+                  <LoginForm onSwitchForm={() => handleTabChange("register")} />
+                </TabsContent>
+                <TabsContent value="register">
+                  <RegisterForm onSwitchForm={() => handleTabChange("login")} />
+                </TabsContent>
               </Tabs>
             </CardHeader>
             <CardContent>
-              <TabsContent value="login">
-                <LoginForm onSwitchForm={() => handleTabChange("register")} />
-              </TabsContent>
-              <TabsContent value="register">
-                <RegisterForm onSwitchForm={() => handleTabChange("login")} />
-              </TabsContent>
+              {/* Card content here if needed */}
             </CardContent>
           </Card>
         </div>
