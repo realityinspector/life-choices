@@ -90,8 +90,8 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
     const plateArc = d3.arc()
       .innerRadius(0)
       .outerRadius(radius)
-      .startAngle(-Math.PI / 2)
-      .endAngle(Math.PI / 2);
+      .startAngle(0)
+      .endAngle(Math.PI);
     
     sundial.append("path")
       .attr("d", plateArc as any)
@@ -104,7 +104,7 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
     const hourAngle = Math.PI / hourMarks;
     
     for (let hour = 0; hour <= hourMarks; hour++) {
-      const angle = -Math.PI / 2 + hour * hourAngle;
+      const angle = hour * hourAngle;
       const lineLength = radius * 0.9;
       const x2 = lineLength * Math.cos(angle);
       const y2 = lineLength * Math.sin(angle);
@@ -159,7 +159,7 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
     
     // Gnomon
     sundial.append("path")
-      .attr("d", `M0,0 L0,${-gnomonHeight} L${gnomonBase},0 Z`)
+      .attr("d", `M0,0 L${gnomonHeight},0 L0,${-gnomonBase} Z`)
       .attr("fill", "url(#gnomon-gradient)")
       .attr("stroke", "#4B5563")
       .attr("stroke-width", 1);
@@ -209,8 +209,8 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
       const arcGenerator = d3.arc()
         .innerRadius(innerRadius)
         .outerRadius(currentOuterRadius)
-        .startAngle(-Math.PI / 2) // Start at the top
-        .endAngle(Math.PI / 2); // End at the bottom (180 degrees around)
+        .startAngle(0) // Start at the right
+        .endAngle(Math.PI); // End at the left (180 degrees around)
       
       // Add the activity arc
       const arc = sundial.append("path")
@@ -260,14 +260,14 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
     
     // Calculate shadow angle based on percentage of life lived
     const percentLived = calculatePercentageLived(userData);
-    const shadowAngle = (-Math.PI / 2) + (percentLived / 100) * Math.PI; // Angle for the shadow
+    const shadowAngle = Math.PI - (percentLived / 100) * Math.PI; // Angle for the shadow (from left to right)
     
     // Draw the shadow line (shows current time/progress)
     const shadowLength = radius * 0.95;
     const shadowX = shadowLength * Math.cos(shadowAngle);
     const shadowY = shadowLength * Math.sin(shadowAngle);
     
-    // Shadow path (slightly curved for style)
+    // Shadow path
     const shadowPath = sundial.append("path")
       .attr("d", `M0,0 L${shadowX},${shadowY}`)
       .attr("stroke", shadowColor)
@@ -282,9 +282,9 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
       .attr("r", 5)
       .attr("fill", shadowColor);
     
-    // Add percentage and current position text in the shadow
+    // Add percentage and current position text near the shadow
     const textX = shadowX * 0.7;
-    const textY = shadowY * 0.7;
+    const textY = shadowY * 0.7 - 15; // Offset a bit above the shadow line
     
     sundial.append("text")
       .attr("x", textX)
