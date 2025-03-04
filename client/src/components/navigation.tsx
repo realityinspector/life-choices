@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Calendar, Activity, Clock, User, ShoppingBag, BarChart2 } from "lucide-react";
+import { Calendar, Activity, Clock, User, ShoppingBag, BarChart2, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavigationProps {
@@ -28,6 +28,11 @@ const Navigation = ({ currentPath }: NavigationProps) => {
       label: "Life Events",
       path: "/life-events",
       icon: <ShoppingBag className="h-4 w-4 mr-2" />,
+    },
+    {
+      label: "Shop Activities",
+      path: "/shop-activities",
+      icon: <Store className="h-4 w-4 mr-2" />,
     },
     {
       label: "Analytics",

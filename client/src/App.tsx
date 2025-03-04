@@ -9,6 +9,7 @@ import FreeSundialPage from "@/pages/free-sundial";
 import LoginPage from "@/pages/login";
 import LifeEventsPage from "@/pages/life-events";
 import AnalyticsPage from "@/pages/analytics";
+import ShopActivitiesPage from "@/pages/shop-activities";
 
 function Router() {
   const { isUserSetup } = useUser();
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       {isUserSetup && <Route path="/dashboard" component={Home} />}
       {isUserSetup && <Route path="/life-events" component={LifeEventsPage} />}
+      {isUserSetup && <Route path="/shop-activities" component={ShopActivitiesPage} />}
       {isUserSetup && <Route path="/analytics" component={AnalyticsPage} />}
       <Route component={NotFound} />
     </Switch>
