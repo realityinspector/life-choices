@@ -8,7 +8,7 @@ interface SundialChartProps {
   className?: string;
 }
 
-// Helper function to get color for ring based on activity color
+// Helper function to get color for activity based on color name
 const getColorFromName = (colorName: string): string => {
   const colorMap: Record<string, string> = {
     red: "#EF4444",
@@ -48,136 +48,106 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
   useEffect(() => {
     if (!svgRef.current) return;
     
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
+    // Clear any existing SVG content
+    d3.select(svgRef.current).selectAll("*").remove();
     
-    const width = svgRef.current.clientWidth;
-    const height = svgRef.current.clientHeight;
-    const radius = Math.min(width, height) / 2 - 30;
-    const centerX = width / 2;
-    const centerY = height / 2;
+    // Calculate percentage of life lived
+    const percentageLived = calculatePercentageLived(userData);
     
-    // Create a group for the entire sundial
-    const sundial = svg.append("g")
-      .attr("transform", `translate(${centerX}, ${centerY})`);
+    // Setup constants and colors
+    const width = 600;
+    const height = 350;
+    const margin = { top: 40, right: 50, bottom: 50, left: 50 };
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
     
-    // Define some base colors for the sundial
-    const baseColor = "#D1D5DB";
-    const plateColor = "#F3F4F6";
-    const shadowColor = "#4B5563";
-    const markerColor = "#6B7280";
-    const gnomonColor = "#9CA3AF";
+    // Colors
+    const lightBlue = "#e0f2fe";
+    const darkBlue = "#3B82F6";
+    const progressColor = "#4F46E5";
     
-    // Create gradient for the base plate
-    const plateGradient = svg.append("defs")
-      .append("radialGradient")
-      .attr("id", "plate-gradient")
-      .attr("cx", "50%")
-      .attr("cy", "50%")
-      .attr("r", "50%")
-      .attr("fx", "25%")
-      .attr("fy", "25%");
-      
-    plateGradient.append("stop")
-      .attr("offset", "0%")
-      .attr("stop-color", "#F9FAFB");
-      
-    plateGradient.append("stop")
-      .attr("offset", "100%")
-      .attr("stop-color", "#E5E7EB");
+    // Create SVG
+    const svg = d3.select(svgRef.current)
+      .attr("width", width)
+      .attr("height", height);
     
-    // Draw the sundial plate (half circle)
-    const plateArc = d3.arc()
-      .innerRadius(0)
-      .outerRadius(radius)
-      .startAngle(Math.PI)
-      .endAngle(2 * Math.PI);
+    // Create chart group
+    const chart = svg.append("g")
+      .attr("transform", `translate(${margin.left}, ${margin.top})`);
     
-    sundial.append("path")
-      .attr("d", plateArc as any)
-      .attr("fill", "url(#plate-gradient)")
-      .attr("stroke", baseColor)
-      .attr("stroke-width", 2);
+    // Create X scale - Life timeline from Birth to End
+    const xScale = d3.scaleLinear()
+      .domain([0, 100])  // Percentage of life
+      .range([0, chartWidth]);
     
-    // Draw hour lines (like a real sundial)
-    const hourMarks = 12;
-    const hourAngle = Math.PI / hourMarks;
-    
-    for (let hour = 0; hour <= hourMarks; hour++) {
-      // Adjust angle to start from left (Math.PI) and progress to right (2*Math.PI)
-      const angle = Math.PI + hour * hourAngle;
-      const lineLength = radius * 0.9;
-      const x2 = lineLength * Math.cos(angle);
-      const y2 = lineLength * Math.sin(angle);
-      
-      sundial.append("line")
-        .attr("x1", 0)
-        .attr("y1", 0)
-        .attr("x2", x2)
-        .attr("y2", y2)
-        .attr("stroke", markerColor)
-        .attr("stroke-width", hour % 3 === 0 ? 2 : 1)
-        .attr("opacity", 0.6);
-      
-      // Add hour numbers at major marks
-      if (hour % 3 === 0 || hour === 0 || hour === hourMarks) {
-        const textDistance = radius * 0.95;
-        const tx = textDistance * Math.cos(angle);
-        const ty = textDistance * Math.sin(angle);
-        
-        sundial.append("text")
-          .attr("x", tx)
-          .attr("y", ty)
-          .attr("text-anchor", "middle")
-          .attr("dominant-baseline", "middle")
-          .attr("fill", "#374151")
-          .attr("font-size", "10px")
-          .attr("font-weight", hour % 3 === 0 ? "bold" : "normal")
-          .text(hour === 0 ? "Birth" : hour === hourMarks / 2 ? "Mid-Life" : hour === hourMarks ? "End" : hour.toString());
-      }
-    }
-    
-    // Draw the gnomon (the triangular part of a sundial)
-    const gnomonHeight = radius * 0.6;
-    const gnomonBase = radius * 0.2;
-    
-    // Create gradient for the gnomon
-    const gnomonGradient = svg.append("defs")
-      .append("linearGradient")
-      .attr("id", "gnomon-gradient")
-      .attr("x1", "0%")
-      .attr("y1", "0%")
-      .attr("x2", "100%")
-      .attr("y2", "100%");
-    
-    gnomonGradient.append("stop")
-      .attr("offset", "0%")
-      .attr("stop-color", "#9CA3AF");
-    
-    gnomonGradient.append("stop")
-      .attr("offset", "100%")
-      .attr("stop-color", "#4B5563");
-    
-    // Gnomon - pointing left (to birth side) to match orientation
-    sundial.append("path")
-      .attr("d", `M0,0 L${-gnomonHeight},0 L0,${-gnomonBase} Z`)
-      .attr("fill", "url(#gnomon-gradient)")
-      .attr("stroke", "#4B5563")
+    // Background grid
+    chart.append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", chartWidth)
+      .attr("height", chartHeight)
+      .attr("rx", 5)
+      .attr("ry", 5)
+      .attr("fill", "#f9fafb")
+      .attr("stroke", "#e5e7eb")
       .attr("stroke-width", 1);
     
-    // Sort activities by lifetime hours (largest first) to ensure smaller rings are on top
-    const sortedActivities = [...activities].sort(
-      (a, b) => calculateLifetimeHours(userData, b) - calculateLifetimeHours(userData, a)
-    );
+    // Draw grid lines
+    for (let i = 0; i <= 10; i++) {
+      const x = xScale(i * 10);
+      
+      chart.append("line")
+        .attr("x1", x)
+        .attr("y1", 0)
+        .attr("x2", x)
+        .attr("y2", chartHeight)
+        .attr("stroke", "#e5e7eb")
+        .attr("stroke-width", i % 5 === 0 ? 1 : 0.5)
+        .attr("stroke-dasharray", i % 5 === 0 ? "none" : "3,3");
+    }
+    
+    // Add birth, mid-life and end labels
+    chart.append("text")
+      .attr("x", 0)
+      .attr("y", chartHeight + 20)
+      .attr("text-anchor", "start")
+      .attr("fill", "#374151")
+      .attr("font-size", "12px")
+      .attr("font-weight", "bold")
+      .text("Birth");
+    
+    chart.append("text")
+      .attr("x", chartWidth / 2)
+      .attr("y", chartHeight + 20)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#374151")
+      .attr("font-size", "12px")
+      .attr("font-weight", "bold")
+      .text("Mid-Life");
+    
+    chart.append("text")
+      .attr("x", chartWidth)
+      .attr("y", chartHeight + 20)
+      .attr("text-anchor", "end")
+      .attr("fill", "#374151")
+      .attr("font-size", "12px")
+      .attr("font-weight", "bold")
+      .text("End");
     
     // Calculate total hours across all activities for scaling
     const totalActivityHours = getTotalActivityHours(activities, userData);
     const totalLifeHours = userData.lifeExpectancy * 365.25 * (24 - userData.sleepHours);
     
-    // Create activity arcs around the semi-circle
-    const arcMaxWidth = radius * 0.2; // Maximum width of each arc
-    const arcPadding = 2; // Padding between arcs
-    let currentOuterRadius = radius; // Start at the outer edge
+    // Sort activities by lifetime hours (largest first)
+    const sortedActivities = [...activities].sort(
+      (a, b) => calculateLifetimeHours(userData, b) - calculateLifetimeHours(userData, a)
+    );
+    
+    // Activity bands - horizontal orientation
+    const activityHeight = Math.min(20, chartHeight / (sortedActivities.length || 1));
+    const activityPadding = 5;
+    const activitySection = chartHeight * 0.6; // Use 60% of chart height for activities
+    const startY = (chartHeight - activitySection) / 2;
     
     if (sortedActivities.length > 0) {
       // Create a legend group
@@ -194,37 +164,36 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
     
     sortedActivities.forEach((activity, i) => {
       const activityHours = calculateLifetimeHours(userData, activity);
+      const proportionOfLife = activityHours / totalLifeHours;
       
-      // Scale the arc width based on the activity's proportion of total hours
-      const arcWidth = Math.max(
-        5, // Minimum 5px width
-        Math.min(
-          arcMaxWidth, // Maximum width
-          (activityHours / totalLifeHours) * (radius * 0.5) // Scaled by proportion of life
-        )
-      );
+      // Y position for this activity
+      const y = startY + i * (activityHeight + activityPadding);
       
-      const innerRadius = currentOuterRadius - arcWidth;
+      // Activity band
+      const band = chart.append("rect")
+        .datum(activity)
+        .attr("x", 0)
+        .attr("y", y)
+        .attr("width", chartWidth)
+        .attr("height", activityHeight)
+        .attr("rx", 3)
+        .attr("ry", 3)
+        .attr("fill", "#f3f4f6")
+        .attr("stroke", "#e5e7eb")
+        .attr("stroke-width", 1);
       
-      // Create an arc generator for this activity
-      const arcGenerator = d3.arc()
-        .innerRadius(innerRadius)
-        .outerRadius(currentOuterRadius)
-        .startAngle(Math.PI) // Start at the left (birth)
-        .endAngle(2 * Math.PI); // End at the right (end)
-      
-      // Add the activity arc
-      const arc = sundial.append("path")
-        .datum({ activity, innerRadius, outerRadius: currentOuterRadius })
-        .attr("d", arcGenerator as any)
+      // Filled portion of activity based on proportion
+      chart.append("rect")
+        .datum({ activity, y })
+        .attr("x", 0)
+        .attr("y", y)
+        .attr("width", chartWidth * proportionOfLife)
+        .attr("height", activityHeight)
+        .attr("rx", 3)
+        .attr("ry", 3)
         .attr("fill", getColorFromName(activity.color))
         .attr("opacity", 0.8)
-        .attr("stroke", "#FFF")
-        .attr("stroke-width", 1)
-        .style("cursor", "pointer");
-      
-      // Add mouseover events for tooltip
-      arc
+        .style("cursor", "pointer")
         .on("mouseover", function(this: any, event: any) {
           d3.select(this).attr("opacity", 1);
           setTooltipData({
@@ -238,84 +207,107 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
           setTooltipData(null);
         });
       
-      // Add to legend
-      if (sortedActivities.length > 0) {
-        const legendItem = svg.select("g").append("g")
-          .attr("transform", `translate(0, ${i * 20 + 20})`);
-        
-        legendItem.append("rect")
-          .attr("width", 12)
-          .attr("height", 12)
-          .attr("fill", getColorFromName(activity.color));
-        
-        legendItem.append("text")
-          .attr("x", 18)
-          .attr("y", 10)
-          .attr("font-size", "10px")
-          .text(`${activity.name}`);
-      }
+      // Activity name on the band
+      chart.append("text")
+        .attr("x", 5)
+        .attr("y", y + activityHeight / 2)
+        .attr("fill", "#111827")
+        .attr("font-size", "10px")
+        .attr("dominant-baseline", "middle")
+        .text(activity.name);
       
-      // Update the current outer radius for the next arc
-      currentOuterRadius = innerRadius - arcPadding;
+      // Add to legend
+      const legendItem = svg.select("g").append("g")
+        .attr("transform", `translate(0, ${i * 20 + 20})`);
+      
+      legendItem.append("rect")
+        .attr("width", 12)
+        .attr("height", 12)
+        .attr("fill", getColorFromName(activity.color));
+      
+      legendItem.append("text")
+        .attr("x", 18)
+        .attr("y", 10)
+        .attr("font-size", "10px")
+        .text(`${activity.name}`);
     });
     
-    // Calculate shadow angle based on percentage of life lived
-    const percentLived = calculatePercentageLived(userData);
-    // Angle for the shadow from left (birth, Math.PI) to right (end, 2*Math.PI)
-    const shadowAngle = Math.PI + (percentLived / 100) * Math.PI;
+    // Life progress indicator (top of chart)
+    // Background track
+    chart.append("rect")
+      .attr("x", 0)
+      .attr("y", -20)
+      .attr("width", chartWidth)
+      .attr("height", 10)
+      .attr("rx", 5)
+      .attr("ry", 5)
+      .attr("fill", lightBlue)
+      .attr("opacity", 0.3);
     
-    // Draw the shadow line (shows current time/progress)
-    const shadowLength = radius * 0.95;
-    const shadowX = shadowLength * Math.cos(shadowAngle);
-    const shadowY = shadowLength * Math.sin(shadowAngle);
+    // Progress fill
+    chart.append("rect")
+      .attr("x", 0)
+      .attr("y", -20)
+      .attr("width", xScale(percentageLived))
+      .attr("height", 10)
+      .attr("rx", 5)
+      .attr("ry", 5)
+      .attr("fill", darkBlue)
+      .attr("opacity", 0.6);
     
-    // Shadow path
-    const shadowPath = sundial.append("path")
-      .attr("d", `M0,0 L${shadowX},${shadowY}`)
-      .attr("stroke", shadowColor)
-      .attr("stroke-width", 3)
-      .attr("stroke-linecap", "round")
-      .attr("fill", "none");
+    // Current position marker
+    const currentX = xScale(percentageLived);
     
-    // Add a marker at the end of the shadow
-    sundial.append("circle")
-      .attr("cx", shadowX)
-      .attr("cy", shadowY)
-      .attr("r", 5)
-      .attr("fill", shadowColor);
+    // Vertical line at current position
+    chart.append("line")
+      .attr("x1", currentX)
+      .attr("y1", -25)
+      .attr("x2", currentX)
+      .attr("y2", chartHeight)
+      .attr("stroke", progressColor)
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "5,3");
     
-    // Add percentage and current position text near the shadow - adjusted for proper placement
-    const textX = shadowX * 0.6;
-    const textY = shadowY * 0.6; // Adjusted position for better visibility
+    // Current position marker (circle)
+    chart.append("circle")
+      .attr("cx", currentX)
+      .attr("cy", -15)
+      .attr("r", 6)
+      .attr("fill", progressColor);
     
-    sundial.append("text")
-      .attr("x", textX)
-      .attr("y", textY)
+    // Add percentage text
+    chart.append("text")
+      .attr("x", currentX)
+      .attr("y", -35)
       .attr("text-anchor", "middle")
-      .attr("dominant-baseline", "middle")
       .attr("fill", "#1F2937")
       .attr("font-size", "14px")
       .attr("font-weight", "bold")
-      .text(`${Math.round(percentLived)}%`);
+      .text(`${Math.round(percentageLived)}%`);
     
     // Digital time display at the bottom
-    sundial.append("foreignObject")
-      .attr("x", -radius/2)
-      .attr("y", radius * 0.6)
-      .attr("width", radius)
-      .attr("height", 60)
-      .html(`
-        <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
-          <div style="font-size: 20px; font-weight: bold; color: #1F2937;">${formatSundialTime(userData)}</div>
-          <div style="font-size: 12px; color: #6B7280;">Your Life Time</div>
-        </div>
-      `);
-      
+    chart.append("text")
+      .attr("x", chartWidth / 2)
+      .attr("y", chartHeight + 45)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#1F2937")
+      .attr("font-size", "16px")
+      .attr("font-weight", "bold")
+      .text(formatSundialTime(userData));
+    
+    chart.append("text")
+      .attr("x", chartWidth / 2)
+      .attr("y", chartHeight + 65)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#6B7280")
+      .attr("font-size", "12px")
+      .text("Your Life Time");
+    
   }, [userData, activities]);
   
   return (
-    <div className={`relative w-full aspect-square max-w-lg mx-auto ${className}`}>
-      <svg ref={svgRef} width="100%" height="100%" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" />
+    <div className={`relative w-full h-full min-h-[350px] ${className}`}>
+      <svg ref={svgRef} className="w-full h-full" viewBox="0 0 600 350" preserveAspectRatio="xMidYMid meet" />
       
       {/* Tooltip */}
       {tooltipData && (
@@ -331,7 +323,7 @@ const SundialChart = ({ className = "" }: SundialChartProps) => {
           <p className="font-bold">{tooltipData.activity.name}</p>
           <p>Frequency: {tooltipData.activity.frequency} {tooltipData.activity.frequencyUnit}(s)</p>
           <p>Duration: {tooltipData.activity.duration} {tooltipData.activity.durationUnit}(s)</p>
-          <p>Lifetime hours: {calculateLifetimeHours(userData, tooltipData.activity)} hours</p>
+          <p>Lifetime hours: {calculateLifetimeHours(userData, tooltipData.activity).toLocaleString()} hours</p>
           {tooltipData.activity.lifeImpact !== 0 && (
             <p className={tooltipData.activity.lifeImpact > 0 ? "text-green-600" : "text-red-600"}>
               Life impact: {tooltipData.activity.lifeImpact > 0 ? "+" : ""}{tooltipData.activity.lifeImpact} years
