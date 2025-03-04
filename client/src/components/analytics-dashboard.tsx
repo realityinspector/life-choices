@@ -62,9 +62,9 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
   const percentageAllocated = totalBCH > 0 ? (totalActivityHours / totalBCH) * 100 : 0;
   
   // Use lifeImpact instead of impact for activities
-  const netImpact = activities.length > 0
-    ? activities.reduce((sum, activity) => sum + activity.lifeImpact, 0) / activities.length
-    : 0;
+  const netImpact = (!activities || activities.length === 0) 
+    ? 0
+    : activities.reduce((sum, activity) => sum + activity.lifeImpact, 0) / activities.length;
   
   // Calculate days remaining based on life expectancy
   const daysRemaining = Math.round((userData.lifeExpectancy - userData.age) * 365.25);
@@ -102,10 +102,12 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
   ];
   
   // Activity allocation data
-  const activityAllocationData = activities.map(activity => ({
-    name: activity.name,
-    hours: activity.frequency * activity.duration * (userData.lifeExpectancy - userData.age) * (activity.frequencyUnit === 'week' ? 52 : activity.frequencyUnit === 'month' ? 12 : activity.frequencyUnit === 'year' ? 1 : 365)
-  })).sort((a, b) => b.hours - a.hours);
+  const activityAllocationData = (!activities || activities.length === 0) 
+    ? []
+    : activities.map(activity => ({
+        name: activity.name,
+        hours: activity.frequency * activity.duration * (userData.lifeExpectancy - userData.age) * (activity.frequencyUnit === 'week' ? 52 : activity.frequencyUnit === 'month' ? 12 : activity.frequencyUnit === 'year' ? 1 : 365)
+      })).sort((a, b) => b.hours - a.hours);
   
   // Life quality projection data
   const generateProjectionData = () => {
