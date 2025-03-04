@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Dashboard from "@/components/dashboard";
 import Activities from "@/components/activities";
 import TimeMachine from "@/components/time-machine";
@@ -7,10 +7,21 @@ import { useUser } from "@/context/user-context";
 import Header from "@/components/header";
 import { useLocation } from "wouter";
 
-const Home = () => {
-  const [activeView, setActiveView] = useState('dashboard');
+interface HomeProps {
+  initialView?: string;
+}
+
+const Home = ({ initialView = 'dashboard' }: HomeProps) => {
+  const [activeView, setActiveView] = useState(initialView);
   const { userData } = useUser();
   const [location, setLocation] = useLocation();
+  
+  // Update active view if initialView changes
+  useEffect(() => {
+    if (initialView) {
+      setActiveView(initialView);
+    }
+  }, [initialView]);
 
   const handleViewChange = (view: string) => {
     // Handle special views that should redirect to different pages

@@ -82,6 +82,10 @@ export const calculateLifetimeHours = (userData: UserData, activity: Activity): 
 
 // Calculate total lifetime hours across all activities
 export const calculateTotalLifetimeHours = (userData: UserData, activities: Activity[]): number => {
+  if (!activities || activities.length === 0) {
+    return 0;
+  }
+  
   return activities.reduce((total, activity) => {
     return total + calculateLifetimeHours(userData, activity);
   }, 0);
@@ -97,6 +101,10 @@ export const calculateAllocatedPercentage = (userData: UserData, activities: Act
 
 // Calculate net life impact from all activities
 export const calculateNetLifeImpact = (activities: Activity[]): number => {
+  if (!activities || activities.length === 0) {
+    return 0;
+  }
+  
   const impact = activities.reduce((total, activity) => {
     return total + activity.lifeImpact;
   }, 0);

@@ -32,6 +32,9 @@ function Router() {
       <Route path="/" component={FreeSundialPage} />
       <Route path="/login" component={LoginPage} />
       {isUserSetup && <Route path="/dashboard" component={Home} />}
+      {isUserSetup && <Route path="/activities" component={() => <Home initialView="activities" />} />}
+      {isUserSetup && <Route path="/time-machine" component={() => <Home initialView="projections" />} />}
+      {isUserSetup && <Route path="/profile" component={() => <Home initialView="profile" />} />}
       {isUserSetup && <Route path="/life-events" component={LifeEventsPage} />}
       {isUserSetup && <Route path="/shop-activities" component={ShopActivitiesPage} />}
       {isUserSetup && <Route path="/analytics" component={AnalyticsPage} />}
