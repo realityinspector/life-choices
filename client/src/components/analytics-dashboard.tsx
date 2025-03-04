@@ -477,9 +477,9 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
                 <CardDescription>Number of defined activities</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{activities.length}</div>
+                <div className="text-3xl font-bold">{(!activities || activities.length === 0) ? 0 : activities.length}</div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {activities.filter(a => a.lifeImpact > 0).length} positive impact activities
+                  {(!activities || activities.length === 0) ? 0 : activities.filter(a => a.lifeImpact > 0).length} positive impact activities
                 </p>
               </CardContent>
             </Card>
@@ -522,28 +522,34 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
               <CardDescription>Hours allocated to each activity over lifetime</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart
-                  data={activityAllocationData.slice(0, 10)} // Top 10 activities by hours
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis 
-                    type="category" 
-                    dataKey="name" 
-                    width={100}
-                    tick={{ fontSize: 12 }} 
-                  />
-                  <Tooltip formatter={(value: any) => Math.round(value).toLocaleString() + ' hours'} />
-                  <Bar dataKey="hours" fill="#8884d8">
-                    {activityAllocationData.slice(0, 10).map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {(!activityAllocationData || activityAllocationData.length === 0) ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  No activity data available
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart
+                    data={activityAllocationData.slice(0, 10)} // Top 10 activities by hours
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis 
+                      type="category" 
+                      dataKey="name" 
+                      width={100}
+                      tick={{ fontSize: 12 }} 
+                    />
+                    <Tooltip formatter={(value: any) => Math.round(value).toLocaleString() + ' hours'} />
+                    <Bar dataKey="hours" fill="#8884d8">
+                      {activityAllocationData.slice(0, 10).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
           
@@ -557,7 +563,12 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={[
+                      data={(!activities || activities.length === 0) ? [
+                        { name: 'High Positive (6-10)', value: 0 },
+                        { name: 'Medium Positive (3-5)', value: 0 },
+                        { name: 'Low Positive (0-2)', value: 0 },
+                        { name: 'Negative', value: 0 }
+                      ] : [
                         { name: 'High Positive (6-10)', value: activities.filter(a => a.lifeImpact >= 6).length },
                         { name: 'Medium Positive (3-5)', value: activities.filter(a => a.lifeImpact >= 3 && a.lifeImpact < 6).length },
                         { name: 'Low Positive (0-2)', value: activities.filter(a => a.lifeImpact >= 0 && a.lifeImpact < 3).length },
@@ -588,30 +599,36 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {activities
-                    .sort((a, b) => b.lifeImpact - a.lifeImpact)
-                    .slice(0, 5)
-                    .map((activity, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div 
-                            className="w-2 h-10 mr-3 rounded-full" 
-                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                          />
-                          <div>
-                            <div className="font-medium">{activity.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {activity.frequency} x {activity.frequencyUnit}, {activity.duration} {activity.durationUnit}
+                  {(!activities || activities.length === 0) ? (
+                    <div className="text-center text-muted-foreground py-4">
+                      No activities defined yet
+                    </div>
+                  ) : (
+                    activities
+                      .sort((a, b) => b.lifeImpact - a.lifeImpact)
+                      .slice(0, 5)
+                      .map((activity, index) => (
+                        <div key={index} className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div 
+                              className="w-2 h-10 mr-3 rounded-full" 
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            />
+                            <div>
+                              <div className="font-medium">{activity.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {activity.frequency} x {activity.frequencyUnit}, {activity.duration} {activity.durationUnit}
+                              </div>
                             </div>
                           </div>
+                          <Badge 
+                            variant={activity.lifeImpact > 5 ? "default" : activity.lifeImpact > 0 ? "outline" : "destructive"}
+                          >
+                            {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}
+                          </Badge>
                         </div>
-                        <Badge 
-                          variant={activity.lifeImpact > 5 ? "default" : activity.lifeImpact > 0 ? "outline" : "destructive"}
-                        >
-                          {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}
-                        </Badge>
-                      </div>
-                    ))}
+                      ))
+                  )}
                 </div>
               </CardContent>
               <CardFooter>
@@ -680,34 +697,40 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
               <CardDescription>Projected quality of life over time</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart
-                  data={lifeQualityProjectionData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="age" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="quality"
-                    name="Quality Score"
-                    stroke="#8884d8"
-                    activeDot={{ r: 8 }}
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="bcHoursRemaining"
-                    name="Conscious Hours Remaining"
-                    stroke="#82ca9d"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {(!lifeQualityProjectionData || lifeQualityProjectionData.length === 0) ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  No projection data available
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={400}>
+                  <LineChart
+                    data={lifeQualityProjectionData}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="age" />
+                    <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                    <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="quality"
+                      name="Quality Score"
+                      stroke="#8884d8"
+                      activeDot={{ r: 8 }}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="bcHoursRemaining"
+                      name="Conscious Hours Remaining"
+                      stroke="#82ca9d"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
           
