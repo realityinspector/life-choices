@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import { useUser, UserProvider } from "./context/user-context";
 import FreeSundialPage from "@/pages/free-sundial";
 import LoginPage from "@/pages/login";
+import LifeEventsPage from "@/pages/life-events";
 
 function Router() {
   const { isUserSetup } = useUser();
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/" component={FreeSundialPage} />
       <Route path="/login" component={LoginPage} />
       {isUserSetup && <Route path="/dashboard" component={Home} />}
+      {isUserSetup && <Route path="/life-events" component={LifeEventsPage} />}
       <Route component={NotFound} />
     </Switch>
   );

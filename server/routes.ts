@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { userSchema, activitySchema } from "@shared/schema";
+import { userSchema, activitySchema, User, lifeEventSchema, userLifeEventSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth } from "./auth";
@@ -205,6 +205,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(200).json(userData);
     } catch (error) {
       console.error('Error processing sundial data:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Life Events and Event Categories routes
+  
+  // Event Categories - Public
+  app.get('/api/event-categories', async (req, res) => {
+    try {
+      const categories = await storage.getEventCategories();
+      return res.json(categories);
+    } catch (error) {
+      console.error('Error getting event categories:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Get all Life Events - Public
+  app.get('/api/life-events', async (req, res) => {
+    try {
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const events = await storage.getLifeEvents(categoryId);
+      return res.json(events);
+    } catch (error) {
+      console.error('Error getting life events:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Get a single Life Event - Public
+  app.get('/api/life-events/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const event = await storage.getLifeEvent(id);
+      
+      if (!event) {
+        return res.status(404).json({ message: 'Life event not found' });
+      }
+      
+      return res.json(event);
+    } catch (error) {
+      console.error('Error getting life event:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // User Life Events - Protected
+  app.get('/api/user-life-events', requireAuth, async (req, res) => {
+    try {
+      // @ts-ignore - user will always exist due to requireAuth middleware
+      const userId = req.user.id;
+      const userEvents = await storage.getUserLifeEvents(userId);
+      return res.json(userEvents);
+    } catch (error) {
+      console.error('Error getting user life events:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Add a Life Event to User's Collection - Protected
+  app.post('/api/user-life-events', requireAuth, async (req, res) => {
+    try {
+      // Validate request body
+      const userEventData = userLifeEventSchema.partial().parse(req.body);
+      
+      // @ts-ignore - user will always exist due to requireAuth middleware
+      const userId = req.user.id;
+      
+      // Add the life event to user's collection
+      const userEvent = await storage.addUserLifeEvent({
+        ...userEventData,
+        userId,
+        lifeEventId: req.body.lifeEventId,
+        isActive: true
+      });
+      
+      // Get the full user event with the event data
+      const fullUserEvent = await storage.getUserLifeEvent(userEvent.id);
+      return res.status(201).json(fullUserEvent);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error('Error adding user life event:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Update a User Life Event - Protected
+  app.put('/api/user-life-events/:id', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Validate request body
+      const userEventData = userLifeEventSchema.partial().parse(req.body);
+      
+      // Check if the user life event exists
+      const existingUserEvent = await storage.getUserLifeEvent(id);
+      if (!existingUserEvent) {
+        return res.status(404).json({ message: 'User life event not found' });
+      }
+      
+      // @ts-ignore - user will always exist due to requireAuth middleware
+      if (existingUserEvent.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      
+      // Update the user life event
+      const updatedUserEvent = await storage.updateUserLifeEvent(id, userEventData);
+      
+      // Get the full user event with the event data
+      const fullUserEvent = await storage.getUserLifeEvent(id);
+      return res.json(fullUserEvent);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error('Error updating user life event:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+  
+  // Remove a Life Event from User's Collection - Protected
+  app.delete('/api/user-life-events/:id', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if the user life event exists
+      const existingUserEvent = await storage.getUserLifeEvent(id);
+      if (!existingUserEvent) {
+        return res.status(404).json({ message: 'User life event not found' });
+      }
+      
+      // @ts-ignore - user will always exist due to requireAuth middleware
+      if (existingUserEvent.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      
+      // Remove the user life event
+      await storage.removeUserLifeEvent(id);
+      return res.status(204).send();
+    } catch (error) {
+      console.error('Error removing user life event:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
