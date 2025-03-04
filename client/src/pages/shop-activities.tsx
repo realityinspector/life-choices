@@ -224,256 +224,274 @@ export default function ShopActivitiesPage() {
     return "bg-gray-500";
   };
 
-  return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Shop Activities</h1>
-          <p className="text-muted-foreground">
-            Browse and add life-enhancing activities to your routine
-          </p>
+  // If user is not logged in, show login prompt
+  if (!userData) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
+        <Header />
+        <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg text-center">
+          <h1 className="text-2xl font-bold mb-4">Login Required</h1>
+          <p className="mb-6">Please log in to view and add activities.</p>
+          <Button onClick={() => window.location.href = "/login"}>Go to Login</Button>
         </div>
-        <Store className="h-10 w-10 text-primary" />
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="md:col-span-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              className="pl-10"
-              placeholder="Search activities by name or category..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <Header userData={userData} />
+      
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Shop Activities</h1>
+            <p className="text-muted-foreground">
+              Browse and add life-enhancing activities to your routine
+            </p>
+          </div>
+          <Store className="h-10 w-10 text-primary" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="md:col-span-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                className="pl-10"
+                placeholder="Search activities by name or category..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => setSelectedCategory(null)}
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              {selectedCategory ? "Clear Filter" : "All Categories"}
+            </Button>
           </div>
         </div>
-        <div>
-          <Button 
-            variant="outline" 
-            className="w-full justify-start"
-            onClick={() => setSelectedCategory(null)}
-          >
-            <Filter className="mr-2 h-4 w-4" />
-            {selectedCategory ? "Clear Filter" : "All Categories"}
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Categories</CardTitle>
-              <CardDescription>Browse by type</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {ACTIVITY_CATEGORIES.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "ghost"}
-                  className="w-full justify-start text-left"
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category}
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="md:col-span-3">
-          <Tabs defaultValue="all">
-            <TabsList className="mb-4">
-              <TabsTrigger value="all">All Activities</TabsTrigger>
-              <TabsTrigger value="high-impact">High Impact</TabsTrigger>
-              <TabsTrigger value="quick">Quick Activities</TabsTrigger>
-              <TabsTrigger value="recommended">Recommended</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="all" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredActivities.map((activity, index) => (
-                  <Card key={index} className="overflow-hidden">
-                    <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between">
-                        <CardTitle className="text-lg">{activity.name}</CardTitle>
-                        <Badge>{activity.category}</Badge>
-                      </div>
-                      <CardDescription>
-                        {activity.frequency} x {activity.frequencyUnit}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pb-2">
-                      <div className="flex justify-between text-sm">
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                          <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
-                          <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button 
-                        className="w-full" 
-                        size="sm"
-                        onClick={() => handleAddActivity(activity)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add to My Activities
-                      </Button>
-                    </CardFooter>
-                  </Card>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="md:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Categories</CardTitle>
+                <CardDescription>Browse by type</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {ACTIVITY_CATEGORIES.map((category) => (
+                  <Button
+                    key={category}
+                    variant={selectedCategory === category ? "default" : "ghost"}
+                    className="w-full justify-start text-left"
+                    onClick={() => setSelectedCategory(category)}
+                  >
+                    {category}
+                  </Button>
                 ))}
-              </div>
-              
-              {filteredActivities.length === 0 && (
-                <div className="text-center p-10 bg-muted rounded-lg">
-                  <Search className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="font-medium text-lg mb-2">No activities found</h3>
-                  <p className="text-muted-foreground">
-                    Try adjusting your search or filters to find activities.
-                  </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="md:col-span-3">
+            <Tabs defaultValue="all">
+              <TabsList className="mb-4">
+                <TabsTrigger value="all">All Activities</TabsTrigger>
+                <TabsTrigger value="high-impact">High Impact</TabsTrigger>
+                <TabsTrigger value="quick">Quick Activities</TabsTrigger>
+                <TabsTrigger value="recommended">Recommended</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="all" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredActivities.map((activity, index) => (
+                    <Card key={index} className="overflow-hidden">
+                      <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between">
+                          <CardTitle className="text-lg">{activity.name}</CardTitle>
+                          <Badge>{activity.category}</Badge>
+                        </div>
+                        <CardDescription>
+                          {activity.frequency} x {activity.frequencyUnit}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pb-2">
+                        <div className="flex justify-between text-sm">
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                            <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
+                            <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button 
+                          className="w-full" 
+                          size="sm"
+                          onClick={() => handleAddActivity(activity)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add to My Activities
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
                 </div>
-              )}
-            </TabsContent>
+                
+                {filteredActivities.length === 0 && (
+                  <div className="text-center p-10 bg-muted rounded-lg">
+                    <Search className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="font-medium text-lg mb-2">No activities found</h3>
+                    <p className="text-muted-foreground">
+                      Try adjusting your search or filters to find activities.
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
 
-            <TabsContent value="high-impact" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredActivities
-                  .filter(a => a.lifeImpact >= 7)
-                  .map((activity, index) => (
-                    <Card key={index} className="overflow-hidden">
-                      <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between">
-                          <CardTitle className="text-lg">{activity.name}</CardTitle>
-                          <Badge>{activity.category}</Badge>
-                        </div>
-                        <CardDescription>
-                          {activity.frequency} x {activity.frequencyUnit}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="flex justify-between text-sm">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+              <TabsContent value="high-impact" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredActivities
+                    .filter(a => a.lifeImpact >= 7)
+                    .map((activity, index) => (
+                      <Card key={index} className="overflow-hidden">
+                        <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between">
+                            <CardTitle className="text-lg">{activity.name}</CardTitle>
+                            <Badge>{activity.category}</Badge>
                           </div>
-                          <div className="flex items-center">
-                            <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+                          <CardDescription>
+                            {activity.frequency} x {activity.frequencyUnit}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pb-2">
+                          <div className="flex justify-between text-sm">
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                              <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
+                              <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          className="w-full" 
-                          size="sm"
-                          onClick={() => handleAddActivity(activity)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add to My Activities
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-              </div>
-            </TabsContent>
+                        </CardContent>
+                        <CardFooter>
+                          <Button 
+                            className="w-full" 
+                            size="sm"
+                            onClick={() => handleAddActivity(activity)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add to My Activities
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                </div>
+              </TabsContent>
 
-            <TabsContent value="quick" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredActivities
-                  .filter(a => a.duration <= 30 && a.durationUnit === "minute")
-                  .map((activity, index) => (
-                    <Card key={index} className="overflow-hidden">
-                      <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between">
-                          <CardTitle className="text-lg">{activity.name}</CardTitle>
-                          <Badge>{activity.category}</Badge>
-                        </div>
-                        <CardDescription>
-                          {activity.frequency} x {activity.frequencyUnit}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="flex justify-between text-sm">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+              <TabsContent value="quick" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredActivities
+                    .filter(a => a.duration <= 30 && a.durationUnit === "minute")
+                    .map((activity, index) => (
+                      <Card key={index} className="overflow-hidden">
+                        <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between">
+                            <CardTitle className="text-lg">{activity.name}</CardTitle>
+                            <Badge>{activity.category}</Badge>
                           </div>
-                          <div className="flex items-center">
-                            <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+                          <CardDescription>
+                            {activity.frequency} x {activity.frequencyUnit}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pb-2">
+                          <div className="flex justify-between text-sm">
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                              <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
+                              <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          className="w-full" 
-                          size="sm"
-                          onClick={() => handleAddActivity(activity)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add to My Activities
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-              </div>
-            </TabsContent>
+                        </CardContent>
+                        <CardFooter>
+                          <Button 
+                            className="w-full" 
+                            size="sm"
+                            onClick={() => handleAddActivity(activity)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add to My Activities
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                </div>
+              </TabsContent>
 
-            <TabsContent value="recommended" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredActivities
-                  .filter((_, i) => i % 3 === 0) // Just a simulation of "recommended" activities
-                  .map((activity, index) => (
-                    <Card key={index} className="overflow-hidden border-primary">
-                      <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between">
-                          <CardTitle className="text-lg flex items-center">
-                            {activity.name}
-                            <Heart className="h-4 w-4 ml-2 text-red-500 fill-red-500" />
-                          </CardTitle>
-                          <Badge>{activity.category}</Badge>
-                        </div>
-                        <CardDescription>
-                          Recommended for your profile
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="flex justify-between text-sm">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+              <TabsContent value="recommended" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredActivities
+                    .filter((_, i) => i % 3 === 0) // Just a simulation of "recommended" activities
+                    .map((activity, index) => (
+                      <Card key={index} className="overflow-hidden border-primary">
+                        <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between">
+                            <CardTitle className="text-lg flex items-center">
+                              {activity.name}
+                              <Heart className="h-4 w-4 ml-2 text-red-500 fill-red-500" />
+                            </CardTitle>
+                            <Badge>{activity.category}</Badge>
                           </div>
-                          <div className="flex items-center">
-                            <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+                          <CardDescription>
+                            Recommended for your profile
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pb-2">
+                          <div className="flex justify-between text-sm">
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                              <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
+                              <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          className="w-full" 
-                          size="sm"
-                          onClick={() => handleAddActivity(activity)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add to My Activities
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+                        </CardContent>
+                        <CardFooter>
+                          <Button 
+                            className="w-full" 
+                            size="sm"
+                            onClick={() => handleAddActivity(activity)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add to My Activities
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </div>
     </div>
