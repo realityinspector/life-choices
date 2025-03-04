@@ -17,7 +17,8 @@ import {
   Line,
   PieChart, 
   Pie, 
-  Cell
+  Cell,
+  Legend
 } from 'recharts';
 import { UserData, Activity } from '@shared/schema';
 import { 
@@ -120,7 +121,7 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
       // Add some variation and impact from activities
       if (activities.length > 0) {
         const positiveImpact = activities.reduce((sum, activity) => 
-          sum + (activity.impact > 0 ? activity.impact : 0), 0) / activities.length;
+          sum + (activity.lifeImpact > 0 ? activity.lifeImpact : 0), 0) / activities.length;
         qualityScore += positiveImpact * 2 * (1 - i/projectionYears); // Impact decreases over time
       }
       
@@ -476,7 +477,7 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
               <CardContent>
                 <div className="text-3xl font-bold">{activities.length}</div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {activities.filter(a => a.impact > 0).length} positive impact activities
+                  {activities.filter(a => a.lifeImpact > 0).length} positive impact activities
                 </p>
               </CardContent>
             </Card>
@@ -503,7 +504,7 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
               <CardContent>
                 <div className="text-3xl font-bold">
                   {activities.length > 0 
-                    ? (activities.reduce((sum, act) => sum + act.impact, 0) / activities.length).toFixed(1)
+                    ? (activities.reduce((sum, act) => sum + act.lifeImpact, 0) / activities.length).toFixed(1)
                     : '0.0'}
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
@@ -555,10 +556,10 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'High Positive (6-10)', value: activities.filter(a => a.impact >= 6).length },
-                        { name: 'Medium Positive (3-5)', value: activities.filter(a => a.impact >= 3 && a.impact < 6).length },
-                        { name: 'Low Positive (0-2)', value: activities.filter(a => a.impact >= 0 && a.impact < 3).length },
-                        { name: 'Negative', value: activities.filter(a => a.impact < 0).length }
+                        { name: 'High Positive (6-10)', value: activities.filter(a => a.lifeImpact >= 6).length },
+                        { name: 'Medium Positive (3-5)', value: activities.filter(a => a.lifeImpact >= 3 && a.lifeImpact < 6).length },
+                        { name: 'Low Positive (0-2)', value: activities.filter(a => a.lifeImpact >= 0 && a.lifeImpact < 3).length },
+                        { name: 'Negative', value: activities.filter(a => a.lifeImpact < 0).length }
                       ]}
                       cx="50%"
                       cy="50%"
@@ -586,7 +587,7 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
               <CardContent>
                 <div className="space-y-4">
                   {activities
-                    .sort((a, b) => b.impact - a.impact)
+                    .sort((a, b) => b.lifeImpact - a.lifeImpact)
                     .slice(0, 5)
                     .map((activity, index) => (
                       <div key={index} className="flex items-center justify-between">
@@ -603,9 +604,9 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
                           </div>
                         </div>
                         <Badge 
-                          variant={activity.impact > 5 ? "default" : activity.impact > 0 ? "outline" : "destructive"}
+                          variant={activity.lifeImpact > 5 ? "default" : activity.lifeImpact > 0 ? "outline" : "destructive"}
                         >
-                          {activity.impact > 0 ? '+' : ''}{activity.impact}
+                          {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}
                         </Badge>
                       </div>
                     ))}
