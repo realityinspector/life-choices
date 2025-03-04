@@ -121,7 +121,7 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
       let qualityScore = 100 - (percentComplete * 0.5); // Base quality that decreases with age
       
       // Add some variation and impact from activities
-      if (activities.length > 0) {
+      if (activities && activities.length > 0) {
         const positiveImpact = activities.reduce((sum, activity) => 
           sum + (activity.lifeImpact > 0 ? activity.lifeImpact : 0), 0) / activities.length;
         qualityScore += positiveImpact * 2 * (1 - i/projectionYears); // Impact decreases over time
@@ -505,9 +505,10 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {activities.length > 0 
-                    ? (activities.reduce((sum, act) => sum + act.lifeImpact, 0) / activities.length).toFixed(1)
-                    : '0.0'}
+                  {(!activities || activities.length === 0) 
+                    ? '0.0'
+                    : (activities.reduce((sum, act) => sum + act.lifeImpact, 0) / activities.length).toFixed(1)
+                  }
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
                   On a scale from -10 to +10
