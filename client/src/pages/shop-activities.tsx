@@ -8,8 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/user-context";
-import { Activity, ActivityInsert } from "@shared/schema";
+import { Activity, ActivityInsert, UserData } from "@shared/schema";
 import { Store, Filter, Clock, Zap, Plus, Heart, Search } from "lucide-react";
+import Header from "@/components/header";
+import { useLocation } from "wouter";
 
 // Sample categories for activities
 const ACTIVITY_CATEGORIES = [
@@ -182,7 +184,8 @@ const SAMPLE_ACTIVITIES: Array<Required<ActivityInsert>> = [
 
 export default function ShopActivitiesPage() {
   const { toast } = useToast();
-  const { addActivity } = useUser();
+  const { userData, addActivity } = useUser();
+  const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [filteredActivities, setFilteredActivities] = useState<Required<ActivityInsert>[]>(SAMPLE_ACTIVITIES);
