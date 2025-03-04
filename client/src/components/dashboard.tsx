@@ -10,7 +10,7 @@ import {
   calculateLifetimeHours
 } from "@/lib/calculations";
 import { Activity } from "@shared/schema";
-import { ChevronRight, Clock, Plus, BarChart, User } from "lucide-react";
+import { ChevronRight, Clock, Plus, BarChart, User, ShoppingBag, Calendar, BarChart2 } from "lucide-react";
 
 interface DashboardProps {
   onViewChange: (view: string) => void;
@@ -97,6 +97,22 @@ const Dashboard = ({ onViewChange }: DashboardProps) => {
               </button>
               
               <button 
+                onClick={() => onViewChange('shop-activities')} 
+                className="w-full flex items-center justify-between px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <span>Shop Activities</span>
+                <ShoppingBag className="h-5 w-5 text-gray-400" />
+              </button>
+              
+              <button 
+                onClick={() => onViewChange('life-events')} 
+                className="w-full flex items-center justify-between px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <span>Browse Life Events</span>
+                <Calendar className="h-5 w-5 text-gray-400" />
+              </button>
+              
+              <button 
                 onClick={() => onViewChange('projections')} 
                 className="w-full flex items-center justify-between px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
@@ -110,6 +126,14 @@ const Dashboard = ({ onViewChange }: DashboardProps) => {
               >
                 <span>Update Profile</span>
                 <User className="h-5 w-5 text-gray-400" />
+              </button>
+              
+              <button 
+                onClick={() => onViewChange('analytics')} 
+                className="w-full flex items-center justify-between px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <span>View Analytics</span>
+                <BarChart2 className="h-5 w-5 text-gray-400" />
               </button>
             </div>
           </div>
