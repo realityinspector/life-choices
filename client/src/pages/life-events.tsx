@@ -39,12 +39,22 @@ export default function LifeEventsPage() {
     queryFn: getQueryFn<(UserLifeEvent & { event: LifeEvent })[]>({ on401: 'returnNull' }),
   });
 
-  // Filter life events based on search query
-  const filteredLifeEvents = lifeEvents.filter(event => {
+  // Filter life events based on search query and category
+  const filteredLifeEvents = !lifeEvents || lifeEvents.length === 0 ? [] : lifeEvents.filter(event => {
+    // Filter by category first
+    if (selectedCategory !== null && event.categoryId !== selectedCategory) {
+      return false;
+    }
+    
+    // Then filter by search terms
+    if (!searchQuery.trim()) {
+      return true; // If no search query, return all events that match the category filter
+    }
+    
     const label = event.label?.toLowerCase() || '';
     const relationship = event.relationship?.toLowerCase() || '';
     const motivator = event.motivator?.toLowerCase() || '';
-    const searchTerms = searchQuery.toLowerCase();
+    const searchTerms = searchQuery.toLowerCase().trim();
     
     return label.includes(searchTerms) || 
            relationship.includes(searchTerms) || 
@@ -53,6 +63,9 @@ export default function LifeEventsPage() {
 
   // Check if a life event is already in user's collection
   const isEventInUserCollection = (eventId: number) => {
+    if (!userLifeEvents || userLifeEvents.length === 0) {
+      return false;
+    }
     return userLifeEvents.some((userEvent) => userEvent.lifeEventId === eventId);
   };
 
@@ -116,7 +129,7 @@ export default function LifeEventsPage() {
                     >
                       All Categories
                     </Button>
-                    {categories.map(category => (
+                    {categories && categories.length > 0 ? categories.map(category => (
                       <Button 
                         key={category.id} 
                         variant={selectedCategory === category.id ? "default" : "outline"} 
@@ -126,7 +139,7 @@ export default function LifeEventsPage() {
                       >
                         {category.name}
                       </Button>
-                    ))}
+                    )) : <div className="text-center py-2 text-muted-foreground">No categories available</div>}
                   </div>
                 )}
               </CardContent>
@@ -141,7 +154,8 @@ export default function LifeEventsPage() {
                 <CardContent>
                   <ul className="space-y-2">
                     {selectedLifeEvents.map(eventId => {
-                      const event = lifeEvents.find(e => e.id === eventId);
+                      const event = lifeEvents && lifeEvents.length > 0 ? 
+                        lifeEvents.find(e => e.id === eventId) : null;
                       return event ? (
                         <li key={eventId} className="flex justify-between items-center">
                           <span className="truncate">{event.label}</span>
@@ -197,7 +211,8 @@ export default function LifeEventsPage() {
                 </div>
               ) : (
                 filteredLifeEvents.map(event => {
-                  const category = categories.find(c => c.id === event.categoryId);
+                  const category = categories && categories.length > 0 ? 
+                    categories.find(c => c.id === event.categoryId) : null;
                   const alreadyInCollection = isEventInUserCollection(event.id);
                   
                   return (

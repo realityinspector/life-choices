@@ -31,10 +31,18 @@ function Router() {
     <Switch>
       <Route path="/" component={FreeSundialPage} />
       <Route path="/login" component={LoginPage} />
-      {isUserSetup && <Route path="/dashboard" component={Home} />}
-      {isUserSetup && <Route path="/activities" component={() => <Home initialView="activities" />} />}
-      {isUserSetup && <Route path="/time-machine" component={() => <Home initialView="projections" />} />}
-      {isUserSetup && <Route path="/profile" component={() => <Home initialView="profile" />} />}
+      {isUserSetup && <Route path="/dashboard">
+        {() => <Home initialView="dashboard" />}
+      </Route>}
+      {isUserSetup && <Route path="/activities">
+        {() => <Home initialView="activities" />}
+      </Route>}
+      {isUserSetup && <Route path="/time-machine">
+        {() => <Home initialView="projections" />}
+      </Route>}
+      {isUserSetup && <Route path="/profile">
+        {() => <Home initialView="profile" />}
+      </Route>}
       {isUserSetup && <Route path="/life-events" component={LifeEventsPage} />}
       {isUserSetup && <Route path="/shop-activities" component={ShopActivitiesPage} />}
       {isUserSetup && <Route path="/analytics" component={AnalyticsPage} />}

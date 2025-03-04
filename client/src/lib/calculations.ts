@@ -172,6 +172,10 @@ export const calculateProjectedActivityPercentage = (activity: Activity, targetA
 
 // Calculate total projected percentage at a specific age
 export const calculateTotalProjectedPercentage = (activities: Activity[], targetAge: number, userData: UserData): number => {
+  if (!activities || activities.length === 0) {
+    return 0;
+  }
+  
   const percentage = activities.reduce((total, activity) => {
     return total + calculateProjectedActivityPercentage(activity, targetAge, userData);
   }, 0);
@@ -180,6 +184,10 @@ export const calculateTotalProjectedPercentage = (activities: Activity[], target
 
 // Calculate projected life impact at a specific age
 export const calculateProjectedLifeImpact = (activities: Activity[], targetAge: number, userData: UserData): number => {
+  if (!activities || activities.length === 0) {
+    return 0;
+  }
+  
   // Simple proportional calculation
   const fullImpact = calculateNetLifeImpact(activities);
   const ageSpan = userData.lifeExpectancy - userData.age;
