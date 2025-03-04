@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, real, json, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, real, json, varchar, timestamp, date, time, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -52,3 +52,85 @@ export type ActivityInsert = Omit<z.infer<typeof activitySchema>, "frequencyUnit
 };
 
 export type Activity = typeof activities.$inferSelect;
+
+// Life Event schema
+export const lifeEvents = pgTable("life_events", {
+  id: serial("id").primaryKey(),
+  label: text("label").notNull(),
+  relationship: text("relationship"),
+  categoryId: integer("category_id").references(() => eventCategories.id),
+  eventsPerYear: real("events_per_year").default(0),
+  bonusEvents: real("bonus_events").default(0),
+  isCalendared: boolean("is_calendared").default(false),
+  defaultStartDate: date("default_start_date"),
+  defaultStartTime: time("default_start_time"),
+  historicalEventsPerYear: real("historical_events_per_year").default(0),
+  hoursMin: real("hours_min").default(0),
+  hoursMax: real("hours_max").default(0),
+  overlapTolerance: text("overlap_tolerance"),
+  exclusionDayRequired: boolean("exclusion_day_required").default(false),
+  costMin: decimal("cost_min", { precision: 10, scale: 2 }).default("0"),
+  costMax: decimal("cost_max", { precision: 10, scale: 2 }).default("0"),
+  valueMin: decimal("value_min", { precision: 10, scale: 2 }).default("0"),
+  yearsInLength: real("years_in_length").default(0),
+  valueMaxPersonal: decimal("value_max_personal", { precision: 10, scale: 2 }).default("0"),
+  peopleValueMultiplier: real("people_value_multiplier").default(1),
+  timeVortexMultiplier: real("time_vortex_multiplier").default(1),
+  lovePriorityMultiplier: real("love_priority_multiplier").default(1),
+  motivator: text("motivator"),
+  ageStart: integer("age_start").default(0),
+  ageStop: integer("age_stop").default(100),
+  lifePoints: text("life_points"),
+  emotionValue: text("emotion_value"),
+  longevityImpact: text("longevity_impact"),
+  approvalStatus: text("approval_status").default("Not Sent"),
+  emoji: text("emoji"),
+  isDefault: boolean("is_default").default(true),
+});
+
+// Event Categories schema
+export const eventCategories = pgTable("event_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  color: text("color"),
+});
+
+// User Life Events junction table
+export const userLifeEvents = pgTable("user_life_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  lifeEventId: integer("life_event_id").notNull().references(() => lifeEvents.id, { onDelete: "cascade" }),
+  isActive: boolean("is_active").default(true),
+  dateAdded: timestamp("date_added").defaultNow(),
+  customLabel: text("custom_label"),
+  customRelationship: text("custom_relationship"),
+  customEventsPerYear: real("custom_events_per_year"),
+  customStartDate: date("custom_start_date"),
+  customHoursMin: real("custom_hours_min"),
+  customHoursMax: real("custom_hours_max"),
+});
+
+// Create schemas for insert
+export const eventCategorySchema = createInsertSchema(eventCategories).omit({
+  id: true,
+});
+
+export const lifeEventSchema = createInsertSchema(lifeEvents).omit({
+  id: true,
+});
+
+export const userLifeEventSchema = createInsertSchema(userLifeEvents).omit({
+  id: true,
+  dateAdded: true,
+});
+
+// Type definitions
+export type EventCategory = typeof eventCategories.$inferSelect;
+export type InsertEventCategory = typeof eventCategories.$inferInsert;
+
+export type LifeEvent = typeof lifeEvents.$inferSelect;
+export type InsertLifeEvent = typeof lifeEvents.$inferInsert;
+
+export type UserLifeEvent = typeof userLifeEvents.$inferSelect;
+export type InsertUserLifeEvent = typeof userLifeEvents.$inferInsert;

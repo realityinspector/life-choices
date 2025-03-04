@@ -1,5 +1,7 @@
-import { UserData, ActivityInsert, User, Activity, users, activities, InsertUser } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { UserData, ActivityInsert, User, Activity, users, activities, InsertUser, 
+  EventCategory, InsertEventCategory, LifeEvent, InsertLifeEvent, UserLifeEvent, InsertUserLifeEvent, 
+  eventCategories, lifeEvents, userLifeEvents } from "@shared/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import session from "express-session";
 import pgSessionPkg from "connect-pg-simple";
 import { pool, db } from "./db";
@@ -23,6 +25,28 @@ export interface IStorage {
   deleteActivity(id: number): Promise<void>;
   deleteAllActivities(userId?: number): Promise<void>;
   
+  // Event category methods
+  getEventCategories(): Promise<EventCategory[]>;
+  getEventCategory(id: number): Promise<EventCategory | undefined>;
+  createEventCategory(category: InsertEventCategory): Promise<EventCategory>;
+  updateEventCategory(id: number, category: Partial<InsertEventCategory>): Promise<EventCategory | undefined>;
+  deleteEventCategory(id: number): Promise<void>;
+  
+  // Life event methods
+  getLifeEvents(categoryId?: number): Promise<LifeEvent[]>;
+  getLifeEvent(id: number): Promise<LifeEvent | undefined>;
+  createLifeEvent(event: InsertLifeEvent): Promise<LifeEvent>;
+  createManyLifeEvents(events: InsertLifeEvent[]): Promise<LifeEvent[]>;
+  updateLifeEvent(id: number, event: Partial<InsertLifeEvent>): Promise<LifeEvent | undefined>;
+  deleteLifeEvent(id: number): Promise<void>;
+  
+  // User life event methods
+  getUserLifeEvents(userId: number): Promise<(UserLifeEvent & { event: LifeEvent })[]>;
+  getUserLifeEvent(id: number): Promise<(UserLifeEvent & { event: LifeEvent }) | undefined>;
+  addUserLifeEvent(userEvent: InsertUserLifeEvent): Promise<UserLifeEvent>;
+  updateUserLifeEvent(id: number, userEvent: Partial<InsertUserLifeEvent>): Promise<UserLifeEvent | undefined>;
+  removeUserLifeEvent(id: number): Promise<void>;
+  
   // Session store
   sessionStore: session.Store;
 }
@@ -37,6 +61,7 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  // User methods
   async getUser(id?: number): Promise<User | undefined> {
     if (!id) return undefined;
     const result = await db.select().from(users).where(eq(users.id, id));
@@ -67,6 +92,7 @@ export class DatabaseStorage implements IStorage {
     await this.deleteAllActivities(id); // Cascade delete user's activities
   }
 
+  // Activity methods
   async getActivities(userId?: number): Promise<Activity[]> {
     if (!userId) return [];
     return db.select().from(activities).where(eq(activities.userId, userId));
@@ -104,6 +130,128 @@ export class DatabaseStorage implements IStorage {
   async deleteAllActivities(userId?: number): Promise<void> {
     if (!userId) return;
     await db.delete(activities).where(eq(activities.userId, userId));
+  }
+  
+  // Event category methods
+  async getEventCategories(): Promise<EventCategory[]> {
+    return db.select().from(eventCategories);
+  }
+  
+  async getEventCategory(id: number): Promise<EventCategory | undefined> {
+    const result = await db.select().from(eventCategories).where(eq(eventCategories.id, id));
+    return result[0];
+  }
+  
+  async createEventCategory(category: InsertEventCategory): Promise<EventCategory> {
+    const result = await db.insert(eventCategories).values(category).returning();
+    return result[0];
+  }
+  
+  async updateEventCategory(id: number, category: Partial<InsertEventCategory>): Promise<EventCategory | undefined> {
+    const existingCategory = await this.getEventCategory(id);
+    if (!existingCategory) {
+      return undefined;
+    }
+    
+    const result = await db.update(eventCategories)
+      .set(category)
+      .where(eq(eventCategories.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteEventCategory(id: number): Promise<void> {
+    await db.delete(eventCategories).where(eq(eventCategories.id, id));
+  }
+  
+  // Life event methods
+  async getLifeEvents(categoryId?: number): Promise<LifeEvent[]> {
+    if (categoryId) {
+      return db.select().from(lifeEvents).where(eq(lifeEvents.categoryId, categoryId));
+    }
+    return db.select().from(lifeEvents);
+  }
+  
+  async getLifeEvent(id: number): Promise<LifeEvent | undefined> {
+    const result = await db.select().from(lifeEvents).where(eq(lifeEvents.id, id));
+    return result[0];
+  }
+  
+  async createLifeEvent(event: InsertLifeEvent): Promise<LifeEvent> {
+    const result = await db.insert(lifeEvents).values(event).returning();
+    return result[0];
+  }
+  
+  async createManyLifeEvents(events: InsertLifeEvent[]): Promise<LifeEvent[]> {
+    const result = await db.insert(lifeEvents).values(events).returning();
+    return result;
+  }
+  
+  async updateLifeEvent(id: number, event: Partial<InsertLifeEvent>): Promise<LifeEvent | undefined> {
+    const existingEvent = await this.getLifeEvent(id);
+    if (!existingEvent) {
+      return undefined;
+    }
+    
+    const result = await db.update(lifeEvents)
+      .set(event)
+      .where(eq(lifeEvents.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteLifeEvent(id: number): Promise<void> {
+    await db.delete(lifeEvents).where(eq(lifeEvents.id, id));
+  }
+  
+  // User life event methods
+  async getUserLifeEvents(userId: number): Promise<(UserLifeEvent & { event: LifeEvent })[]> {
+    const userEvents = await db.select().from(userLifeEvents).where(eq(userLifeEvents.userId, userId));
+    
+    const result = [];
+    for (const userEvent of userEvents) {
+      const event = await this.getLifeEvent(userEvent.lifeEventId);
+      if (event) {
+        result.push({ ...userEvent, event });
+      }
+    }
+    
+    return result;
+  }
+  
+  async getUserLifeEvent(id: number): Promise<(UserLifeEvent & { event: LifeEvent }) | undefined> {
+    const userEvent = await db.select().from(userLifeEvents).where(eq(userLifeEvents.id, id)).then(res => res[0]);
+    if (!userEvent) return undefined;
+    
+    const event = await this.getLifeEvent(userEvent.lifeEventId);
+    if (!event) return undefined;
+    
+    return { ...userEvent, event };
+  }
+  
+  async addUserLifeEvent(userEvent: InsertUserLifeEvent): Promise<UserLifeEvent> {
+    const result = await db.insert(userLifeEvents).values(userEvent).returning();
+    return result[0];
+  }
+  
+  async updateUserLifeEvent(id: number, userEvent: Partial<InsertUserLifeEvent>): Promise<UserLifeEvent | undefined> {
+    const existingUserEvent = await db.select().from(userLifeEvents).where(eq(userLifeEvents.id, id)).then(res => res[0]);
+    if (!existingUserEvent) {
+      return undefined;
+    }
+    
+    const result = await db.update(userLifeEvents)
+      .set(userEvent)
+      .where(eq(userLifeEvents.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async removeUserLifeEvent(id: number): Promise<void> {
+    await db.delete(userLifeEvents).where(eq(userLifeEvents.id, id));
   }
 }
 
