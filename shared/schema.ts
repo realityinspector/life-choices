@@ -2,6 +2,63 @@ import { pgTable, text, serial, integer, boolean, real, json, varchar, timestamp
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// System Prompts schema
+export const systemPrompts = pgTable("system_prompts", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  content: text("content").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// LLM Conversation schema
+export const llmConversations = pgTable("llm_conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// LLM Messages schema
+export const llmMessages = pgTable("llm_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => llmConversations.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // 'system', 'user', 'assistant'
+  content: text("content").notNull(),
+  systemPromptId: integer("system_prompt_id").references(() => systemPrompts.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Create schemas for insert
+export const systemPromptSchema = createInsertSchema(systemPrompts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const llmConversationSchema = createInsertSchema(llmConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const llmMessageSchema = createInsertSchema(llmMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type definitions
+export type SystemPrompt = typeof systemPrompts.$inferSelect;
+export type InsertSystemPrompt = typeof systemPrompts.$inferInsert;
+
+export type LLMConversation = typeof llmConversations.$inferSelect;
+export type InsertLLMConversation = typeof llmConversations.$inferInsert;
+
+export type LLMMessage = typeof llmMessages.$inferSelect;
+export type InsertLLMMessage = typeof llmMessages.$inferInsert;
+
 // User schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),

@@ -1,7 +1,8 @@
 import { UserData, ActivityInsert, User, Activity, users, activities, InsertUser, 
   EventCategory, InsertEventCategory, LifeEvent, InsertLifeEvent, UserLifeEvent, InsertUserLifeEvent, 
-  eventCategories, lifeEvents, userLifeEvents } from "@shared/schema";
-import { eq, and, isNull } from "drizzle-orm";
+  eventCategories, lifeEvents, userLifeEvents, SystemPrompt, InsertSystemPrompt, systemPrompts,
+  LLMConversation, InsertLLMConversation, llmConversations, LLMMessage, InsertLLMMessage, llmMessages } from "@shared/schema";
+import { eq, and, isNull, desc } from "drizzle-orm";
 import session from "express-session";
 import pgSessionPkg from "connect-pg-simple";
 import { pool, db } from "./db";
@@ -46,6 +47,26 @@ export interface IStorage {
   addUserLifeEvent(userEvent: InsertUserLifeEvent): Promise<UserLifeEvent>;
   updateUserLifeEvent(id: number, userEvent: Partial<InsertUserLifeEvent>): Promise<UserLifeEvent | undefined>;
   removeUserLifeEvent(id: number): Promise<void>;
+  
+  // System prompt methods
+  getSystemPrompts(): Promise<SystemPrompt[]>;
+  getSystemPrompt(id: number): Promise<SystemPrompt | undefined>;
+  getSystemPromptByName(name: string): Promise<SystemPrompt | undefined>;
+  createSystemPrompt(prompt: InsertSystemPrompt): Promise<SystemPrompt>;
+  updateSystemPrompt(id: number, prompt: Partial<InsertSystemPrompt>): Promise<SystemPrompt | undefined>;
+  deleteSystemPrompt(id: number): Promise<void>;
+  
+  // LLM conversation methods
+  getLLMConversations(userId: number): Promise<LLMConversation[]>;
+  getLLMConversation(id: number): Promise<LLMConversation | undefined>;
+  createLLMConversation(conversation: InsertLLMConversation): Promise<LLMConversation>;
+  updateLLMConversation(id: number, conversation: Partial<InsertLLMConversation>): Promise<LLMConversation | undefined>;
+  deleteLLMConversation(id: number): Promise<void>;
+  
+  // LLM message methods
+  getLLMMessages(conversationId: number): Promise<LLMMessage[]>;
+  getLLMMessage(id: number): Promise<LLMMessage | undefined>;
+  createLLMMessage(message: InsertLLMMessage): Promise<LLMMessage>;
   
   // Session store
   sessionStore: session.Store;
@@ -252,6 +273,104 @@ export class DatabaseStorage implements IStorage {
   
   async removeUserLifeEvent(id: number): Promise<void> {
     await db.delete(userLifeEvents).where(eq(userLifeEvents.id, id));
+  }
+
+  // System prompt methods
+  async getSystemPrompts(): Promise<SystemPrompt[]> {
+    return db.select().from(systemPrompts);
+  }
+  
+  async getSystemPrompt(id: number): Promise<SystemPrompt | undefined> {
+    const result = await db.select().from(systemPrompts).where(eq(systemPrompts.id, id));
+    return result[0];
+  }
+  
+  async getSystemPromptByName(name: string): Promise<SystemPrompt | undefined> {
+    const result = await db.select().from(systemPrompts).where(eq(systemPrompts.name, name));
+    return result[0];
+  }
+  
+  async createSystemPrompt(prompt: InsertSystemPrompt): Promise<SystemPrompt> {
+    const result = await db.insert(systemPrompts).values(prompt).returning();
+    return result[0];
+  }
+  
+  async updateSystemPrompt(id: number, prompt: Partial<InsertSystemPrompt>): Promise<SystemPrompt | undefined> {
+    const existingPrompt = await this.getSystemPrompt(id);
+    if (!existingPrompt) {
+      return undefined;
+    }
+    
+    const result = await db.update(systemPrompts)
+      .set({
+        ...prompt,
+        updatedAt: new Date()
+      })
+      .where(eq(systemPrompts.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteSystemPrompt(id: number): Promise<void> {
+    await db.delete(systemPrompts).where(eq(systemPrompts.id, id));
+  }
+  
+  // LLM conversation methods
+  async getLLMConversations(userId: number): Promise<LLMConversation[]> {
+    return db.select()
+      .from(llmConversations)
+      .where(eq(llmConversations.userId, userId))
+      .orderBy(desc(llmConversations.updatedAt));
+  }
+  
+  async getLLMConversation(id: number): Promise<LLMConversation | undefined> {
+    const result = await db.select().from(llmConversations).where(eq(llmConversations.id, id));
+    return result[0];
+  }
+  
+  async createLLMConversation(conversation: InsertLLMConversation): Promise<LLMConversation> {
+    const result = await db.insert(llmConversations).values(conversation).returning();
+    return result[0];
+  }
+  
+  async updateLLMConversation(id: number, conversation: Partial<InsertLLMConversation>): Promise<LLMConversation | undefined> {
+    const existingConversation = await this.getLLMConversation(id);
+    if (!existingConversation) {
+      return undefined;
+    }
+    
+    const result = await db.update(llmConversations)
+      .set({
+        ...conversation,
+        updatedAt: new Date()
+      })
+      .where(eq(llmConversations.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteLLMConversation(id: number): Promise<void> {
+    await db.delete(llmConversations).where(eq(llmConversations.id, id));
+  }
+  
+  // LLM message methods
+  async getLLMMessages(conversationId: number): Promise<LLMMessage[]> {
+    return db.select()
+      .from(llmMessages)
+      .where(eq(llmMessages.conversationId, conversationId))
+      .orderBy(llmMessages.createdAt);
+  }
+  
+  async getLLMMessage(id: number): Promise<LLMMessage | undefined> {
+    const result = await db.select().from(llmMessages).where(eq(llmMessages.id, id));
+    return result[0];
+  }
+  
+  async createLLMMessage(message: InsertLLMMessage): Promise<LLMMessage> {
+    const result = await db.insert(llmMessages).values(message).returning();
+    return result[0];
   }
 }
 
