@@ -13,7 +13,9 @@ jest.mock('../../lib/queryClient', () => ({
     invalidateQueries: jest.fn(),
   },
   apiRequest: jest.fn(),
-  getQueryFn: () => jest.fn().mockResolvedValue({}),
+  getQueryFn: () => ({ 
+    queryFn: jest.fn().mockResolvedValue({}) 
+  }),
 }));
 
 describe('Dashboard Component', () => {
