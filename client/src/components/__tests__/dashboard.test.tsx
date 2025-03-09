@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import Dashboard from '../dashboard';
 import { UserProvider } from '../../context/user-context';
+import { jest } from '@jest/globals';
 
 // Mock the onViewChange function
 const mockOnViewChange = jest.fn();

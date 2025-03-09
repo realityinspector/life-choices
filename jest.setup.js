@@ -2,6 +2,7 @@
 // allows you to do things like:
 // expect(element).toHaveTextContent(/react/i)
 import '@testing-library/jest-dom';
+import { jest } from '@jest/globals';
 
 // Mock fetch for testing API calls
 global.fetch = jest.fn();

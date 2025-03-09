@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import Header from '../header';
+import { jest } from '@jest/globals';
 
 // Create a mock user data for testing that matches the UserData type
 const mockUserData = {
