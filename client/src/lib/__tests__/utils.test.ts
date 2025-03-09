@@ -1,4 +1,5 @@
 import { cn } from '../utils';
+import { expect, describe, it } from '@jest/globals';
 
 describe('cn utility function', () => {
   it('merges class names correctly', () => {

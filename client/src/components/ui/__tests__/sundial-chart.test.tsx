@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import SundialChart from '../sundial-chart';
 import { UserProvider } from '../../../context/user-context';
+import { jest, expect, describe, it } from '@jest/globals';
 
 // Mock D3 functionality
 jest.mock('d3', () => ({
@@ -39,7 +40,7 @@ jest.mock('../../../lib/queryClient', () => ({
     invalidateQueries: jest.fn(),
   },
   apiRequest: jest.fn(),
-  getQueryFn: () => jest.fn().mockResolvedValue([]),
+  getQueryFn: () => jest.fn().mockResolvedValue({}),
 }));
 
 describe('SundialChart Component', () => {

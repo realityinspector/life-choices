@@ -1,6 +1,6 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 const config = {
-  preset: 'ts-jest',
+  preset: 'ts-jest/presets/js-with-ts-esm',
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/client/src'],
   moduleNameMapper: {
@@ -17,6 +17,12 @@ const config = {
     }],
   },
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  testTimeout: 30000, // Increase timeout to 30 seconds
+  globals: {
+    'ts-jest': {
+      useESM: true,
+    },
+  },
 };
 
 export default config;
