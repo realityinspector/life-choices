@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import Header from '../header';
 
-// Create a mock user data for testing
+// Create a mock user data for testing that matches the UserData type
 const mockUserData = {
   id: 1,
   username: 'testuser',
@@ -9,6 +9,7 @@ const mockUserData = {
   age: 30,
   lifeExpectancy: 85,
   sleepHours: 8,
+  password: 'password', // Adding password field for UserData compatibility
   createdAt: new Date(),
   updatedAt: new Date()
 };

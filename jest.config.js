@@ -1,5 +1,5 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
-module.exports = {
+const config = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   roots: ['<rootDir>/client/src'],
@@ -13,6 +13,10 @@ module.exports = {
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: 'tsconfig.json',
+      useESM: true,
     }],
   },
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
 };
+
+export default config;
