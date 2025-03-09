@@ -8,7 +8,7 @@ global.fetch = jest.fn();
 
 // Reset any request mocks after each test
 afterEach(() => {
-  if (global.fetch && typeof (global.fetch as jest.Mock).mockClear === 'function') {
-    (global.fetch as jest.Mock).mockClear();
+  if (global.fetch && typeof global.fetch.mockClear === 'function') {
+    global.fetch.mockClear();
   }
 });
