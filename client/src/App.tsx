@@ -12,6 +12,8 @@ import AnalyticsPage from "@/pages/analytics";
 import ShopActivitiesPage from "@/pages/shop-activities";
 import CartPage from "@/pages/cart";
 import WhatsNextPage from "@/pages/whats-next";
+import ProfilePage from "@/pages/profile";
+import TasksPage from "@/pages/tasks";
 
 // Set the document title
 document.title = "Life Choices | Do what matters, one choice at a time";
@@ -73,18 +75,10 @@ function Router() {
       )}
       
       {/* Task management screens */}
-      {isUserSetup && (
-        <Route path="/activities">
-          {() => <Home initialView="activities" />}
-        </Route>
-      )}
+      {isUserSetup && <Route path="/activities" component={TasksPage} />}
       
       {/* Calendar view */}
-      {isUserSetup && (
-        <Route path="/calendar">
-          {() => <Home initialView="calendar" />}
-        </Route>
-      )}
+      {isUserSetup && <Route path="/calendar" component={CalendarPage} />}
       
       {/* User profile */}
       {isUserSetup && <Route path="/profile" component={ProfilePage} />}
