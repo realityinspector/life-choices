@@ -20,6 +20,7 @@ interface UserContextType {
   clearCart: () => void;
   saveCartActivities: () => Promise<void>;
   resetData: () => void;
+  logout: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -37,41 +38,67 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityCart, setActivityCart] = useState<ActivityInsert[]>([]);
 
-  // Load data from localStorage and API on initial render
+  // Load data from API on initial render and handle auth state
   useEffect(() => {
     const loadData = async () => {
       try {
-        // First try to get user data from API
-        const userDataResponse = await apiRequest('GET', '/api/user', undefined);
-        const userData = await userDataResponse.json();
+        // First try to get user data from API with credentials
+        const userDataResponse = await fetch('/api/user', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
         
-        if (userData) {
-          setUserData(userData);
-          setIsUserSetup(true);
+        if (userDataResponse.ok) {
+          const userData = await userDataResponse.json();
           
-          // Then get activities
-          const activitiesResponse = await apiRequest('GET', '/api/activities', undefined);
-          const activities = await activitiesResponse.json();
-          setActivities(activities);
+          if (userData) {
+            setUserData(userData);
+            setIsUserSetup(true);
+            
+            // Then get activities
+            const activitiesResponse = await fetch('/api/activities', {
+              method: 'GET',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (activitiesResponse.ok) {
+              const activities = await activitiesResponse.json();
+              setActivities(activities);
+            }
+            
+            // Load cart from localStorage (cart is client-side only)
+            const savedCart = localStorage.getItem('lifechoicesCart');
+            if (savedCart) {
+              setActivityCart(JSON.parse(savedCart));
+            }
+          }
+        } else {
+          // If not authenticated, try to load from localStorage as fallback
+          const savedUserData = localStorage.getItem('lifechoicesUserData');
+          const savedActivities = localStorage.getItem('lifechoicesActivities');
+          const savedCart = localStorage.getItem('lifechoicesCart');
+          
+          if (savedUserData) {
+            setUserData(JSON.parse(savedUserData));
+            setIsUserSetup(true);
+          }
+          
+          if (savedActivities) {
+            setActivities(JSON.parse(savedActivities));
+          }
+
+          if (savedCart) {
+            setActivityCart(JSON.parse(savedCart));
+          }
         }
       } catch (error) {
-        // Fallback to localStorage if API fails
-        const savedUserData = localStorage.getItem('lifechoicesUserData');
-        const savedActivities = localStorage.getItem('lifechoicesActivities');
-        const savedCart = localStorage.getItem('lifechoicesCart');
-        
-        if (savedUserData) {
-          setUserData(JSON.parse(savedUserData));
-          setIsUserSetup(true);
-        }
-        
-        if (savedActivities) {
-          setActivities(JSON.parse(savedActivities));
-        }
-
-        if (savedCart) {
-          setActivityCart(JSON.parse(savedCart));
-        }
+        console.error('Error loading user data:', error);
       }
     };
     
@@ -297,6 +324,55 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setActivityCart([]);
     setIsUserSetup(false);
   };
+  
+  const logout = async () => {
+    try {
+      // Call the server logout endpoint
+      await fetch('/api/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      // Clear the user data regardless of server response
+      setUserData({
+        name: '',
+        username: '',
+        password: '',
+        age: 30,
+        lifeExpectancy: 85,
+        sleepHours: 8
+      });
+      setActivities([]);
+      setIsUserSetup(false);
+      
+      // Keep cart data (optional - can be cleared too if needed)
+      
+      // Remove any localStorage data that might have been used as fallback
+      localStorage.removeItem('lifechoicesUserData');
+      localStorage.removeItem('lifechoicesActivities');
+    } catch (error) {
+      console.error('Logout error:', error);
+      
+      // Still clear client-side state even if API fails
+      setUserData({
+        name: '',
+        username: '',
+        password: '',
+        age: 30,
+        lifeExpectancy: 85,
+        sleepHours: 8
+      });
+      setActivities([]);
+      setIsUserSetup(false);
+      
+      // Remove localStorage data
+      localStorage.removeItem('lifechoicesUserData');
+      localStorage.removeItem('lifechoicesActivities');
+    }
+  };
 
   return (
     <UserContext.Provider value={{
@@ -315,7 +391,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       getCartActivities,
       clearCart,
       saveCartActivities,
-      resetData
+      resetData,
+      logout
     }}>
       {children}
     </UserContext.Provider>

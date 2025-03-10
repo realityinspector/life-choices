@@ -16,32 +16,50 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
   const [, setLocation] = useLocation();
   const { completeSetup } = useUser();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Since we're using in-memory storage, we'll simulate a login
-    // In a real app, this would be an API call
-    if (username && password) {
-      // Create a user with default values
-      const userData: UserData = {
-        name: username,
-        username: username, // Set username explicitly
-        password: password, // Include password
-        age: 30,
-        lifeExpectancy: 85,
-        sleepHours: 8
-      };
+    try {
+      if (!username || !password) {
+        toast({
+          title: "Login failed",
+          description: "Please enter your username and password",
+          variant: "destructive",
+        });
+        return;
+      }
       
-      completeSetup(userData);
-      toast({
-        title: "Login successful",
-        description: "Welcome back to Life Choices!",
+      // Actually authenticate with the server
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+        credentials: 'include'
       });
-      setLocation("/whats-next");
-    } else {
+      
+      if (response.ok) {
+        const userData = await response.json();
+        completeSetup(userData);
+        toast({
+          title: "Login successful",
+          description: "Welcome back to Life Choices!",
+        });
+        setLocation("/whats-next");
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Login failed",
+          description: error.message || "Authentication failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
       toast({
-        title: "Login failed",
-        description: "Please enter your username and password",
+        title: "Login error",
+        description: "An error occurred. Please try again.",
         variant: "destructive",
       });
     }
@@ -99,30 +117,57 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
   const [, setLocation] = useLocation();
   const { completeSetup } = useUser();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Similar to login, we're simulating registration
-    if (username && password && name) {
-      const userData: UserData = {
-        name,
-        username, // Set username explicitly
-        password, // Include password
-        age,
-        lifeExpectancy,
-        sleepHours: 8
-      };
+    try {
+      if (!username || !password || !name) {
+        toast({
+          title: "Registration failed",
+          description: "Please fill out all required fields",
+          variant: "destructive",
+        });
+        return;
+      }
       
-      completeSetup(userData);
-      toast({
-        title: "Registration successful",
-        description: "Welcome to Life Choices!",
+      // Register with the server
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          username, 
+          password, 
+          name, 
+          age, 
+          lifeExpectancy, 
+          sleepHours: 8 
+        }),
+        credentials: 'include'
       });
-      setLocation("/whats-next");
-    } else {
+      
+      if (response.ok) {
+        const userData = await response.json();
+        completeSetup(userData);
+        toast({
+          title: "Registration successful",
+          description: "Welcome to Life Choices!",
+        });
+        setLocation("/whats-next");
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Registration failed",
+          description: error.message || "Registration failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
       toast({
-        title: "Registration failed",
-        description: "Please fill out all required fields",
+        title: "Registration error",
+        description: "An error occurred. Please try again.",
         variant: "destructive",
       });
     }

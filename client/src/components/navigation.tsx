@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   CheckCircle2, 
   ListChecks, 
@@ -8,15 +8,40 @@ import {
   BarChart2, 
   Store, 
   Share2, 
-  Home
+  Home,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/context/user-context";
+import { useToast } from "@/hooks/use-toast";
 
 interface NavigationProps {
   currentPath: string;
 }
 
 const Navigation = ({ currentPath }: NavigationProps) => {
+  const { logout } = useUser();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      setLocation("/login");
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout error",
+        description: "There was a problem logging out",
+        variant: "destructive",
+      });
+    }
+  };
+  
   // Define the main navigation items
   const navItems = [
     {
