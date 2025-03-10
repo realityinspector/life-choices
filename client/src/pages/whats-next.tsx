@@ -149,7 +149,7 @@ export default function WhatsNextPage() {
         
         <Link href="/shop-activities" className="flex flex-col items-center py-1 text-gray-500">
           <Plus className="h-6 w-6" />
-          <span className="text-xs mt-1">Activities</span>
+          <span className="text-xs mt-1">Add</span>
         </Link>
         
         <Link href="/calendar" className="flex flex-col items-center py-1 text-gray-500">

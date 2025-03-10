@@ -50,7 +50,17 @@ function Router() {
         <Route path="/whats-next" component={WhatsNextPage} />
       )}
       
-      {/* If user is authenticated and goes to root, show What's Next */}
+      {/* Legacy routes for compatibility */}
+      {isUserSetup && (
+        <Route path="/next">
+          {() => {
+            window.location.href = "/whats-next";
+            return null;
+          }}
+        </Route>
+      )}
+      
+      {/* If user is authenticated and goes to home, show What's Next */}
       {isUserSetup && (
         <Route path="/home" component={WhatsNextPage} />
       )}
