@@ -125,6 +125,15 @@ const Navigation = ({ currentPath }: NavigationProps) => {
             </Button>
           </Link>
         ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-sm text-gray-500"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </Button>
       </div>
     </div>
   );
