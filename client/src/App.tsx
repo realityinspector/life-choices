@@ -11,6 +11,7 @@ import LifeEventsPage from "@/pages/life-events";
 import AnalyticsPage from "@/pages/analytics";
 import ShopActivitiesPage from "@/pages/shop-activities";
 import CartPage from "@/pages/cart";
+import WhatsNextPage from "@/pages/whats-next";
 
 // Set the document title
 document.title = "Life Choices | Do what matters, one choice at a time";
@@ -33,7 +34,8 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={LandingPageWrapper} />
+      {/* Only show landing page if user is not logged in */}
+      {!isUserSetup && <Route path="/" component={LandingPageWrapper} />}
       <Route path="/login" component={LoginPage} />
       
       {/* Main app - for authenticated users */}
@@ -45,15 +47,18 @@ function Router() {
       
       {/* "What's Next" view as home for authenticated users */}
       {isUserSetup && (
-        <Route path="/next">
-          {() => <Home initialView="nextTask" />}
-        </Route>
+        <Route path="/whats-next" component={WhatsNextPage} />
       )}
       
       {/* If user is authenticated and goes to root, show What's Next */}
       {isUserSetup && (
+        <Route path="/home" component={WhatsNextPage} />
+      )}
+      
+      {/* Default route for authenticated users */}
+      {isUserSetup && (
         <Route path="/">
-          {() => <Home initialView="nextTask" />}
+          <WhatsNextPage />
         </Route>
       )}
       
