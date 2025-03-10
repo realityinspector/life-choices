@@ -74,19 +74,9 @@ export default function WhatsNextPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Nav Bar */}
-      <div className="bg-white border-b p-4 flex items-center justify-between">
+      {/* Simple header */}
+      <div className="bg-white p-4 flex items-center justify-between border-b">
         <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
-        <div className="flex items-center space-x-3">
-          <Link href="/cart" className="relative">
-            <ShoppingBag className="h-6 w-6 text-gray-700" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-          </Link>
-        </div>
       </div>
 
       {/* Main Content */}

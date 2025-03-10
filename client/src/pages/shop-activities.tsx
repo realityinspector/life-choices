@@ -776,10 +776,10 @@ export default function ShopActivitiesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Nav Bar - Simple */}
-      <div className="bg-white border-b p-4 flex items-center justify-between">
+      {/* Simple header */}
+      <div className="bg-white p-4 flex items-center justify-between border-b">
         <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center">
           <Button 
             variant="outline" 
             size="icon" 
