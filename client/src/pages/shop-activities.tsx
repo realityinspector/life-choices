@@ -94,6 +94,103 @@ const ACTIVITY_CATEGORIES = [
   "Home & Life Management"
 ];
 
+// Function to generate personalized recommendations based on user profile and current activities
+const generateRecommendations = (
+  userData: UserData,
+  currentActivities: Activity[],
+  allActivities: Required<ActivityInsert>[]
+): Required<ActivityInsert>[] => {
+  // Get current categories and activity names
+  const userCategories = new Set(currentActivities.map(a => a.category));
+  const userActivityNames = new Set(currentActivities.map(a => a.name));
+  
+  // Calculate total time allocated per week
+  const weeklyTimeAllocation = currentActivities.reduce((total, activity) => {
+    let weeklyTime = activity.duration;
+    if (activity.durationUnit === "hour") {
+      weeklyTime *= 60; // Convert to minutes
+    }
+    
+    // Convert to weekly frequency
+    if (activity.frequencyUnit === "day") {
+      weeklyTime *= (activity.frequency * 7);
+    } else if (activity.frequencyUnit === "week") {
+      weeklyTime *= activity.frequency;
+    } else if (activity.frequencyUnit === "month") {
+      weeklyTime *= (activity.frequency / 4);
+    } else if (activity.frequencyUnit === "year") {
+      weeklyTime *= (activity.frequency / 52);
+    }
+    
+    return total + weeklyTime;
+  }, 0);
+  
+  // Calculate available weekly time (excluding sleep) in minutes
+  const availableWeeklyTime = (24 * 7 - userData.sleepHours * 7) * 60;
+  const timeUsagePercentage = (weeklyTimeAllocation / availableWeeklyTime) * 100;
+  
+  // Create a balanced recommendation set
+  const recommendations: Required<ActivityInsert>[] = [];
+  
+  // Approach 1: Recommend activities from categories the user is interested in but not fully explored
+  if (userCategories.size > 0) {
+    // Find activities in the same categories but with different names
+    const categorySimilarActivities = allActivities.filter(activity => 
+      userCategories.has(activity.category) && 
+      !userActivityNames.has(activity.name)
+    );
+    
+    recommendations.push(...categorySimilarActivities.slice(0, 3));
+  }
+  
+  // Approach 2: Recommend high-impact activities if the user has mostly low-impact ones
+  const averageImpact = currentActivities.length > 0 
+    ? currentActivities.reduce((sum, a) => sum + (a.lifeImpact || 0), 0) / currentActivities.length
+    : 0;
+    
+  if (averageImpact < 6 && recommendations.length < 6) {
+    const highImpactActivities = allActivities
+      .filter(a => a.lifeImpact >= 7 && !userActivityNames.has(a.name))
+      .slice(0, 3);
+      
+    recommendations.push(...highImpactActivities);
+  }
+  
+  // Approach 3: If the user has a busy schedule (>70% allocated), recommend shorter activities
+  if (timeUsagePercentage > 70 && recommendations.length < 8) {
+    const quickActivities = allActivities
+      .filter(a => 
+        a.duration <= 30 && 
+        a.durationUnit === "minute" && 
+        !userActivityNames.has(a.name)
+      )
+      .slice(0, 3);
+      
+    recommendations.push(...quickActivities);
+  }
+  
+  // Approach 4: Recommend activities from new categories if the user has a narrow focus
+  if (userCategories.size < 4 && recommendations.length < 10) {
+    const newCategoryActivities = allActivities
+      .filter(a => !userCategories.has(a.category) && !userActivityNames.has(a.name))
+      .slice(0, 3);
+      
+    recommendations.push(...newCategoryActivities);
+  }
+  
+  // If we still don't have enough recommendations, add some high-quality ones
+  if (recommendations.length < 6) {
+    const additionalActivities = allActivities
+      .filter(a => !userActivityNames.has(a.name) && a.lifeImpact >= 6)
+      .slice(0, 6 - recommendations.length);
+      
+    recommendations.push(...additionalActivities);
+  }
+  
+  // Remove any duplicates and return
+  return [...new Map(recommendations.map(item => [item.name, item])).values()];
+};
+
 // Sample activities data - in a real app, this would come from the database
 // Making sure all properties are defined to avoid TypeScript errors
 const SAMPLE_ACTIVITIES: Array<Required<ActivityInsert>> = [
