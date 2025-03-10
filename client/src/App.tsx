@@ -87,11 +87,7 @@ function Router() {
       )}
       
       {/* User profile */}
-      {isUserSetup && (
-        <Route path="/profile">
-          {() => <Home initialView="profile" />}
-        </Route>
-      )}
+      {isUserSetup && <Route path="/profile" component={ProfilePage} />}
       
       {/* Shopping and social features */}
       {isUserSetup && <Route path="/shop-activities" component={ShopActivitiesPage} />}

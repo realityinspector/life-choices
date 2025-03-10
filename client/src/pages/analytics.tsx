@@ -21,7 +21,6 @@ export default function AnalyticsPage() {
   if (!userData) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-        <Header />
         <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg text-center">
           <h1 className="text-2xl font-bold mb-4">Login Required</h1>
           <p className="mb-6">Please log in to view your analytics dashboard.</p>
@@ -33,9 +32,12 @@ export default function AnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <Header userData={userData} />
-        <div className="flex justify-center items-center h-[calc(100vh-100px)]">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        {/* Simple header */}
+        <div className="bg-white p-4 flex items-center justify-between border-b">
+          <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
+        </div>
+        <div className="flex-1 flex justify-center items-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       </div>
