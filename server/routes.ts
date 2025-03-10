@@ -24,6 +24,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     next();
   };
+  
+  // Register the new activity and cluster routers
+  app.use('/api/activities', activityRouter);
+  app.use('/api/clusters', clusterRouter);
 
   // User routes - protected
   app.put('/api/user', requireAuth, async (req, res) => {

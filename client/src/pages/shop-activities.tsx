@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/user-context";
 import { Activity, ActivityInsert, UserData } from "@shared/schema";
-import { Store, Filter, Clock, Zap, Plus, Heart, Search } from "lucide-react";
+import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check } from "lucide-react";
 import Header from "@/components/header";
 import { useLocation } from "wouter";
 
@@ -184,11 +184,18 @@ const SAMPLE_ACTIVITIES: Array<Required<ActivityInsert>> = [
 
 export default function ShopActivitiesPage() {
   const { toast } = useToast();
-  const { userData, addActivity } = useUser();
+  const { userData, addActivity, addActivitiesToCart, getCartActivities, saveCartActivities } = useUser();
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [filteredActivities, setFilteredActivities] = useState<Required<ActivityInsert>[]>(SAMPLE_ACTIVITIES);
+  const [cartItems, setCartItems] = useState<ActivityInsert[]>([]);
+  const [showCart, setShowCart] = useState(false);
+
+  useEffect(() => {
+    // Initialize cart from user context
+    setCartItems(getCartActivities());
+  }, [getCartActivities]);
 
   useEffect(() => {
     // Filter activities based on search query and category
@@ -209,11 +216,32 @@ export default function ShopActivitiesPage() {
   }, [searchQuery, selectedCategory]);
 
   const handleAddActivity = (activity: ActivityInsert) => {
+    // Add directly to activities
     addActivity(activity);
     toast({
       title: "Activity Added",
       description: `${activity.name} has been added to your activities.`,
     });
+  };
+  
+  const handleAddToCart = (activity: ActivityInsert) => {
+    // Add to cart
+    addActivitiesToCart([activity]);
+    setCartItems(getCartActivities());
+    toast({
+      title: "Added to Cart",
+      description: `${activity.name} has been added to your shopping cart.`,
+    });
+  };
+  
+  const handleCheckout = async () => {
+    await saveCartActivities();
+    toast({
+      title: "Activities Added",
+      description: `${cartItems.length} activities have been added to your routine.`,
+    });
+    setCartItems([]);
+    setShowCart(false);
   };
 
   const getImpactColor = (impact: number | undefined) => {
@@ -250,8 +278,80 @@ export default function ShopActivitiesPage() {
               Browse and add life-enhancing activities to your routine
             </p>
           </div>
-          <Store className="h-10 w-10 text-primary" />
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => setShowCart(!showCart)} 
+              className="relative"
+            >
+              <ShoppingCart className="h-6 w-6 text-primary" />
+              {cartItems.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                  {cartItems.length}
+                </span>
+              )}
+            </Button>
+            <Store className="h-10 w-10 text-primary" />
+          </div>
         </div>
+        
+        {/* Shopping Cart Drawer */}
+        {showCart && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
+            <div className="bg-background w-full max-w-md h-full flex flex-col overflow-hidden">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h2 className="text-xl font-bold">Your Shopping Cart</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowCart(false)}>
+                  &times;
+                </Button>
+              </div>
+              
+              <div className="flex-1 overflow-auto p-4">
+                {cartItems.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center">
+                    <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Your cart is empty</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Browse activities and add them to your cart
+                    </p>
+                    <Button onClick={() => setShowCart(false)}>Shop Activities</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {cartItems.map((item, i) => (
+                      <Card key={i} className="overflow-hidden">
+                        <div className={`h-2 ${getImpactColor(item.lifeImpact)}`} />
+                        <div className="p-4">
+                          <div className="flex justify-between mb-2">
+                            <h3 className="font-medium">{item.name}</h3>
+                            <Badge>{item.category}</Badge>
+                          </div>
+                          <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>{item.frequency} x {item.frequencyUnit}</span>
+                            <span>{item.duration} {item.durationUnit}{item.duration > 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {cartItems.length > 0 && (
+                <div className="p-4 border-t">
+                  <Button 
+                    className="w-full" 
+                    onClick={handleCheckout}
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Checkout ({cartItems.length} item{cartItems.length !== 1 ? 's' : ''})
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="md:col-span-3">
@@ -334,14 +434,23 @@ export default function ShopActivitiesPage() {
                           </div>
                         </div>
                       </CardContent>
-                      <CardFooter>
+                      <CardFooter className="flex space-x-2">
                         <Button 
-                          className="w-full" 
+                          className="flex-1" 
                           size="sm"
+                          onClick={() => handleAddToCart(activity)}
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Add to Cart
+                        </Button>
+                        <Button 
+                          className="flex-1" 
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleAddActivity(activity)}
                         >
                           <Plus className="h-4 w-4 mr-2" />
-                          Add to My Activities
+                          Add Now
                         </Button>
                       </CardFooter>
                     </Card>

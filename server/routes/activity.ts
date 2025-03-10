@@ -1,28 +1,48 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { storage } from '../storage';
 import { ActivityInsert, activitySchema } from '@shared/schema';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
+// Type guard for authentication
+function isAuthenticated(req: Request): boolean {
+  return req.isAuthenticated();
+}
+
+// Type for request.user with User ID
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: number;
+    [key: string]: any;
+  };
+}
+
 export const activityRouter = Router();
 
 // Get all activities for the logged-in user
 activityRouter.get('/', async (req, res) => {
-  if (!req.session.userId) {
+  if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
-  const activities = await storage.getActivities(req.session.userId);
+  // @ts-ignore - user will always exist due to isAuthenticated check
+  const userId = req.user.id;
+  const activities = await storage.getActivities(userId);
   res.json(activities);
 });
 
 // Get next activity suggestion
-activityRouter.get('/next', async (req, res) => {
-  if (!req.session.userId) {
+activityRouter.get('/next', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req)) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
-  const nextActivity = await storage.getNextActivity(req.session.userId);
+  const userId = req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ message: "Invalid user ID" });
+  }
+  
+  const nextActivity = await storage.getNextActivity(userId);
   if (!nextActivity) {
     return res.status(404).json({ message: "No activities found" });
   }
