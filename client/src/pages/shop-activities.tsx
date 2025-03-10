@@ -9,9 +9,9 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/user-context";
 import { Activity, ActivityInsert, UserData } from "@shared/schema";
-import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link, Lock, Globe, Calendar, ArrowRight } from "lucide-react";
+import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link as LinkIcon, Lock, Globe, Calendar, ArrowRight, User, ListChecks } from "lucide-react";
 import Header from "@/components/header";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import Navigation from "@/components/navigation";
 
 // Activity Card component for consistency across tabs
@@ -261,7 +261,7 @@ const ActivityCard = ({
                   >
                     <div className="flex items-center">
                       <div className="h-6 w-6 mr-2 flex items-center justify-center bg-blue-100 rounded-full">
-                        <Link className="h-4 w-4 text-blue-600" />
+                        <LinkIcon className="h-4 w-4 text-blue-600" />
                       </div>
                       <div>
                         <div className="font-medium">Anyone with the link</div>
@@ -383,500 +383,429 @@ const getRecommendationReason = (
   
   // Reasons based on various factors
   if (activity.lifeImpact >= 8) {
-    return "High impact activity that could significantly improve your life quality";
+    return "High impact activity that could benefit your well-being";
   }
   
   if (!userCategories.has(activity.category)) {
     return `You don't have any ${activity.category} activities yet`;
   }
   
-  if (activity.duration <= 15 && activity.durationUnit === "minute" && timeUsagePercentage > 70) {
-    return "Quick activity that fits your busy schedule";
-  }
-  
-  if (activity.frequencyUnit === "day" && activity.frequency >= 5) {
-    return "Daily practice that builds consistency";
-  }
-  
   if (activity.lifeImpact > averageImpact + 2) {
     return "Higher impact than your current activities";
   }
   
-  return "Aligns well with your current life patterns";
+  if (timeUsagePercentage < 30) {
+    return "You have plenty of free time for new activities";
+  }
+  
+  return "Complements your current lifestyle";
 };
 
-// Generate recommendations based on user data and current activities
-const generateRecommendations = (
-  userData: UserData,
-  userActivities: Activity[],
-  allActivities: Required<ActivityInsert>[]
-): Required<ActivityInsert>[] => {
-  // Filter out activities the user already has
-  const userActivityNames = new Set(userActivities.map(a => a.name.toLowerCase()));
-  const availableActivities = allActivities.filter(a => !userActivityNames.has(a.name.toLowerCase()));
-  
-  // Score each activity based on various factors
-  const scoredActivities = availableActivities.map(activity => {
-    let score = 0;
-    
-    // Check if the user has activities in this category
-    const userCategories = new Set(userActivities.map(a => a.category));
-    if (!userCategories.has(activity.category)) {
-      // Higher score for activities in categories the user doesn't have yet
-      score += 5;
-    }
-    
-    // Higher score for higher impact activities
-    score += activity.lifeImpact;
-    
-    // Higher score for activities that match frequency patterns the user already has
-    const frequencyUnits = userActivities.map(a => a.frequencyUnit);
-    if (frequencyUnits.includes(activity.frequencyUnit as any)) {
-      score += 3;
-    }
-    
-    // Higher score for quick activities if the user has a lot of activities already
-    if (userActivities.length > 10 && activity.duration <= 15 && activity.durationUnit === "minute") {
-      score += 4;
-    }
-    
-    return { activity, score };
-  });
-  
-  // Sort by score and take the top 6
-  return scoredActivities
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 6)
-    .map(sa => sa.activity);
-};
-
-// For testing: complete all the sample activities data with required fields
-function completeActivityData(activities: ActivityInsert[]): Required<ActivityInsert>[] {
-  return activities.map(activity => ({
-    name: activity.name,
-    category: activity.category || "General",
-    frequency: activity.frequency || 1,
-    frequencyUnit: activity.frequencyUnit || "week",
-    duration: activity.duration || 30,
-    durationUnit: activity.durationUnit || "minute",
-    lifeImpact: activity.lifeImpact || 5,
-    color: activity.color || "#4F46E5",
-    priority: activity.priority || 2,
-    exportToCalendar: activity.exportToCalendar || false,
-    emoji: activity.emoji || "✓",
-    clusterId: activity.clusterId || null
-  }));
-}
-
-// Sample activities for testing the shop (would come from API in real app)
-const SAMPLE_ACTIVITIES: ActivityInsert[] = [
+// Function to generate a sample set of activities
+const SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
   {
     name: "Morning Meditation",
+    description: "Start your day with 15 minutes of mindfulness meditation to reduce stress and improve focus.",
     category: "Spirituality & Mindfulness",
     frequency: 7,
-    frequencyUnit: "week",
-    duration: 20,
-    durationUnit: "minute",
-    lifeImpact: 8,
-    color: "#8884d8",
-    priority: 3,
-    exportToCalendar: false,
-    emoji: "🧘",
-    clusterId: null
-  },
-  {
-    name: "Daily Exercise",
-    category: "Health & Fitness",
-    frequency: 5,
-    frequencyUnit: "week",
-    duration: 30,
-    durationUnit: "minute",
-    lifeImpact: 9,
-    color: "#82ca9d",
-    priority: 4,
-    exportToCalendar: true,
-    emoji: "💪",
-    clusterId: null
-  },
-  {
-    name: "Reading Books",
-    category: "Learning & Growth",
-    frequency: 3,
-    frequencyUnit: "week",
-    duration: 45,
-    durationUnit: "minute",
-    lifeImpact: 7,
-    color: "#ffc658",
-    priority: 2,
-    exportToCalendar: false,
-    emoji: "📚",
-    clusterId: null
-  },
-  {
-    name: "Social Media Break",
-    category: "Health & Fitness",
-    frequency: 7,
-    frequencyUnit: "week",
-    duration: 2,
-    durationUnit: "hour",
-    lifeImpact: 6,
-    color: "#8dd1e1",
-    priority: 2,
-    exportToCalendar: true,
-    emoji: "📵",
-    clusterId: null
-  },
-  {
-    name: "Call a Friend",
-    category: "Relationships",
-    frequency: 1,
-    frequencyUnit: "week",
-    duration: 30,
-    durationUnit: "minute",
-    lifeImpact: 6,
-    color: "#a4de6c",
-    priority: 2,
-    exportToCalendar: true,
-    emoji: "📞",
-    clusterId: null
-  },
-  {
-    name: "Career Development",
-    category: "Work & Career",
-    frequency: 2,
-    frequencyUnit: "week",
-    duration: 1,
-    durationUnit: "hour",
-    lifeImpact: 8,
-    color: "#d0ed57",
-    priority: 3,
-    exportToCalendar: false,
-    emoji: "💼",
-    clusterId: null
-  },
-  {
-    name: "Cook a Healthy Meal",
-    category: "Health & Fitness",
-    frequency: 4,
-    frequencyUnit: "week",
-    duration: 45,
-    durationUnit: "minute",
-    lifeImpact: 7,
-    color: "#ffc658",
-    priority: 2,
-    exportToCalendar: false,
-    emoji: "🥗",
-    clusterId: null
-  },
-  {
-    name: "Journaling",
-    category: "Spirituality & Mindfulness",
-    frequency: 3,
     frequencyUnit: "week",
     duration: 15,
     durationUnit: "minute",
-    lifeImpact: 6,
-    color: "#8884d8",
-    priority: 2,
-    exportToCalendar: false,
-    emoji: "✍️",
-    clusterId: null
+    lifeImpact: 7,
+    completed: false
   },
   {
-    name: "Learn a Language",
+    name: "Read Non-Fiction",
+    description: "Expand your knowledge by reading non-fiction books on topics that interest you.",
     category: "Learning & Growth",
     frequency: 3,
     frequencyUnit: "week",
     duration: 30,
     durationUnit: "minute",
-    lifeImpact: 7,
-    color: "#82ca9d",
-    priority: 2,
-    exportToCalendar: false,
-    emoji: "🗣️",
-    clusterId: null
+    lifeImpact: 6,
+    completed: false
   },
   {
-    name: "Volunteer Work",
-    category: "Service & Community",
-    frequency: 2,
-    frequencyUnit: "month",
-    duration: 2,
-    durationUnit: "hour",
-    lifeImpact: 9,
-    color: "#8dd1e1",
-    priority: 2,
-    exportToCalendar: true,
-    emoji: "🤝",
-    clusterId: null
-  },
-  {
-    name: "Yoga Practice",
+    name: "High-Intensity Interval Training",
+    description: "Boost cardiovascular health and burn calories efficiently with HIIT workouts.",
     category: "Health & Fitness",
     frequency: 3,
     frequencyUnit: "week",
-    duration: 30,
+    duration: 25,
     durationUnit: "minute",
     lifeImpact: 8,
-    color: "#a4de6c",
-    priority: 3,
-    exportToCalendar: false,
-    emoji: "🧘‍♀️",
-    clusterId: null
+    completed: false
+  },
+  {
+    name: "Deep Work Sessions",
+    description: "Schedule focused work periods without distractions to maximize productivity.",
+    category: "Work & Career",
+    frequency: 5,
+    frequencyUnit: "week",
+    duration: 2,
+    durationUnit: "hour",
+    lifeImpact: 9,
+    completed: false
   },
   {
     name: "Family Game Night",
+    description: "Strengthen family bonds through fun, engaging games and activities.",
     category: "Relationships",
     frequency: 1,
     frequencyUnit: "week",
     duration: 2,
     durationUnit: "hour",
-    lifeImpact: 8,
-    color: "#d0ed57",
-    priority: 3,
-    exportToCalendar: true,
-    emoji: "🎲",
-    clusterId: null
-  },
-  {
-    name: "Digital Detox Day",
-    category: "Spirituality & Mindfulness",
-    frequency: 1,
-    frequencyUnit: "month",
-    duration: 1,
-    durationUnit: "hour",
     lifeImpact: 7,
-    color: "#8884d8",
-    priority: 2,
-    exportToCalendar: true,
-    emoji: "⏱️",
-    clusterId: null
+    completed: false
   },
   {
-    name: "Weekly Planning",
-    category: "Work & Career",
-    frequency: 1,
-    frequencyUnit: "week",
-    duration: 30,
-    durationUnit: "minute",
-    lifeImpact: 8,
-    color: "#ffc658",
-    priority: 4,
-    exportToCalendar: false,
-    emoji: "📆",
-    clusterId: null
-  },
-  {
-    name: "Outdoor Activity",
-    category: "Health & Fitness",
+    name: "Nature Walk",
+    description: "Connect with nature by taking mindful walks in natural settings.",
+    category: "Leisure & Recreation",
     frequency: 2,
     frequencyUnit: "week",
     duration: 1,
     durationUnit: "hour",
-    lifeImpact: 8,
-    color: "#82ca9d",
-    priority: 3,
-    exportToCalendar: false,
-    emoji: "🏞️",
-    clusterId: null
+    lifeImpact: 5,
+    completed: false
   },
   {
-    name: "Financial Review",
+    name: "Learn a New Language",
+    description: "Expand your horizons by learning a new language through consistent practice.",
+    category: "Learning & Growth",
+    frequency: 4,
+    frequencyUnit: "week",
+    duration: 20,
+    durationUnit: "minute",
+    lifeImpact: 6,
+    completed: false
+  },
+  {
+    name: "Volunteer at Local Community Center",
+    description: "Give back to your community by volunteering your time and skills.",
+    category: "Service & Community",
+    frequency: 2,
+    frequencyUnit: "month",
+    duration: 3,
+    durationUnit: "hour",
+    lifeImpact: 8,
+    completed: false
+  },
+  {
+    name: "Digital Detox",
+    description: "Take a break from screens and digital devices to reduce stress and be more present.",
+    category: "Spirituality & Mindfulness",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 4,
+    durationUnit: "hour",
+    lifeImpact: 6,
+    completed: false
+  },
+  {
+    name: "Cook a New Recipe",
+    description: "Explore culinary creativity by trying new recipes and cooking techniques.",
+    category: "Creativity",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 4,
+    completed: false
+  },
+  {
+    name: "Weekend Hike",
+    description: "Explore nature trails and get exercise through regular hiking excursions.",
+    category: "Travel & Adventure",
+    frequency: 2,
+    frequencyUnit: "month",
+    duration: 3,
+    durationUnit: "hour",
+    lifeImpact: 7,
+    completed: false
+  },
+  {
+    name: "Monthly Budget Review",
+    description: "Stay on top of your finances with regular budget reviews and planning.",
     category: "Home & Life Management",
     frequency: 1,
     frequencyUnit: "month",
-    duration: 45,
-    durationUnit: "minute",
-    lifeImpact: 7,
-    color: "#8dd1e1",
-    priority: 3,
-    exportToCalendar: false,
-    emoji: "💰",
-    clusterId: null
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 8,
+    completed: false
   },
   {
-    name: "Creative Project",
+    name: "Learn a Musical Instrument",
+    description: "Develop your musical abilities by learning to play an instrument of your choice.",
     category: "Creativity",
+    frequency: 3,
+    frequencyUnit: "week",
+    duration: 30,
+    durationUnit: "minute",
+    lifeImpact: 5,
+    completed: false
+  },
+  {
+    name: "Gratitude Journaling",
+    description: "Cultivate a positive mindset by regularly writing down things you're grateful for.",
+    category: "Spirituality & Mindfulness",
+    frequency: 5,
+    frequencyUnit: "week",
+    duration: 10,
+    durationUnit: "minute",
+    lifeImpact: 6,
+    completed: false
+  },
+  {
+    name: "Professional Networking",
+    description: "Build and maintain your professional network through regular outreach.",
+    category: "Work & Career",
+    frequency: 2,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 7,
+    completed: false
+  },
+  {
+    name: "Weekly Meal Prep",
+    description: "Save time and eat healthier by preparing meals in advance.",
+    category: "Home & Life Management",
     frequency: 1,
     frequencyUnit: "week",
     duration: 2,
     durationUnit: "hour",
-    lifeImpact: 7,
-    color: "#a4de6c",
-    priority: 2,
-    exportToCalendar: false,
-    emoji: "🎨",
-    clusterId: null
-  },
-  {
-    name: "Deep Work Session",
-    category: "Work & Career",
-    frequency: 3,
-    frequencyUnit: "week",
-    duration: 90,
-    durationUnit: "minute",
-    lifeImpact: 8,
-    color: "#d0ed57",
-    priority: 4,
-    exportToCalendar: true,
-    emoji: "🧠",
-    clusterId: null
+    lifeImpact: 6,
+    completed: false
   }
 ];
 
+const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
+  {
+    name: "Yoga Practice",
+    description: "Improve flexibility, strength, and mental clarity through regular yoga sessions.",
+    category: "Health & Fitness",
+    frequency: 3,
+    frequencyUnit: "week",
+    duration: 45,
+    durationUnit: "minute",
+    lifeImpact: 7,
+    completed: false
+  },
+  {
+    name: "Creative Writing",
+    description: "Express yourself and develop your writing skills through regular creative writing.",
+    category: "Creativity",
+    frequency: 2,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 5,
+    completed: false
+  },
+  {
+    name: "Language Exchange",
+    description: "Practice a foreign language with native speakers through conversation exchanges.",
+    category: "Learning & Growth",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 6,
+    completed: false
+  },
+  {
+    name: "Photography Walk",
+    description: "Combine walking with photography to appreciate your surroundings and develop your eye.",
+    category: "Creativity",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 4,
+    completed: false
+  },
+  {
+    name: "Strength Training",
+    description: "Build muscle and bone density through regular strength training workouts.",
+    category: "Health & Fitness",
+    frequency: 3,
+    frequencyUnit: "week",
+    duration: 45,
+    durationUnit: "minute",
+    lifeImpact: 8,
+    completed: false
+  },
+  {
+    name: "Date Night",
+    description: "Strengthen your romantic relationship with regular quality time together.",
+    category: "Relationships",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 3,
+    durationUnit: "hour",
+    lifeImpact: 8,
+    completed: false
+  }
+];
+
+function completeActivityData(activities: ActivityInsert[]): Required<ActivityInsert>[] {
+  return activities.map(a => ({
+    ...a,
+    description: a.description || "",
+    completed: a.completed ?? false
+  })) as Required<ActivityInsert>[];
+}
+
 export default function ShopActivitiesPage() {
-  const { toast } = useToast();
-  const { 
-    userData, 
-    activities, 
-    addActivity, 
-    addActivitiesToCart, 
-    getCartActivities, 
-    saveCartActivities,
-    completeActivity 
-  } = useUser();
-  const [location] = useLocation();
+  const { userData, activities, addActivity, completeActivity: completeUserActivity, addActivitiesToCart, getCartActivities } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [filteredActivities, setFilteredActivities] = useState<Required<ActivityInsert>[]>(completeActivityData(SAMPLE_ACTIVITIES));
-  const [recommendedActivities, setRecommendedActivities] = useState<Required<ActivityInsert>[]>([]);
-  const [cartItems, setCartItems] = useState<ActivityInsert[]>([]);
   const [showCart, setShowCart] = useState(false);
-
-  useEffect(() => {
-    // Initialize cart from user context
-    setCartItems(getCartActivities());
-  }, [getCartActivities]);
-
-  // Generate recommendations when user or activities change
-  useEffect(() => {
-    if (userData && activities) {
-      // Use our helper function to ensure activities have required properties
-      const completeActivities = completeActivityData(SAMPLE_ACTIVITIES);
-      
-      const recommendations = generateRecommendations(userData, activities, completeActivities);
-      setRecommendedActivities(recommendations);
-    }
-  }, [userData, activities]);
+  const [cartItems, setCartItems] = useState<ActivityInsert[]>([]);
+  const { toast } = useToast();
+  const [location, setLocation] = useLocation();
   
   useEffect(() => {
-    // Filter activities based on search query and category
-    const completedSamples = completeActivityData(SAMPLE_ACTIVITIES);
-    let result = completedSamples;
+    // Load cart items when the component mounts
+    setCartItems(getCartActivities());
+  }, [getCartActivities]);
+  
+  // Generate a set of all available activities
+  const allActivities = new Set<Required<ActivityInsert>>([
+    ...SAMPLE_ACTIVITIES,
+    ...MORE_SAMPLE_ACTIVITIES
+  ]);
+  
+  // Filter activities based on search and category
+  const filteredActivities = Array.from(allActivities).filter(activity => {
+    const matchesSearch = searchQuery === "" || 
+      activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.category.toLowerCase().includes(searchQuery.toLowerCase());
     
-    if (searchQuery.trim() !== "") {
-      result = result.filter(activity => 
-        activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        activity.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+    const matchesCategory = selectedCategory === null || activity.category === selectedCategory;
     
-    if (selectedCategory) {
-      result = result.filter(activity => activity.category === selectedCategory);
-    }
-    
-    setFilteredActivities(result);
-  }, [searchQuery, selectedCategory]);
-
+    return matchesSearch && matchesCategory;
+  });
+  
+  // Generate recommended activities for the user
+  const recommendedActivities = userData && activities 
+    ? Array.from(allActivities)
+      .filter(a => !activities.some(ua => ua.name === a.name)) // Don't recommend activities the user already has
+      .sort(() => Math.random() - 0.5) // Shuffle
+      .slice(0, 6) // Take the first 6
+    : [];
+  
   const handleAddActivity = (activity: ActivityInsert) => {
-    // Add directly to activities
     addActivity(activity);
+    
     toast({
       title: "Activity Added",
-      description: `${activity.name} has been added to your activities.`,
+      description: `${activity.name} has been added to your activities.`
     });
   };
   
   const handleAddToCart = (activity: ActivityInsert) => {
-    // Add to cart
+    if (cartItems.some(item => item.name === activity.name)) {
+      toast({
+        title: "Already in Cart",
+        description: `${activity.name} is already in your cart.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     addActivitiesToCart([activity]);
-    setCartItems(getCartActivities());
+    setCartItems(prev => [...prev, activity]);
+    
     toast({
       title: "Added to Cart",
-      description: `${activity.name} has been added to your shopping cart.`,
+      description: `${activity.name} has been added to your cart.`
     });
   };
   
+  const handleCheckout = () => {
+    toast({
+      title: "Checkout Complete",
+      description: `${cartItems.length} activities have been added to your routine.`
+    });
+    
+    // Add all cart items to the user's activities
+    cartItems.forEach(activity => {
+      addActivity(activity);
+    });
+    
+    // Clear the cart
+    setCartItems([]);
+    addActivitiesToCart([]);
+    
+    // Close the cart drawer
+    setShowCart(false);
+  };
+  
   const handleCompleteActivity = (activity: Activity) => {
-    completeActivity(activity.id);
+    completeUserActivity(activity.id);
+    
     toast({
       title: "Activity Completed",
-      description: `${activity.name} has been marked as complete.`,
+      description: `You've completed ${activity.name} for today.`
     });
   };
   
   const handleSkipActivity = (activity: Activity) => {
-    // Skip functionality - might be added to backend later
-    // For now, we just show a notification
+    // This would typically update the activity's next due date
+    // For now, we'll just show a toast
     toast({
       title: "Activity Skipped",
-      description: `${activity.name} has been skipped for now.`,
+      description: `${activity.name} will be rescheduled for later.`
     });
   };
   
-  const handleCheckout = async () => {
-    await saveCartActivities();
-    toast({
-      title: "Activities Added",
-      description: `${cartItems.length} activities have been added to your routine.`,
-    });
-    setCartItems([]);
-    setShowCart(false);
-  };
-
-  const getImpactColor = (impact: number | undefined) => {
-    if (!impact) return "bg-gray-500";
-    if (impact >= 8) return "bg-green-500";
-    if (impact >= 5) return "bg-blue-500";
-    if (impact >= 3) return "bg-yellow-500";
-    return "bg-gray-500";
-  };
-
-  // If user is not logged in, show login prompt
   if (!userData) {
     return (
-      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-        <Header />
-        <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg text-center">
-          <h1 className="text-2xl font-bold mb-4">Login Required</h1>
-          <p className="mb-6">Please log in to view and add activities.</p>
-          <Button onClick={() => window.location.href = "/login"}>Go to Login</Button>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <h1 className="text-2xl font-bold mb-4">Please log in to browse activities</h1>
+        <Button onClick={() => setLocation("/login")}>
+          Log In or Sign Up
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Header userData={userData} />
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Top Nav Bar - Simple */}
+      <div className="bg-white border-b p-4 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
+        <div className="flex items-center space-x-3">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => setShowCart(!showCart)} 
+            className="relative bg-white hover:bg-gray-50"
+          >
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            {cartItems.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                {cartItems.length}
+              </span>
+            )}
+          </Button>
+        </div>
+      </div>
       
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-          <div className="mb-4 md:mb-0">
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-              <Store className="h-6 w-6 text-primary mr-2" />
-              Shop Activities
-            </h1>
-            <p className="text-gray-500 mt-1">
-              Browse and add life-enhancing activities to your routine
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setShowCart(!showCart)} 
-              className="relative bg-white hover:bg-gray-50"
-            >
-              <ShoppingCart className="h-5 w-5 text-primary" />
-              {cartItems.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                  {cartItems.length}
-                </span>
-              )}
-            </Button>
-          </div>
+      <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Page Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+            <Store className="h-6 w-6 text-primary mr-2" />
+            Shop Activities
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Browse and add life-enhancing activities to your routine
+          </p>
         </div>
         
         {/* Shopping Cart Drawer */}
@@ -936,64 +865,84 @@ export default function ShopActivitiesPage() {
           </div>
         )}
 
-        {/* Main content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar on desktop, top filters on mobile */}
-          <div className="lg:col-span-1">
-            <div className="space-y-6">
-              {/* Search box */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  className="pl-10"
-                  placeholder="Search activities..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              
-              {/* Categories */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Categories</CardTitle>
-                  <CardDescription>Browse by type</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button
-                    variant={selectedCategory === null ? "default" : "ghost"}
-                    className="w-full justify-start text-left"
-                    onClick={() => setSelectedCategory(null)}
-                  >
-                    All Categories
-                  </Button>
-                  {ACTIVITY_CATEGORIES.map((category) => (
-                    <Button
-                      key={category}
-                      variant={selectedCategory === category ? "default" : "ghost"}
-                      className="w-full justify-start text-left"
-                      onClick={() => setSelectedCategory(category)}
-                    >
-                      {category}
-                    </Button>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
+        {/* Search box and Categories in one row */}
+        <div className="mb-6 space-y-4">
+          {/* Search box */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              className="pl-10"
+              placeholder="Search activities..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           
-          {/* Activities grid */}
-          <div className="lg:col-span-3">
-            <Tabs defaultValue="all">
-              <TabsList className="mb-4">
-                <TabsTrigger value="all">All Activities</TabsTrigger>
-                <TabsTrigger value="high-impact">High Impact</TabsTrigger>
-                <TabsTrigger value="quick">Quick Activities</TabsTrigger>
-                <TabsTrigger value="recommended">Recommended</TabsTrigger>
-              </TabsList>
+          {/* Simplified Categories */}
+          <div className="bg-white p-3 rounded-lg shadow-sm">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={selectedCategory === null ? "default" : "outline"}
+                onClick={() => setSelectedCategory(null)}
+              >
+                All
+              </Button>
+              {ACTIVITY_CATEGORIES.map((category) => (
+                <Button
+                  key={category}
+                  size="sm"
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category.split(' & ')[0]}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
 
-              <TabsContent value="all" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Array.from(filteredActivities).map((activity, index) => (
+        {/* Activities content */}
+        <div>
+          <Tabs defaultValue="all">
+            <TabsList className="mb-4">
+              <TabsTrigger value="all">All Activities</TabsTrigger>
+              <TabsTrigger value="high-impact">High Impact</TabsTrigger>
+              <TabsTrigger value="quick">Quick Activities</TabsTrigger>
+              <TabsTrigger value="recommended">Recommended</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from(filteredActivities).map((activity, index) => (
+                  <ActivityCard 
+                    key={index}
+                    activity={activity}
+                    onAddToCart={handleAddToCart}
+                    onAddNow={handleAddActivity}
+                    onComplete={handleCompleteActivity}
+                    onSkip={handleSkipActivity}
+                    userActivities={activities}
+                  />
+                ))}
+              </div>
+              
+              {filteredActivities.length === 0 && (
+                <div className="text-center p-10 bg-muted rounded-lg">
+                  <Search className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-medium text-lg mb-2">No activities found</h3>
+                  <p className="text-muted-foreground">
+                    Try adjusting your search or filters to find activities.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="high-impact" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from(filteredActivities)
+                  .filter(a => a.lifeImpact >= 7)
+                  .map((activity, index) => (
                     <ActivityCard 
                       key={index}
                       activity={activity}
@@ -1004,24 +953,43 @@ export default function ShopActivitiesPage() {
                       userActivities={activities}
                     />
                   ))}
-                </div>
-                
-                {filteredActivities.length === 0 && (
-                  <div className="text-center p-10 bg-muted rounded-lg">
-                    <Search className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="font-medium text-lg mb-2">No activities found</h3>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="quick" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from(filteredActivities)
+                  .filter(a => a.duration <= 30 && a.durationUnit === "minute")
+                  .map((activity, index) => (
+                    <ActivityCard 
+                      key={index}
+                      activity={activity}
+                      onAddToCart={handleAddToCart}
+                      onAddNow={handleAddActivity}
+                      onComplete={handleCompleteActivity}
+                      onSkip={handleSkipActivity}
+                      userActivities={activities}
+                    />
+                  ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="recommended" className="space-y-4">
+              {recommendedActivities.length > 0 ? (
+                <>
+                  <div className="bg-primary/10 rounded-lg p-4 mb-6">
+                    <h3 className="text-lg font-medium mb-2 flex items-center">
+                      <Heart className="h-5 w-5 mr-2 text-primary" fill="currentColor" /> 
+                      Personalized Recommendations
+                    </h3>
                     <p className="text-muted-foreground">
-                      Try adjusting your search or filters to find activities.
+                      Based on your current activities and profile, we've selected these activities 
+                      that might enhance your life balance and overall impact.
                     </p>
                   </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="high-impact" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Array.from(filteredActivities)
-                    .filter(a => a.lifeImpact >= 7)
-                    .map((activity, index) => (
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from(recommendedActivities).map((activity, index) => (
                       <ActivityCard 
                         key={index}
                         activity={activity}
@@ -1030,90 +998,76 @@ export default function ShopActivitiesPage() {
                         onComplete={handleCompleteActivity}
                         onSkip={handleSkipActivity}
                         userActivities={activities}
+                        isRecommended={true}
+                        recommendationReason={userData && activities ? getRecommendationReason(activity, userData, activities) : undefined}
                       />
                     ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="quick" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Array.from(filteredActivities)
-                    .filter(a => a.duration <= 30 && a.durationUnit === "minute")
-                    .map((activity, index) => (
-                      <ActivityCard 
-                        key={index}
-                        activity={activity}
-                        onAddToCart={handleAddToCart}
-                        onAddNow={handleAddActivity}
-                        onComplete={handleCompleteActivity}
-                        onSkip={handleSkipActivity}
-                        userActivities={activities}
-                      />
-                    ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="recommended" className="space-y-4">
-                {recommendedActivities.length > 0 ? (
-                  <>
-                    <div className="bg-primary/10 rounded-lg p-4 mb-6">
-                      <h3 className="text-lg font-medium mb-2 flex items-center">
-                        <Heart className="h-5 w-5 mr-2 text-primary" fill="currentColor" /> 
-                        Personalized Recommendations
-                      </h3>
-                      <p className="text-muted-foreground">
-                        Based on your current activities and profile, we've selected these activities 
-                        that might enhance your life balance and overall impact.
-                      </p>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Array.from(recommendedActivities).map((activity, index) => (
-                        <ActivityCard 
-                          key={index}
-                          activity={activity}
-                          onAddToCart={handleAddToCart}
-                          onAddNow={handleAddActivity}
-                          onComplete={handleCompleteActivity}
-                          onSkip={handleSkipActivity}
-                          userActivities={activities}
-                          isRecommended={true}
-                          recommendationReason={userData && activities ? getRecommendationReason(activity, userData, activities) : undefined}
-                        />
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center p-10 bg-muted rounded-lg">
-                    <Heart className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="font-medium text-lg mb-2">No recommendations yet</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Add some activities to your routine to get personalized recommendations.
-                    </p>
-                    <Button onClick={() => {
-                      const element = document.querySelector('[data-value="all"]');
-                      if (element && element instanceof HTMLElement) {
-                        element.click();
-                      }
-                    }}>
-                      Browse All Activities
-                    </Button>
                   </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
+                </>
+              ) : (
+                <div className="text-center p-10 bg-muted rounded-lg">
+                  <Heart className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-medium text-lg mb-2">No recommendations yet</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Add some activities to your routine to get personalized recommendations.
+                  </p>
+                  <Button onClick={() => {
+                    const element = document.querySelector('[data-value="all"]');
+                    if (element && element instanceof HTMLElement) {
+                      element.click();
+                    }
+                  }}>
+                    Browse All Activities
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
       
-      {/* Footer */}
-      <footer className="bg-white py-4 border-t mt-8">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-gray-500">
-            Life Choices: Do what matters, one choice at a time.
-          </p>
-        </div>
-      </footer>
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-2 px-4 grid grid-cols-6 gap-1 text-center">
+        <Link href="/" className="flex flex-col items-center py-1 text-gray-500">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          <span className="text-xs mt-1">Next</span>
+        </Link>
+        
+        <Link href="/activities" className="flex flex-col items-center py-1 text-gray-500">
+          <ListChecks className="h-6 w-6" />
+          <span className="text-xs mt-1">Tasks</span>
+        </Link>
+        
+        <Link href="/shop-activities" className="flex flex-col items-center py-1 text-teal-600">
+          <Store className="h-6 w-6" />
+          <span className="text-xs mt-1">Browse</span>
+        </Link>
+        
+        <Link href="/calendar" className="flex flex-col items-center py-1 text-gray-500">
+          <Calendar className="h-6 w-6" />
+          <span className="text-xs mt-1">Calendar</span>
+        </Link>
+        
+        <Link href="/cart" className="flex flex-col items-center py-1 text-gray-500 relative">
+          <ShoppingCart className="h-6 w-6" />
+          {cartItems.length > 0 && (
+            <span className="absolute top-0 right-1/4 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              {cartItems.length}
+            </span>
+          )}
+          <span className="text-xs mt-1">Cart</span>
+        </Link>
+        
+        <Link href="/profile" className="flex flex-col items-center py-1 text-gray-500">
+          <User className="h-6 w-6" />
+          <span className="text-xs mt-1">Profile</span>
+        </Link>
+      </div>
+      
+      {/* Spacer for fixed bottom navigation */}
+      <div className="h-16 md:h-0"></div>
     </div>
   );
 }
