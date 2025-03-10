@@ -96,8 +96,10 @@ activityRouter.post('/', async (req: AuthenticatedRequest, res) => {
       nextDue.setFullYear(nextDue.getFullYear() + parsed.frequency);
     }
     
+    const typedActivity = ensureActivityTypes(parsed);
+    
     const activityData: ActivityInsert & { userId: number, nextDue: Date } = {
-      ...parsed,
+      ...typedActivity,
       userId: userId,
       nextDue
     };
@@ -137,7 +139,8 @@ activityRouter.put('/:id', async (req: AuthenticatedRequest, res) => {
     }
     
     const parsed = activitySchema.parse(req.body);
-    const updatedActivity = await storage.updateActivity(activityId, parsed);
+    const typedActivity = ensureActivityTypes(parsed);
+    const updatedActivity = await storage.updateActivity(activityId, typedActivity);
     
     res.json(updatedActivity);
   } catch (error) {
@@ -252,8 +255,10 @@ activityRouter.post('/share', async (req: AuthenticatedRequest, res) => {
       nextDue.setFullYear(nextDue.getFullYear() + parsed.frequency);
     }
     
+    const typedActivity = ensureActivityTypes(parsed);
+    
     const activityData: ActivityInsert & { userId: number, nextDue: Date } = {
-      ...parsed,
+      ...typedActivity,
       userId: userId,
       nextDue
     };

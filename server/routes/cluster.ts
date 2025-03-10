@@ -1,7 +1,25 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { storage } from '../storage';
 import { activityClusterSchema } from '@shared/schema';
 import { z } from 'zod';
+
+// Type guard for authentication
+function isAuthenticated(req: Request): boolean {
+  return req.isAuthenticated();
+}
+
+// Type for request.user with User ID
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: number;
+    username: string;
+    name: string;
+    age: number;
+    lifeExpectancy: number;
+    sleepHours: number;
+    [key: string]: any;
+  };
+}
 
 export const clusterRouter = Router();
 
@@ -34,8 +52,8 @@ clusterRouter.get('/:id', async (req, res) => {
 });
 
 // Create a new cluster
-clusterRouter.post('/', async (req, res) => {
-  if (!req.session.userId) {
+clusterRouter.post('/', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
@@ -54,8 +72,8 @@ clusterRouter.post('/', async (req, res) => {
 });
 
 // Update an existing cluster
-clusterRouter.put('/:id', async (req, res) => {
-  if (!req.session.userId) {
+clusterRouter.put('/:id', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
@@ -82,8 +100,8 @@ clusterRouter.put('/:id', async (req, res) => {
 });
 
 // Delete a cluster
-clusterRouter.delete('/:id', async (req, res) => {
-  if (!req.session.userId) {
+clusterRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
