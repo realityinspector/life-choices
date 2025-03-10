@@ -1,7 +1,8 @@
 import { UserData, ActivityInsert, User, Activity, users, activities, InsertUser, 
   EventCategory, InsertEventCategory, LifeEvent, InsertLifeEvent, UserLifeEvent, InsertUserLifeEvent, 
   eventCategories, lifeEvents, userLifeEvents, SystemPrompt, InsertSystemPrompt, systemPrompts,
-  LLMConversation, InsertLLMConversation, llmConversations, LLMMessage, InsertLLMMessage, llmMessages } from "@shared/schema";
+  LLMConversation, InsertLLMConversation, llmConversations, LLMMessage, InsertLLMMessage, llmMessages,
+  ActivityCluster, InsertActivityCluster, activityClusters, ActivityInvitation, InsertActivityInvitation, activityInvitations } from "@shared/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import session from "express-session";
 import pgSessionPkg from "connect-pg-simple";
@@ -25,6 +26,24 @@ export interface IStorage {
   updateActivity(id: number, activity: ActivityInsert): Promise<Activity | undefined>;
   deleteActivity(id: number): Promise<void>;
   deleteAllActivities(userId?: number): Promise<void>;
+  getNextActivity(userId: number): Promise<Activity | undefined>;
+  completeActivity(id: number): Promise<Activity | undefined>;
+  
+  // Activity cluster methods
+  getActivityClusters(): Promise<ActivityCluster[]>;
+  getActivityCluster(id: number): Promise<ActivityCluster | undefined>;
+  createActivityCluster(cluster: InsertActivityCluster): Promise<ActivityCluster>;
+  updateActivityCluster(id: number, cluster: Partial<InsertActivityCluster>): Promise<ActivityCluster | undefined>;
+  deleteActivityCluster(id: number): Promise<void>;
+  getActivitiesByCluster(clusterId: number): Promise<Activity[]>;
+  
+  // Activity invitation methods
+  createActivityInvitation(invitation: InsertActivityInvitation): Promise<ActivityInvitation>;
+  getActivityInvitation(id: number): Promise<ActivityInvitation | undefined>;
+  getActivityInvitationByToken(token: string): Promise<ActivityInvitation | undefined>;
+  acceptActivityInvitation(token: string, userId: number): Promise<boolean>;
+  deleteActivityInvitation(id: number): Promise<void>;
+  getSentInvitations(userId: number): Promise<ActivityInvitation[]>;
   
   // Event category methods
   getEventCategories(): Promise<EventCategory[]>;
@@ -151,6 +170,153 @@ export class DatabaseStorage implements IStorage {
   async deleteAllActivities(userId?: number): Promise<void> {
     if (!userId) return;
     await db.delete(activities).where(eq(activities.userId, userId));
+  }
+  
+  async getNextActivity(userId: number): Promise<Activity | undefined> {
+    // Get the next due activity for this user, sorted by priority and due date
+    const now = new Date();
+    const result = await db.select()
+      .from(activities)
+      .where(and(
+        eq(activities.userId, userId),
+        activities.nextDue !== null,
+      ))
+      .orderBy(activities.priority, activities.nextDue)
+      .limit(1);
+    
+    return result[0];
+  }
+  
+  async completeActivity(id: number): Promise<Activity | undefined> {
+    // Mark an activity as completed by updating lastCompleted and nextDue
+    const activity = await this.getActivity(id);
+    if (!activity) return undefined;
+    
+    const now = new Date();
+    
+    // Calculate when the activity will be due next based on frequency
+    let nextDue: Date | null = new Date(now);
+    
+    if (activity.frequencyUnit === 'day') {
+      nextDue.setDate(nextDue.getDate() + activity.frequency);
+    } else if (activity.frequencyUnit === 'week') {
+      nextDue.setDate(nextDue.getDate() + (activity.frequency * 7));
+    } else if (activity.frequencyUnit === 'month') {
+      nextDue.setMonth(nextDue.getMonth() + activity.frequency);
+    } else if (activity.frequencyUnit === 'year') {
+      nextDue.setFullYear(nextDue.getFullYear() + activity.frequency);
+    }
+    
+    const result = await db.update(activities)
+      .set({
+        lastCompleted: now,
+        nextDue,
+        completionCount: (activity.completionCount || 0) + 1
+      })
+      .where(eq(activities.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  // Activity cluster methods
+  async getActivityClusters(): Promise<ActivityCluster[]> {
+    return db.select().from(activityClusters);
+  }
+  
+  async getActivityCluster(id: number): Promise<ActivityCluster | undefined> {
+    const result = await db.select().from(activityClusters).where(eq(activityClusters.id, id));
+    return result[0];
+  }
+  
+  async createActivityCluster(cluster: InsertActivityCluster): Promise<ActivityCluster> {
+    const result = await db.insert(activityClusters).values(cluster).returning();
+    return result[0];
+  }
+  
+  async updateActivityCluster(id: number, cluster: Partial<InsertActivityCluster>): Promise<ActivityCluster | undefined> {
+    const existingCluster = await this.getActivityCluster(id);
+    if (!existingCluster) {
+      return undefined;
+    }
+    
+    const result = await db.update(activityClusters)
+      .set(cluster)
+      .where(eq(activityClusters.id, id))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async deleteActivityCluster(id: number): Promise<void> {
+    await db.delete(activityClusters).where(eq(activityClusters.id, id));
+  }
+  
+  async getActivitiesByCluster(clusterId: number): Promise<Activity[]> {
+    return db.select()
+      .from(activities)
+      .where(eq(activities.clusterId, clusterId));
+  }
+  
+  // Activity invitation methods
+  async createActivityInvitation(invitation: InsertActivityInvitation): Promise<ActivityInvitation> {
+    const result = await db.insert(activityInvitations).values(invitation).returning();
+    return result[0];
+  }
+  
+  async getActivityInvitation(id: number): Promise<ActivityInvitation | undefined> {
+    const result = await db.select().from(activityInvitations).where(eq(activityInvitations.id, id));
+    return result[0];
+  }
+  
+  async getActivityInvitationByToken(token: string): Promise<ActivityInvitation | undefined> {
+    const result = await db.select().from(activityInvitations).where(eq(activityInvitations.invitationToken, token));
+    return result[0];
+  }
+  
+  async acceptActivityInvitation(token: string, userId: number): Promise<boolean> {
+    const invitation = await this.getActivityInvitationByToken(token);
+    if (!invitation) return false;
+    
+    // Get the original activity
+    const originalActivity = await this.getActivity(invitation.activityId);
+    if (!originalActivity) return false;
+    
+    // Create a copy of the activity for the new user
+    const activityCopy: ActivityInsert & { userId: number } = {
+      userId,
+      name: originalActivity.name,
+      category: originalActivity.category,
+      frequency: originalActivity.frequency,
+      frequencyUnit: originalActivity.frequencyUnit as any,
+      duration: originalActivity.duration,
+      durationUnit: originalActivity.durationUnit as any,
+      lifeImpact: originalActivity.lifeImpact,
+      color: originalActivity.color,
+      priority: originalActivity.priority,
+      emoji: originalActivity.emoji,
+      exportToCalendar: originalActivity.exportToCalendar,
+      clusterId: originalActivity.clusterId
+    };
+    
+    await this.createActivity(activityCopy);
+    
+    // Mark invitation as accepted
+    await db.update(activityInvitations)
+      .set({ accepted: true })
+      .where(eq(activityInvitations.id, invitation.id));
+    
+    return true;
+  }
+  
+  async deleteActivityInvitation(id: number): Promise<void> {
+    await db.delete(activityInvitations).where(eq(activityInvitations.id, id));
+  }
+  
+  async getSentInvitations(userId: number): Promise<ActivityInvitation[]> {
+    return db.select()
+      .from(activityInvitations)
+      .where(eq(activityInvitations.senderUserId, userId));
   }
   
   // Event category methods

@@ -65,9 +65,9 @@ export const users = pgTable("users", {
   username: varchar("username", { length: 50 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   name: text("name").notNull(),
-  age: integer("age").notNull(),
-  lifeExpectancy: integer("life_expectancy").notNull(),
-  sleepHours: real("sleep_hours").notNull(),
+  email: text("email"),
+  age: integer("age").default(30),
+  sleepHours: real("sleep_hours").default(8),
 });
 
 export const userSchema = createInsertSchema(users).omit({
@@ -96,17 +96,67 @@ export const activities = pgTable("activities", {
   durationUnit: text("duration_unit").notNull(),
   lifeImpact: real("life_impact").notNull().default(0),
   color: text("color").notNull(),
+  priority: integer("priority").default(1), // 1-5 priority level
+  lastCompleted: timestamp("last_completed"), // When was this last completed
+  nextDue: timestamp("next_due"), // When is it next due
+  completionCount: integer("completion_count").default(0), // How many times completed
+  exportToCalendar: boolean("export_to_calendar").default(false), // Export to calendar option
+  emoji: text("emoji"), // Emoji representation
+  clusterId: integer("cluster_id"), // For grouping related activities
+});
+
+// Activity clusters (groups of related activities)
+export const activityClusters = pgTable("activity_clusters", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  goal: text("goal"),
+  emoji: text("emoji"),
+  color: text("color").notNull(),
+  isTemplate: boolean("is_template").default(false), // Is this a template that can be added in bulk
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Shared activity invitations
+export const activityInvitations = pgTable("activity_invitations", {
+  id: serial("id").primaryKey(),
+  activityId: integer("activity_id").notNull().references(() => activities.id, { onDelete: "cascade" }),
+  senderUserId: integer("sender_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  recipientEmail: text("recipient_email"),
+  invitationToken: text("invitation_token").notNull(),
+  accepted: boolean("accepted").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
 });
 
 export const activitySchema = createInsertSchema(activities).omit({
   id: true,
   userId: true,
+  lastCompleted: true,
+  nextDue: true,
+  completionCount: true,
+});
+
+export const activityClusterSchema = createInsertSchema(activityClusters).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const activityInvitationSchema = createInsertSchema(activityInvitations).omit({
+  id: true,
+  createdAt: true,
 });
 
 export type ActivityInsert = Omit<z.infer<typeof activitySchema>, "frequencyUnit" | "durationUnit"> & {
   frequencyUnit: "day" | "week" | "month" | "year";
   durationUnit: "minute" | "hour";
 };
+
+export type ActivityCluster = typeof activityClusters.$inferSelect;
+export type InsertActivityCluster = typeof activityClusters.$inferInsert;
+
+export type ActivityInvitation = typeof activityInvitations.$inferSelect;
+export type InsertActivityInvitation = typeof activityInvitations.$inferInsert;
 
 export type Activity = typeof activities.$inferSelect;
 
