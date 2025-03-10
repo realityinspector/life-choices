@@ -50,11 +50,6 @@ const Navigation = ({ currentPath }: NavigationProps) => {
       icon: <Home className="h-4 w-4 mr-2" />,
     },
     {
-      label: "What's Next",
-      path: "/next",
-      icon: <CheckCircle2 className="h-4 w-4 mr-2" />,
-    },
-    {
       label: "Tasks",
       path: "/activities",
       icon: <ListChecks className="h-4 w-4 mr-2" />,
@@ -92,7 +87,7 @@ const Navigation = ({ currentPath }: NavigationProps) => {
 
   return (
     <div className="flex justify-between w-full">
-      <nav className="flex flex-wrap items-center space-x-1 md:space-x-2">
+      <nav className="flex items-center space-x-2">
         {navItems.map((item) => (
           <Link key={item.path} href={item.path}>
             <Button
@@ -107,7 +102,7 @@ const Navigation = ({ currentPath }: NavigationProps) => {
         ))}
       </nav>
 
-      <div className="flex items-center space-x-1">
+      <div className="flex items-center space-x-2">
         {utilityButtons.map((item) => (
           <Link key={item.path} href={item.path}>
             <Button

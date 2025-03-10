@@ -75,17 +75,17 @@ const ActivityCard = ({
 
   return (
     <>
-      <Card className={`overflow-hidden ${isRecommended ? "border-primary" : ""}`}>
-        <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-        <CardHeader className="pb-2">
-          <div className="flex justify-between">
-            <CardTitle className="text-lg flex items-center">
+      <Card className={`overflow-hidden h-full flex flex-col ${isRecommended ? "border-primary border-2" : ""}`}>
+        <div className={`h-1.5 ${getImpactColor(activity.lifeImpact)}`} />
+        <CardHeader className="pb-2 pt-3">
+          <div className="flex justify-between items-start">
+            <CardTitle className="text-base flex items-center">
               {activity.name}
-              {isRecommended && <Heart className="h-4 w-4 ml-2 text-red-500 fill-red-500" />}
+              {isRecommended && <Heart className="h-3.5 w-3.5 ml-1.5 text-red-500 fill-red-500" />}
             </CardTitle>
-            <Badge>{activity.category}</Badge>
+            <Badge className="text-xs">{activity.category}</Badge>
           </div>
-          <CardDescription>
+          <CardDescription className="mt-1 text-xs">
             {!isRecommended && `${activity.frequency} x ${activity.frequencyUnit}`}
             {isRecommended && recommendationReason ? (
               <span className="text-primary font-medium">{recommendationReason}</span>
@@ -94,14 +94,14 @@ const ActivityCard = ({
             ) : null}
           </CardDescription>
         </CardHeader>
-        <CardContent className="pb-2">
-          <div className="flex justify-between text-sm">
+        <CardContent className="pb-2 pt-0 flex-grow">
+          <div className="flex justify-between text-xs">
             <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+              <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
               <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center">
-              <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
+              <Zap className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
               <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
             </div>
           </div>
@@ -113,33 +113,33 @@ const ActivityCard = ({
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
+        <CardFooter className="flex flex-col space-y-1.5 pt-2">
           <div className="flex w-full space-x-2">
             <Button 
-              className="flex-1" 
+              className="flex-1 text-xs h-8" 
               size="sm"
               onClick={() => onAddToCart(activity)}
             >
-              <ShoppingCart className="h-4 w-4 mr-2" />
+              <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
               Add to Cart
             </Button>
             <Button 
-              className="flex-1" 
+              className="flex-1 text-xs h-8" 
               size="sm"
               variant="outline"
               onClick={() => onAddNow(activity)}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
               Add Now
             </Button>
           </div>
           <Button 
-            className="w-full" 
+            className="w-full text-xs h-8" 
             size="sm"
             variant="ghost"
             onClick={() => setShowShareModal(true)}
           >
-            <Share2 className="h-4 w-4 mr-2" />
+            <Share2 className="h-3.5 w-3.5 mr-1.5" />
             Share Activity
           </Button>
         </CardFooter>
@@ -682,17 +682,17 @@ export default function ShopActivitiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-100">
       <Header userData={userData} />
       
-      <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 flex-grow">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div className="mb-4 md:mb-0">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-              <Store className="h-8 w-8 text-primary mr-3 hidden md:inline" />
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+              <Store className="h-6 w-6 text-primary mr-2" />
               Shop Activities
             </h1>
-            <p className="text-gray-500 mt-1 md:pl-[44px]">
+            <p className="text-gray-500 mt-1">
               Browse and add life-enhancing activities to your routine
             </p>
           </div>
@@ -703,7 +703,7 @@ export default function ShopActivitiesPage() {
               onClick={() => setShowCart(!showCart)} 
               className="relative bg-white hover:bg-gray-50"
             >
-              <ShoppingCart className="h-6 w-6 text-primary" />
+              <ShoppingCart className="h-5 w-5 text-primary" />
               {cartItems.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full text-xs w-5 h-5 flex items-center justify-center">
                   {cartItems.length}
@@ -738,13 +738,13 @@ export default function ShopActivitiesPage() {
                   <div className="space-y-4">
                     {cartItems.map((item, i) => (
                       <Card key={i} className="overflow-hidden">
-                        <div className={`h-2 ${getImpactColor(item.lifeImpact)}`} />
-                        <div className="p-4">
-                          <div className="flex justify-between mb-2">
-                            <h3 className="font-medium">{item.name}</h3>
-                            <Badge>{item.category}</Badge>
+                        <div className={`h-1.5 ${getImpactColor(item.lifeImpact)}`} />
+                        <div className="p-3">
+                          <div className="flex justify-between mb-1.5">
+                            <h3 className="font-medium text-sm">{item.name}</h3>
+                            <Badge className="text-xs">{item.category}</Badge>
                           </div>
-                          <div className="flex justify-between text-sm text-muted-foreground">
+                          <div className="flex justify-between text-xs text-muted-foreground">
                             <span>{item.frequency} x {item.frequencyUnit}</span>
                             <span>{item.duration} {item.durationUnit}{item.duration > 1 ? 's' : ''}</span>
                           </div>
@@ -927,6 +927,15 @@ export default function ShopActivitiesPage() {
           </div>
         </div>
       </div>
+      
+      {/* Footer */}
+      <footer className="bg-white py-4 border-t mt-auto">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-sm text-gray-500">
+            Life Choices: Do what matters, one choice at a time.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
