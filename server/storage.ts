@@ -177,10 +177,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const result = await db.select()
       .from(activities)
-      .where(and(
-        eq(activities.userId, userId),
-        activities.nextDue !== null,
-      ))
+      .where(eq(activities.userId, userId))
       .orderBy(activities.priority, activities.nextDue)
       .limit(1);
     

@@ -5,6 +5,8 @@ import { userSchema, activitySchema, User, lifeEventSchema, userLifeEventSchema 
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth } from "./auth";
+import { activityRouter } from "./routes/activity";
+import { clusterRouter } from "./routes/cluster";
 
 // Type guard to check if user is authenticated
 function isAuthenticated(req: Request): boolean {

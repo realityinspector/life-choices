@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { UserData, Activity, ActivityInsert } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { v4 as uuidv4 } from 'uuid';
 
 interface UserContextType {
   isUserSetup: boolean;
@@ -11,6 +12,13 @@ interface UserContextType {
   addActivity: (activity: ActivityInsert) => void;
   updateActivity: (index: number, activity: ActivityInsert) => void;
   removeActivity: (index: number) => void;
+  completeActivity: (id: number) => void;
+  getNextActivity: () => Promise<Activity | undefined>;
+  createSharedActivity: (activity: ActivityInsert, recipientEmail: string) => Promise<string>;
+  addActivitiesToCart: (activities: ActivityInsert[]) => void;
+  getCartActivities: () => ActivityInsert[];
+  clearCart: () => void;
+  saveCartActivities: () => Promise<void>;
   resetData: () => void;
 }
 
@@ -20,11 +28,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isUserSetup, setIsUserSetup] = useState(false);
   const [userData, setUserData] = useState<UserData>({
     name: '',
+    username: '',
+    password: '',
     age: 30,
-    lifeExpectancy: 85,
     sleepHours: 8
   });
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [activityCart, setActivityCart] = useState<ActivityInsert[]>([]);
 
   // Load data from localStorage and API on initial render
   useEffect(() => {
@@ -45,8 +55,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         // Fallback to localStorage if API fails
-        const savedUserData = localStorage.getItem('sundialUserData');
-        const savedActivities = localStorage.getItem('sundialActivities');
+        const savedUserData = localStorage.getItem('lifechoicesUserData');
+        const savedActivities = localStorage.getItem('lifechoicesActivities');
+        const savedCart = localStorage.getItem('lifechoicesCart');
         
         if (savedUserData) {
           setUserData(JSON.parse(savedUserData));
@@ -55,6 +66,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         
         if (savedActivities) {
           setActivities(JSON.parse(savedActivities));
+        }
+
+        if (savedCart) {
+          setActivityCart(JSON.parse(savedCart));
         }
       }
     };
@@ -70,7 +85,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       await apiRequest('POST', '/api/user', newUserData);
     } catch (error) {
       // Fallback to localStorage if API fails
-      localStorage.setItem('sundialUserData', JSON.stringify(newUserData));
+      localStorage.setItem('lifechoicesUserData', JSON.stringify(newUserData));
     }
   };
 
@@ -81,7 +96,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       await apiRequest('PUT', '/api/user', newUserData);
     } catch (error) {
       // Fallback to localStorage if API fails
-      localStorage.setItem('sundialUserData', JSON.stringify(newUserData));
+      localStorage.setItem('lifechoicesUserData', JSON.stringify(newUserData));
     }
   };
 
@@ -94,17 +109,25 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       // Generate a unique ID and fallback to localStorage
       const newActivity = {
         ...activity,
-        id: activities.length > 0 ? Math.max(...activities.map(a => a.id || 0)) + 1 : 1
-      };
+        id: activities.length > 0 ? Math.max(...activities.map(a => a.id || 0)) + 1 : 1,
+        userId: 1 // Placeholder for local storage
+      } as Activity;
       const updatedActivities = [...activities, newActivity];
       setActivities(updatedActivities);
-      localStorage.setItem('sundialActivities', JSON.stringify(updatedActivities));
+      localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
     }
   };
 
   const updateActivity = async (index: number, activity: ActivityInsert) => {
     const activityToUpdate = activities[index];
-    const updatedActivity = { ...activity, id: activityToUpdate.id };
+    const updatedActivity = { 
+      ...activity, 
+      id: activityToUpdate.id,
+      userId: activityToUpdate.userId,
+      lastCompleted: activityToUpdate.lastCompleted,
+      nextDue: activityToUpdate.nextDue,
+      completionCount: activityToUpdate.completionCount
+    } as Activity;
     
     try {
       await apiRequest('PUT', `/api/activities/${activityToUpdate.id}`, updatedActivity);
@@ -116,7 +139,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       const updatedActivities = [...activities];
       updatedActivities[index] = updatedActivity;
       setActivities(updatedActivities);
-      localStorage.setItem('sundialActivities', JSON.stringify(updatedActivities));
+      localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
     }
   };
 
@@ -131,8 +154,123 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       // Fallback to localStorage if API fails
       const updatedActivities = activities.filter((_, i) => i !== index);
       setActivities(updatedActivities);
-      localStorage.setItem('sundialActivities', JSON.stringify(updatedActivities));
+      localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
     }
+  };
+
+  const completeActivity = async (id: number) => {
+    try {
+      const response = await apiRequest('POST', `/api/activities/${id}/complete`, undefined);
+      const updatedActivity = await response.json();
+      
+      // Update the activity in the local state
+      const updatedActivities = activities.map(activity => 
+        activity.id === id ? updatedActivity : activity
+      );
+      
+      setActivities(updatedActivities);
+      return updatedActivity;
+    } catch (error) {
+      // Fallback to local update
+      const activityIndex = activities.findIndex(a => a.id === id);
+      if (activityIndex === -1) return;
+      
+      const activity = activities[activityIndex];
+      const now = new Date();
+      
+      // Calculate when the activity will be due next based on frequency
+      let nextDue = new Date(now);
+      
+      if (activity.frequencyUnit === 'day') {
+        nextDue.setDate(nextDue.getDate() + activity.frequency);
+      } else if (activity.frequencyUnit === 'week') {
+        nextDue.setDate(nextDue.getDate() + (activity.frequency * 7));
+      } else if (activity.frequencyUnit === 'month') {
+        nextDue.setMonth(nextDue.getMonth() + activity.frequency);
+      } else if (activity.frequencyUnit === 'year') {
+        nextDue.setFullYear(nextDue.getFullYear() + activity.frequency);
+      }
+      
+      const updatedActivity = {
+        ...activity,
+        lastCompleted: now,
+        nextDue,
+        completionCount: (activity.completionCount || 0) + 1
+      };
+      
+      const updatedActivities = [...activities];
+      updatedActivities[activityIndex] = updatedActivity;
+      setActivities(updatedActivities);
+      localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
+      
+      return updatedActivity;
+    }
+  };
+
+  const getNextActivity = async (): Promise<Activity | undefined> => {
+    try {
+      const response = await apiRequest('GET', '/api/activities/next', undefined);
+      return await response.json();
+    } catch (error) {
+      // Fallback to client-side logic for determining next activity
+      const now = new Date();
+      
+      // Sort activities by priority and due date
+      const sortedActivities = [...activities]
+        .filter(a => a.nextDue !== null)
+        .sort((a, b) => {
+          // First by priority (lower number = higher priority)
+          if ((a.priority || 5) !== (b.priority || 5)) {
+            return (a.priority || 5) - (b.priority || 5);
+          }
+          
+          // Then by due date
+          if (a.nextDue && b.nextDue) {
+            return new Date(a.nextDue).getTime() - new Date(b.nextDue).getTime();
+          }
+          
+          return 0;
+        });
+        
+      return sortedActivities[0];
+    }
+  };
+
+  const createSharedActivity = async (activity: ActivityInsert, recipientEmail: string): Promise<string> => {
+    try {
+      const response = await apiRequest('POST', '/api/activities/share', {
+        activity,
+        recipientEmail
+      });
+      const result = await response.json();
+      return result.invitationToken;
+    } catch (error) {
+      // Generate a fake token for demo purposes
+      return `share-${uuidv4()}`;
+    }
+  };
+
+  const addActivitiesToCart = (activitiesToAdd: ActivityInsert[]) => {
+    const updatedCart = [...activityCart, ...activitiesToAdd];
+    setActivityCart(updatedCart);
+    localStorage.setItem('lifechoicesCart', JSON.stringify(updatedCart));
+  };
+
+  const getCartActivities = () => {
+    return activityCart;
+  };
+
+  const clearCart = () => {
+    setActivityCart([]);
+    localStorage.removeItem('lifechoicesCart');
+  };
+
+  const saveCartActivities = async () => {
+    // Add all activities in the cart to the user's activities
+    for (const activity of activityCart) {
+      await addActivity(activity);
+    }
+    clearCart();
   };
 
   const resetData = async () => {
@@ -141,17 +279,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       await apiRequest('DELETE', '/api/activities', undefined);
     } catch (error) {
       // Fallback to localStorage if API fails
-      localStorage.removeItem('sundialUserData');
-      localStorage.removeItem('sundialActivities');
+      localStorage.removeItem('lifechoicesUserData');
+      localStorage.removeItem('lifechoicesActivities');
+      localStorage.removeItem('lifechoicesCart');
     }
     
     setUserData({
       name: '',
+      username: '',
+      password: '',
       age: 30,
-      lifeExpectancy: 85,
       sleepHours: 8
     });
     setActivities([]);
+    setActivityCart([]);
     setIsUserSetup(false);
   };
 
@@ -165,6 +306,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       addActivity,
       updateActivity,
       removeActivity,
+      completeActivity,
+      getNextActivity,
+      createSharedActivity,
+      addActivitiesToCart,
+      getCartActivities,
+      clearCart,
+      saveCartActivities,
       resetData
     }}>
       {children}
