@@ -4,6 +4,15 @@ import { ActivityInsert, activitySchema } from '@shared/schema';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
+// Helper function to ensure correct type assertions for ActivityInsert
+function ensureActivityTypes(data: any): ActivityInsert {
+  return {
+    ...data,
+    frequencyUnit: data.frequencyUnit as "day" | "week" | "month" | "year",
+    durationUnit: data.durationUnit as "minute" | "hour"
+  };
+}
+
 // Type guard for authentication
 function isAuthenticated(req: Request): boolean {
   return req.isAuthenticated();

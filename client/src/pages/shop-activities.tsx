@@ -683,8 +683,11 @@ export default function ShopActivitiesPage() {
       <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div className="mb-4 md:mb-0">
-            <h1 className="text-3xl font-bold text-gray-900">Shop Activities</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+              <Store className="h-8 w-8 text-primary mr-3 hidden md:inline" />
+              Shop Activities
+            </h1>
+            <p className="text-gray-500 mt-1 md:pl-[44px]">
               Browse and add life-enhancing activities to your routine
             </p>
           </div>
@@ -702,7 +705,6 @@ export default function ShopActivitiesPage() {
                 </span>
               )}
             </Button>
-            <Store className="h-10 w-10 text-primary hidden md:block" />
           </div>
         </div>
         
