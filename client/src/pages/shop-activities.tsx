@@ -354,7 +354,8 @@ const generateRecommendations = (
   }, 0);
   
   // Calculate available weekly time (excluding sleep) in minutes
-  const availableWeeklyTime = (24 * 7 - userData.sleepHours * 7) * 60;
+  const sleepHours = userData.sleepHours || 8; // Default to 8 hours if not specified
+  const availableWeeklyTime = (24 * 7 - sleepHours * 7) * 60;
   const timeUsagePercentage = (weeklyTimeAllocation / availableWeeklyTime) * 100;
   
   // Create a balanced recommendation set
@@ -430,7 +431,11 @@ const SAMPLE_ACTIVITIES: Array<Required<ActivityInsert>> = [
     duration: 20,
     durationUnit: "minute",
     lifeImpact: 8,
-    color: "#8884d8"
+    color: "#8884d8",
+    emoji: "🧘",
+    priority: 3,
+    exportToCalendar: false,
+    clusterId: null
   },
   {
     name: "Strength Training",
@@ -907,7 +912,12 @@ export default function ShopActivitiesPage() {
                     <p className="text-muted-foreground mb-6">
                       Add some activities to your routine to get personalized recommendations.
                     </p>
-                    <Button onClick={() => document.querySelector('[data-value="all"]')?.click()}>
+                    <Button onClick={() => {
+                      const element = document.querySelector('[data-value="all"]');
+                      if (element && element instanceof HTMLElement) {
+                        element.click();
+                      }
+                    }}>
                       Browse All Activities
                     </Button>
                   </div>
