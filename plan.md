@@ -1,26 +1,29 @@
-# The Sundial Project: Lifetime Management Application Plan
+# Life Choices: Daily Task Management with Long-term Goal Alignment
 
 ## 1. Project Overview
 
-The Sundial Project is a sophisticated lifetime management application that transforms time perception through advanced interactive visualizations. The platform enables comprehensive activity tracking, conscious hour budgeting, and provides nuanced insights into personal time allocation and potential life impact.
+Life Choices is a mobile-friendly task management application that helps users track daily activities while aligning them with long-term goals. The platform focuses on "what's next" functionality, providing users with immediate task recommendations, a shopping cart for adding activities, and a simple swipe interface optimized for mobile use.
 
 ## 2. Core Features
 
 ### 2.1. User Management
 - User registration and authentication
-- Personal profile with age, life expectancy, and sleep hours
-- Dashboard presenting personalized time metrics
+- Quick onboarding via shared activity links
+- Personal profile for task preferences
+- "What's Next" focus for immediate action items
 
 ### 2.2. Activity Management
 - Activity creation, editing, and deletion
-- Activity categorization and prioritization
-- Scheduling and frequency settings
-- Activity impact scoring
+- Shopping cart for adding multiple activities
+- Quick swipe interface for mobile interaction
+- Activity categorization and smart task rotation
+- Export to calendar functionality
 
-### 2.3. Time Visualization
-- Interactive sundial chart representing life allocation
-- Time machine for future projections and what-if scenarios
-- Analytics dashboard with time spending insights
+### 2.3. Activity Clusters & Behaviors
+- Predefined activity clusters for common goals (e.g., "Lose 10 lbs")
+- Smart meta-additions for work tasks
+- Progress tracking and scoring on completed activities
+- Pattern detection for behavior tracking
 
 ### 2.4. Social Features
 - Activity sharing and recommendations
@@ -35,8 +38,8 @@ The Sundial Project is a sophisticated lifetime management application that tran
 ## 3. Technical Architecture
 
 ### 3.1. Frontend
-- React with TypeScript for type safety
-- D3.js for interactive data visualizations
+- React with TypeScript for type safety and React Native compatibility
+- Mobile-first UI with swipe gestures and touch interactions
 - TailwindCSS with shadcn components for UI
 - React Query for data fetching and state management
 - React Hook Form for form handling and validation
@@ -63,52 +66,52 @@ The Sundial Project is a sophisticated lifetime management application that tran
 - Create authentication system ✅
 - Design base UI components ✅
 
-### 4.2. Phase 2: Time Management
-- Implement user dashboard with time metrics ✅
+### 4.2. Phase 2: Activity Management
+- Implement "What's Next" activity recommendation ✅
 - Develop activity management system ✅
-- Create the sundial visualization ✅
-- Build the time machine feature ✅
+- Create mobile-friendly shopping interface
+- Build activity clusters for common goals
 
-### 4.3. Phase 3: Analytics and Insights
-- Develop analytics dashboard ✅
-- Implement data visualization components ✅
-- Create impact projection system ✅
+### 4.3. Phase 3: Mobile Experience
+- Develop swipe interface for task interaction
+- Implement activity shopping cart functionality
+- Create export to calendar functionality
 
 ### 4.4. Phase 4: Social and Sharing
-- Implement activity sharing
-- Develop activity clusters and group activities
-- Create invitation system
+- Implement activity sharing via deep links
+- Develop one-click onboarding via shared activities
+- Create social invitations and collaborative activities
 
-### 4.5. Phase 5: Life Events and Milestones
-- Implement life events tracking ✅
-- Create event visualization and timeline
-- Develop impact analysis for life events
+### 4.5. Phase 5: Progress Tracking
+- Implement behavior tracking for completed activities
+- Create pattern recognition for habit formation
+- Develop goal achievement visualization
 
 ### 4.6. Phase 6: Final Touches
-- Optimize performance
-- Improve accessibility
+- Optimize performance for mobile devices
+- Improve accessibility for touch interfaces
 - Add comprehensive error handling
-- Enhance user experience with animations and transitions
+- Enhance user experience with swipe animations
 
 ## 5. Current Progress and Next Steps
 
 ### 5.1. Completed Features
 - Core user authentication and profile management
 - Basic activity tracking and management
-- Initial sundial visualization
-- Dashboard with time metrics
 - Life events tracking foundation
 
 ### 5.2. In Progress
-- Enhanced activity management with recommendations
-- Time machine feature refinement
-- Analytics improvements
+- Mobile-first UI with swipe interface
+- "What's Next" activity recommendation system
+- Activity shopping cart implementation
+- Activity sharing and social features
 
 ### 5.3. Next Steps
-- Complete the activity shop for recommendations
-- Implement social features (activity sharing, clusters)
-- Enhance the life events visualization and integration
-- Optimize performance and user experience
+- Complete shopping interface for activity clusters
+- Implement social onboarding via activity sharing
+- Add calendar export functionality
+- Create behavior tracking and pattern recognition
+- Remove all sundial and life-expectancy related features
 
 ## 6. Development Guidelines
 
@@ -138,4 +141,4 @@ The Sundial Project is a sophisticated lifetime management application that tran
 
 ## 7. Conclusion
 
-The Sundial Project aims to transform how users perceive and allocate their time through innovative visualization and thoughtful activity management. By combining powerful data insights with intuitive user experience, the application helps users make conscious decisions about their time allocation and maximize their life impact.
+Life Choices aims to transform how users manage their daily tasks while keeping them aligned with long-term goals. With a mobile-first approach, intuitive swipe interface, and smart activity recommendations, the application helps users focus on "what's next" while maintaining the ability to easily share activities and track progress towards meaningful objectives.
