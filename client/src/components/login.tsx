@@ -25,6 +25,8 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
       // Create a user with default values
       const userData: UserData = {
         name: username,
+        username: username, // Set username explicitly
+        password: password, // Include password
         age: 30,
         lifeExpectancy: 85,
         sleepHours: 8
@@ -35,7 +37,7 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
         title: "Login successful",
         description: "Welcome back to Life Choices!",
       });
-      setLocation("/next");
+      setLocation("/whats-next");
     } else {
       toast({
         title: "Login failed",
@@ -104,6 +106,8 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
     if (username && password && name) {
       const userData: UserData = {
         name,
+        username, // Set username explicitly
+        password, // Include password
         age,
         lifeExpectancy,
         sleepHours: 8
@@ -114,7 +118,7 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
         title: "Registration successful",
         description: "Welcome to Life Choices!",
       });
-      setLocation("/next");
+      setLocation("/whats-next");
     } else {
       toast({
         title: "Registration failed",
