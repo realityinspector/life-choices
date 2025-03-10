@@ -1,84 +1,170 @@
-import { useState } from "react";
-import SundialChart from "./ui/sundial-chart";
+import { useState, useEffect } from "react";
 import { useUser } from "@/context/user-context";
-import { 
-  calculatePercentageLived, 
-  calculateTotalBCH, 
-  calculateRemainingBCH, 
-  formatTimeToBCH,
-  calculateAllocatedPercentage,
-  calculateLifetimeHours
-} from "@/lib/calculations";
 import { Activity } from "@shared/schema";
-import { ChevronRight, Clock, Plus, BarChart, User, ShoppingBag, Calendar, BarChart2 } from "lucide-react";
+import { 
+  ChevronRight, 
+  Clock, 
+  Plus, 
+  BarChart, 
+  User, 
+  ShoppingBag, 
+  Calendar, 
+  BarChart2, 
+  CheckCircle2,
+  ListChecks,
+  AlertCircle
+} from "lucide-react";
 
 interface DashboardProps {
   onViewChange: (view: string) => void;
 }
 
 const Dashboard = ({ onViewChange }: DashboardProps) => {
-  const { userData, activities } = useUser();
+  const { userData, activities, getNextActivity, completeActivity } = useUser();
+  const [nextActivity, setNextActivity] = useState<Activity | null>(null);
+  
+  // Fetch the next activity when component loads
+  useEffect(() => {
+    getNextActivity().then(activity => {
+      if (activity) {
+        setNextActivity(activity);
+      }
+    });
+  }, []);
   
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-8">
-        {/* Left Column - Sundial Visualization */}
+        {/* Left Column - Next Activity */}
         <div className="lg:col-span-2">
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Your Life Sundial</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <CheckCircle2 className="mr-2 h-5 w-5 text-teal-600" />
+              What's Next?
+            </h2>
             
-            {/* Sundial Visualization */}
-            <SundialChart />
+            {/* Next Activity Card */}
+            <div className="bg-teal-50 rounded-lg p-6 border border-teal-100 shadow-sm">
+              {nextActivity ? (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900">{nextActivity.name}</h3>
+                      <p className="text-sm text-gray-500">{nextActivity.category}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button 
+                        className="p-2 rounded-full bg-teal-100 text-teal-600 hover:bg-teal-200"
+                        onClick={() => {
+                          if (nextActivity) {
+                            // Complete the activity and get the next one
+                            completeActivity(nextActivity.id);
+                            getNextActivity().then(activity => {
+                              if (activity) {
+                                setNextActivity(activity);
+                              } else {
+                                setNextActivity(null);
+                              }
+                            });
+                          }
+                        }}
+                      >
+                        <CheckCircle2 size={24} />
+                      </button>
+                      <button 
+                        className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        onClick={() => {
+                          // Skip to next activity
+                          getNextActivity().then(activity => {
+                            if (activity) {
+                              setNextActivity(activity);
+                            } else {
+                              setNextActivity(null);
+                            }
+                          });
+                        }}
+                      >
+                        <ChevronRight size={24} />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4 text-sm">
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-1 text-teal-700" />
+                      <span>{nextActivity.duration} {nextActivity.durationUnit}{nextActivity.duration > 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-1 text-teal-700" />
+                      <span>Every {nextActivity.frequency} {nextActivity.frequencyUnit}{nextActivity.frequency > 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <AlertCircle className="mx-auto h-12 w-12 text-teal-600 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No activities scheduled</h3>
+                  <p className="text-gray-500 mb-4">Add activities to get started with your daily routine.</p>
+                  <button 
+                    onClick={() => onViewChange('activities')} 
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+                  >
+                    <Plus className="-ml-1 mr-2 h-5 w-5" />
+                    Add Activity
+                  </button>
+                </div>
+              )}
+            </div>
             
-            {/* Legend */}
-            <div className="mt-6 grid grid-cols-3 gap-4 text-center text-sm">
-              <div>
-                <div className="text-lg font-semibold text-gray-900">{userData.age}</div>
-                <div className="text-gray-500">Current Age</div>
-              </div>
-              <div>
-                <div className="text-lg font-semibold text-gray-900">{calculatePercentageLived(userData)}%</div>
-                <div className="text-gray-500">Life Completed</div>
-              </div>
-              <div>
-                <div className="text-lg font-semibold text-gray-900">{userData.lifeExpectancy - userData.age}</div>
-                <div className="text-gray-500">Years Remaining</div>
+            {/* Activity Categories */}
+            <div className="mt-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Activity Categories</h3>
+              <div className="flex flex-wrap gap-2">
+                <div className="px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm">All</div>
+                <div className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">Work</div>
+                <div className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">Personal</div>
+                <div className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Health</div>
+                <div className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">Learning</div>
+                <div className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">Relationships</div>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Right Column - Stats */}
+        {/* Right Column - Stats & Quick Actions */}
         <div className="lg:col-span-1">
           <div className="bg-white shadow rounded-lg p-6 mb-4">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Time Allocation</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <ListChecks className="mr-2 h-5 w-5 text-teal-600" />
+              Activity Stats
+            </h2>
             
             <div className="space-y-4">
-              {/* BCH Stats */}
+              {/* Total Activities */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Budget of Conscious Hours (BCH)</h3>
+                <h3 className="text-sm font-medium text-gray-500">Total Activities</h3>
                 <p className="mt-1 text-2xl font-semibold text-gray-900">
-                  {formatTimeToBCH(calculateTotalBCH(userData))}
+                  {activities.length}
                 </p>
-                <p className="text-sm text-gray-500">Total waking hours in your life</p>
+                <p className="text-sm text-gray-500">Activities in your routine</p>
               </div>
               
-              {/* Remaining BCH */}
+              {/* Activities by Category */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Remaining BCH</h3>
+                <h3 className="text-sm font-medium text-gray-500">Categories</h3>
                 <p className="mt-1 text-2xl font-semibold text-gray-900">
-                  {formatTimeToBCH(calculateRemainingBCH(userData))}
+                  {new Set(activities.map(a => a.category)).size}
                 </p>
-                <p className="text-sm text-gray-500">Waking hours left in your life</p>
+                <p className="text-sm text-gray-500">Different activity types</p>
               </div>
               
-              {/* Allocated Time */}
+              {/* Activity Balance */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Allocated to Activities</h3>
+                <h3 className="text-sm font-medium text-gray-500">Positive Impact</h3>
                 <p className="mt-1 text-2xl font-semibold text-gray-900">
-                  {calculateAllocatedPercentage(userData, activities)}%
+                  {activities.filter(a => a.lifeImpact && a.lifeImpact > 0).length}
                 </p>
-                <p className="text-sm text-gray-500">Of your remaining time</p>
+                <p className="text-sm text-gray-500">Activities with positive impact</p>
               </div>
             </div>
           </div>
@@ -161,7 +247,7 @@ const Dashboard = ({ onViewChange }: DashboardProps) => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frequency</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lifetime Hours</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Estimate</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Life Impact</th>
                 </tr>
               </thead>
@@ -192,7 +278,7 @@ const Dashboard = ({ onViewChange }: DashboardProps) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {calculateLifetimeHours(userData, activity)} hours
+                          {Math.round(activity.duration * (activity.frequency * 52) / 60)} hours/year
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -201,14 +287,14 @@ const Dashboard = ({ onViewChange }: DashboardProps) => {
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
                             </svg>
-                            <span>{`+${activity.lifeImpact} years`}</span>
+                            <span>Positive</span>
                           </div>
                         ) : activity.lifeImpact < 0 ? (
                           <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                             </svg>
-                            <span>{`${activity.lifeImpact} years`}</span>
+                            <span>Negative</span>
                           </div>
                         ) : (
                           <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
