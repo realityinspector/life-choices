@@ -106,6 +106,7 @@ export default function WhatsNextPage() {
               onComplete={handleComplete}
               onSkip={handleSkip}
               onAddToCart={handleAddToCart}
+              userActivities={activities}
               onInfo={(activity) => {
                 // Show detailed info about the activity
                 toast({

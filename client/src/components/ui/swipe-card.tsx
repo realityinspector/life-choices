@@ -11,6 +11,7 @@ interface SwipeCardProps {
   onAddToCart?: (activity: Activity) => void;
   onInfo?: (activity: Activity) => void;
   isActive?: boolean;
+  userActivities?: Activity[]; // Add user activities to check if this activity exists
 }
 
 export function SwipeCard({
@@ -20,6 +21,7 @@ export function SwipeCard({
   onAddToCart,
   onInfo,
   isActive = true,
+  userActivities = [],
 }: SwipeCardProps) {
   const [exitX, setExitX] = useState<number | null>(null);
   const [exitY, setExitY] = useState<number | null>(null);
@@ -51,6 +53,9 @@ export function SwipeCard({
     left: 0,
   };
   
+  // Check if this activity already exists in the user's collection
+  const activityExists = userActivities.some(a => a.name === activity.name);
+  
   const handleDragEnd = (_e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const xOffset = info.offset.x;
     const yOffset = info.offset.y;
@@ -66,10 +71,16 @@ export function SwipeCard({
       setActionType('skip');
       setTimeout(() => onSkip?.(activity), 200);
     } else if (yOffset < -100) {
-      // Swiped up - add to cart
+      // Swiped up - add to cart if not already in collection, otherwise complete
       setExitY(-cardHeight.current - 200);
       setActionType('cart');
-      setTimeout(() => onAddToCart?.(activity), 200);
+      setTimeout(() => {
+        if (activityExists) {
+          onComplete?.(activity);
+        } else {
+          onAddToCart?.(activity);
+        }
+      }, 200);
     } else {
       // Reset position
       x.set(0);
@@ -230,18 +241,28 @@ export function SwipeCard({
             </button>
           </div>
           
-          {/* Add to Cart Button */}
-          <button 
-            onClick={() => onAddToCart?.(activity)}
-            className="mt-3 w-full flex items-center justify-center gap-2 bg-blue-500 text-white py-3 rounded-xl hover:bg-blue-600 transition-colors"
-          >
-            <ShoppingBag size={18} />
-            <span>Add to Cart</span>
-          </button>
+          {/* Action Button - Conditional based on whether activity already exists */}
+          {activityExists ? (
+            <button 
+              onClick={() => onComplete?.(activity)}
+              className="mt-3 w-full flex items-center justify-center gap-2 bg-green-500 text-white py-3 rounded-xl hover:bg-green-600 transition-colors"
+            >
+              <CheckCircle size={18} />
+              <span>Complete</span>
+            </button>
+          ) : (
+            <button 
+              onClick={() => onAddToCart?.(activity)}
+              className="mt-3 w-full flex items-center justify-center gap-2 bg-blue-500 text-white py-3 rounded-xl hover:bg-blue-600 transition-colors"
+            >
+              <ShoppingBag size={18} />
+              <span>Add to Cart</span>
+            </button>
+          )}
           
           {/* Swipe Instructions */}
           <div className="mt-3 text-center text-xs text-gray-500">
-            <p>Swipe right to complete, left to skip, up to add to cart</p>
+            <p>Swipe right to complete, left to skip, up to {activityExists ? 'complete' : 'add to cart'}</p>
           </div>
         </div>
       </div>
