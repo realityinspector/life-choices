@@ -851,10 +851,6 @@ export default function ShopActivitiesPage() {
       <Header userData={userData} />
       
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Use the Navigation component with consistent styling */}
-        <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
-          <Navigation currentPath={location} />
-        </div>
         
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div className="mb-4 md:mb-0">
