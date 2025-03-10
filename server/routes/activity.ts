@@ -216,12 +216,13 @@ activityRouter.delete('/', async (req: AuthenticatedRequest, res) => {
 });
 
 // Share activity with someone
-activityRouter.post('/share', async (req, res) => {
-  if (!req.session.userId) {
+activityRouter.post('/share', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
   try {
+    const userId = req.user.id;
     const { activity, recipientEmail } = req.body;
     
     if (!activity || !recipientEmail) {
@@ -244,7 +245,7 @@ activityRouter.post('/share', async (req, res) => {
     
     const activityData: ActivityInsert & { userId: number, nextDue: Date } = {
       ...parsed,
-      userId: req.session.userId,
+      userId: userId,
       nextDue
     };
     
@@ -255,7 +256,7 @@ activityRouter.post('/share', async (req, res) => {
     
     const invitation = await storage.createActivityInvitation({
       activityId: createdActivity.id,
-      senderUserId: req.session.userId,
+      senderUserId: userId,
       recipientEmail,
       invitationToken,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days expiry
@@ -278,14 +279,15 @@ activityRouter.post('/share', async (req, res) => {
 });
 
 // Accept shared activity using token
-activityRouter.post('/accept/:token', async (req, res) => {
-  if (!req.session.userId) {
+activityRouter.post('/accept/:token', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
   try {
+    const userId = req.user.id;
     const { token } = req.params;
-    const success = await storage.acceptActivityInvitation(token, req.session.userId);
+    const success = await storage.acceptActivityInvitation(token, userId);
     
     if (!success) {
       return res.status(404).json({ message: "Invalid or expired invitation" });
