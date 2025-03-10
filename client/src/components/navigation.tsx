@@ -45,9 +45,9 @@ const Navigation = ({ currentPath }: NavigationProps) => {
   // Define the main navigation items
   const navItems = [
     {
-      label: "Home",
+      label: "Next",
       path: "/",
-      icon: <Home className="h-4 w-4 mr-2" />,
+      icon: <CheckCircle2 className="h-4 w-4 mr-2" />,
     },
     {
       label: "Tasks",
