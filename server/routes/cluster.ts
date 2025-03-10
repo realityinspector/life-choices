@@ -53,7 +53,7 @@ clusterRouter.get('/:id', async (req, res) => {
 
 // Create a new cluster
 clusterRouter.post('/', async (req: AuthenticatedRequest, res) => {
-  if (!isAuthenticated(req) || !req.user) {
+  if (!isAuthenticated(req)) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
@@ -73,7 +73,7 @@ clusterRouter.post('/', async (req: AuthenticatedRequest, res) => {
 
 // Update an existing cluster
 clusterRouter.put('/:id', async (req: AuthenticatedRequest, res) => {
-  if (!isAuthenticated(req) || !req.user) {
+  if (!isAuthenticated(req)) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
@@ -101,7 +101,7 @@ clusterRouter.put('/:id', async (req: AuthenticatedRequest, res) => {
 
 // Delete a cluster
 clusterRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
-  if (!isAuthenticated(req) || !req.user) {
+  if (!isAuthenticated(req)) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
