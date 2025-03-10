@@ -50,6 +50,10 @@ Life Choices is a mobile-first application that transforms life goals into actio
    - Touch-friendly card layouts
    - Bottom navigation bar for mobile
    - Responsive design for all screen sizes
+   - REBRAND throughout as "life choices" not "sundial"
+   - REMOVE all "sundial" and chart components
+   - update the landing page to be a card
+   
 
 2. **"What's Next" Activity Recommendation**
    - Algorithm to suggest next activity based on schedule
