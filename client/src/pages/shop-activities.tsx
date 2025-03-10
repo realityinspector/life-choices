@@ -13,6 +13,73 @@ import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check } f
 import Header from "@/components/header";
 import { useLocation } from "wouter";
 
+// Activity Card component for consistency across tabs
+interface ActivityCardProps {
+  activity: Required<ActivityInsert>;
+  onAddToCart: (activity: ActivityInsert) => void;
+  onAddNow: (activity: ActivityInsert) => void;
+  isRecommended?: boolean;
+}
+
+const ActivityCard = ({ activity, onAddToCart, onAddNow, isRecommended = false }: ActivityCardProps) => {
+  const getImpactColor = (impact: number | undefined) => {
+    if (!impact) return "bg-gray-500";
+    if (impact >= 8) return "bg-green-500";
+    if (impact >= 5) return "bg-blue-500";
+    if (impact >= 3) return "bg-yellow-500";
+    return "bg-gray-500";
+  };
+
+  return (
+    <Card className={`overflow-hidden ${isRecommended ? "border-primary" : ""}`}>
+      <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
+      <CardHeader className="pb-2">
+        <div className="flex justify-between">
+          <CardTitle className="text-lg flex items-center">
+            {activity.name}
+            {isRecommended && <Heart className="h-4 w-4 ml-2 text-red-500 fill-red-500" />}
+          </CardTitle>
+          <Badge>{activity.category}</Badge>
+        </div>
+        <CardDescription>
+          {isRecommended ? "Recommended for your profile" : `${activity.frequency} x ${activity.frequencyUnit}`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pb-2">
+        <div className="flex justify-between text-sm">
+          <div className="flex items-center">
+            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+            <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+          </div>
+          <div className="flex items-center">
+            <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
+            <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="flex space-x-2">
+        <Button 
+          className="flex-1" 
+          size="sm"
+          onClick={() => onAddToCart(activity)}
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Add to Cart
+        </Button>
+        <Button 
+          className="flex-1" 
+          size="sm"
+          variant="outline"
+          onClick={() => onAddNow(activity)}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Now
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
 // Sample categories for activities
 const ACTIVITY_CATEGORIES = [
   "Health & Fitness",
@@ -411,49 +478,12 @@ export default function ShopActivitiesPage() {
               <TabsContent value="all" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredActivities.map((activity, index) => (
-                    <Card key={index} className="overflow-hidden">
-                      <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between">
-                          <CardTitle className="text-lg">{activity.name}</CardTitle>
-                          <Badge>{activity.category}</Badge>
-                        </div>
-                        <CardDescription>
-                          {activity.frequency} x {activity.frequencyUnit}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="flex justify-between text-sm">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex space-x-2">
-                        <Button 
-                          className="flex-1" 
-                          size="sm"
-                          onClick={() => handleAddToCart(activity)}
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Add to Cart
-                        </Button>
-                        <Button 
-                          className="flex-1" 
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAddActivity(activity)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Now
-                        </Button>
-                      </CardFooter>
-                    </Card>
+                    <ActivityCard 
+                      key={index}
+                      activity={activity}
+                      onAddToCart={handleAddToCart}
+                      onAddNow={handleAddActivity}
+                    />
                   ))}
                 </div>
                 
@@ -473,40 +503,12 @@ export default function ShopActivitiesPage() {
                   {filteredActivities
                     .filter(a => a.lifeImpact >= 7)
                     .map((activity, index) => (
-                      <Card key={index} className="overflow-hidden">
-                        <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between">
-                            <CardTitle className="text-lg">{activity.name}</CardTitle>
-                            <Badge>{activity.category}</Badge>
-                          </div>
-                          <CardDescription>
-                            {activity.frequency} x {activity.frequencyUnit}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="pb-2">
-                          <div className="flex justify-between text-sm">
-                            <div className="flex items-center">
-                              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                        <CardFooter>
-                          <Button 
-                            className="w-full" 
-                            size="sm"
-                            onClick={() => handleAddActivity(activity)}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add to My Activities
-                          </Button>
-                        </CardFooter>
-                      </Card>
+                      <ActivityCard 
+                        key={index}
+                        activity={activity}
+                        onAddToCart={handleAddToCart}
+                        onAddNow={handleAddActivity}
+                      />
                     ))}
                 </div>
               </TabsContent>
@@ -516,40 +518,12 @@ export default function ShopActivitiesPage() {
                   {filteredActivities
                     .filter(a => a.duration <= 30 && a.durationUnit === "minute")
                     .map((activity, index) => (
-                      <Card key={index} className="overflow-hidden">
-                        <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between">
-                            <CardTitle className="text-lg">{activity.name}</CardTitle>
-                            <Badge>{activity.category}</Badge>
-                          </div>
-                          <CardDescription>
-                            {activity.frequency} x {activity.frequencyUnit}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="pb-2">
-                          <div className="flex justify-between text-sm">
-                            <div className="flex items-center">
-                              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                        <CardFooter>
-                          <Button 
-                            className="w-full" 
-                            size="sm"
-                            onClick={() => handleAddActivity(activity)}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add to My Activities
-                          </Button>
-                        </CardFooter>
-                      </Card>
+                      <ActivityCard 
+                        key={index}
+                        activity={activity}
+                        onAddToCart={handleAddToCart}
+                        onAddNow={handleAddActivity}
+                      />
                     ))}
                 </div>
               </TabsContent>
@@ -559,43 +533,13 @@ export default function ShopActivitiesPage() {
                   {filteredActivities
                     .filter((_, i) => i % 3 === 0) // Just a simulation of "recommended" activities
                     .map((activity, index) => (
-                      <Card key={index} className="overflow-hidden border-primary">
-                        <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between">
-                            <CardTitle className="text-lg flex items-center">
-                              {activity.name}
-                              <Heart className="h-4 w-4 ml-2 text-red-500 fill-red-500" />
-                            </CardTitle>
-                            <Badge>{activity.category}</Badge>
-                          </div>
-                          <CardDescription>
-                            Recommended for your profile
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="pb-2">
-                          <div className="flex justify-between text-sm">
-                            <div className="flex items-center">
-                              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                        <CardFooter>
-                          <Button 
-                            className="w-full" 
-                            size="sm"
-                            onClick={() => handleAddActivity(activity)}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add to My Activities
-                          </Button>
-                        </CardFooter>
-                      </Card>
+                      <ActivityCard 
+                        key={index}
+                        activity={activity}
+                        onAddToCart={handleAddToCart}
+                        onAddNow={handleAddActivity}
+                        isRecommended={true}
+                      />
                     ))}
                 </div>
               </TabsContent>
