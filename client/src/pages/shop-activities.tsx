@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/user-context";
 import { Activity, ActivityInsert, UserData } from "@shared/schema";
-import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check } from "lucide-react";
+import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link, Lock, Globe } from "lucide-react";
 import Header from "@/components/header";
 import { useLocation } from "wouter";
 
@@ -29,6 +29,11 @@ const ActivityCard = ({
   isRecommended = false,
   recommendationReason
 }: ActivityCardProps) => {
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePrivacy, setSharePrivacy] = useState<"private" | "link" | "public">("private");
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const { toast } = useToast();
+  
   const getImpactColor = (impact: number | undefined) => {
     if (!impact) return "bg-gray-500";
     if (impact >= 8) return "bg-green-500";
@@ -37,65 +42,209 @@ const ActivityCard = ({
     return "bg-gray-500";
   };
 
+  const handleShare = () => {
+    // In a real app, this would call an API to generate a shareable link
+    // For now, we'll just simulate it
+    if (sharePrivacy === "private") {
+      toast({
+        title: "Cannot share private activity",
+        description: "Please change the privacy setting to generate a shareable link.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const shareableUrl = `https://lifechoices.app/share/${activity.name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 8)}`;
+    setShareUrl(shareableUrl);
+    
+    toast({
+      title: sharePrivacy === "public" ? "Activity shared publicly" : "Share link generated",
+      description: "You can now share this activity with others",
+    });
+  };
+  
+  const copyToClipboard = () => {
+    if (shareUrl) {
+      navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: "Copied to clipboard",
+        description: "Share link has been copied to your clipboard",
+      });
+    }
+  };
+
   return (
-    <Card className={`overflow-hidden ${isRecommended ? "border-primary" : ""}`}>
-      <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
-      <CardHeader className="pb-2">
-        <div className="flex justify-between">
-          <CardTitle className="text-lg flex items-center">
-            {activity.name}
-            {isRecommended && <Heart className="h-4 w-4 ml-2 text-red-500 fill-red-500" />}
-          </CardTitle>
-          <Badge>{activity.category}</Badge>
+    <>
+      <Card className={`overflow-hidden ${isRecommended ? "border-primary" : ""}`}>
+        <div className={`h-2 ${getImpactColor(activity.lifeImpact)}`} />
+        <CardHeader className="pb-2">
+          <div className="flex justify-between">
+            <CardTitle className="text-lg flex items-center">
+              {activity.name}
+              {isRecommended && <Heart className="h-4 w-4 ml-2 text-red-500 fill-red-500" />}
+            </CardTitle>
+            <Badge>{activity.category}</Badge>
+          </div>
+          <CardDescription>
+            {!isRecommended && `${activity.frequency} x ${activity.frequencyUnit}`}
+            {isRecommended && recommendationReason ? (
+              <span className="text-primary font-medium">{recommendationReason}</span>
+            ) : isRecommended ? (
+              <span className="text-primary font-medium">Recommended for your profile</span>
+            ) : null}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pb-2">
+          <div className="flex justify-between text-sm">
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+              <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center">
+              <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
+              <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+            </div>
+          </div>
+          {isRecommended && !recommendationReason && (
+            <div className="mt-2 text-xs text-primary-foreground/70">
+              <span className="flex items-center">
+                <span className="mr-1">•</span> {activity.frequency} x {activity.frequencyUnit}
+              </span>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-2">
+          <div className="flex w-full space-x-2">
+            <Button 
+              className="flex-1" 
+              size="sm"
+              onClick={() => onAddToCart(activity)}
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Add to Cart
+            </Button>
+            <Button 
+              className="flex-1" 
+              size="sm"
+              variant="outline"
+              onClick={() => onAddNow(activity)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Now
+            </Button>
+          </div>
+          <Button 
+            className="w-full" 
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowShareModal(true)}
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Share Activity
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Share "{activity.name}"</h3>
+              <Button size="sm" variant="ghost" onClick={() => setShowShareModal(false)}>
+                &times;
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">Privacy Settings</h4>
+                <div className="flex flex-col space-y-2">
+                  <div 
+                    className={`p-3 border rounded-md cursor-pointer flex justify-between items-center ${sharePrivacy === 'private' ? 'border-primary bg-primary/5' : ''}`}
+                    onClick={() => setSharePrivacy('private')}
+                  >
+                    <div className="flex items-center">
+                      <div className="h-6 w-6 mr-2 flex items-center justify-center bg-gray-100 rounded-full">
+                        <Lock className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">Private</div>
+                        <div className="text-xs text-gray-500">Only you can see this activity</div>
+                      </div>
+                    </div>
+                    {sharePrivacy === 'private' && <Check className="h-5 w-5 text-primary" />}
+                  </div>
+                  
+                  <div 
+                    className={`p-3 border rounded-md cursor-pointer flex justify-between items-center ${sharePrivacy === 'link' ? 'border-primary bg-primary/5' : ''}`}
+                    onClick={() => setSharePrivacy('link')}
+                  >
+                    <div className="flex items-center">
+                      <div className="h-6 w-6 mr-2 flex items-center justify-center bg-blue-100 rounded-full">
+                        <Link className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">Anyone with the link</div>
+                        <div className="text-xs text-gray-500">Anyone with the link can view</div>
+                      </div>
+                    </div>
+                    {sharePrivacy === 'link' && <Check className="h-5 w-5 text-primary" />}
+                  </div>
+                  
+                  <div 
+                    className={`p-3 border rounded-md cursor-pointer flex justify-between items-center ${sharePrivacy === 'public' ? 'border-primary bg-primary/5' : ''}`}
+                    onClick={() => setSharePrivacy('public')}
+                  >
+                    <div className="flex items-center">
+                      <div className="h-6 w-6 mr-2 flex items-center justify-center bg-green-100 rounded-full">
+                        <Globe className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">Public</div>
+                        <div className="text-xs text-gray-500">Anyone can find this activity</div>
+                      </div>
+                    </div>
+                    {sharePrivacy === 'public' && <Check className="h-5 w-5 text-primary" />}
+                  </div>
+                </div>
+              </div>
+              
+              {shareUrl && (
+                <div>
+                  <h4 className="font-medium mb-2">Share Link</h4>
+                  <div className="flex">
+                    <input 
+                      type="text" 
+                      value={shareUrl}
+                      readOnly
+                      className="flex-1 p-2 text-sm border rounded-l-md focus:outline-none"
+                    />
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="rounded-l-none" 
+                      onClick={copyToClipboard}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="pt-2 flex justify-end space-x-2">
+                <Button variant="outline" size="sm" onClick={() => setShowShareModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleShare} disabled={sharePrivacy === 'private' && shareUrl === null}>
+                  {shareUrl ? 'Generate New Link' : 'Generate Share Link'}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-        <CardDescription>
-          {!isRecommended && `${activity.frequency} x ${activity.frequencyUnit}`}
-          {isRecommended && recommendationReason ? (
-            <span className="text-primary font-medium">{recommendationReason}</span>
-          ) : isRecommended ? (
-            <span className="text-primary font-medium">Recommended for your profile</span>
-          ) : null}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pb-2">
-        <div className="flex justify-between text-sm">
-          <div className="flex items-center">
-            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-            <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
-          </div>
-          <div className="flex items-center">
-            <Zap className="h-4 w-4 mr-1 text-muted-foreground" />
-            <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
-          </div>
-        </div>
-        {isRecommended && !recommendationReason && (
-          <div className="mt-2 text-xs text-primary-foreground/70">
-            <span className="flex items-center">
-              <span className="mr-1">•</span> {activity.frequency} x {activity.frequencyUnit}
-            </span>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex space-x-2">
-        <Button 
-          className="flex-1" 
-          size="sm"
-          onClick={() => onAddToCart(activity)}
-        >
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          Add to Cart
-        </Button>
-        <Button 
-          className="flex-1" 
-          size="sm"
-          variant="outline"
-          onClick={() => onAddNow(activity)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Now
-        </Button>
-      </CardFooter>
-    </Card>
+      )}
+    </>
   );
 };
 
@@ -531,11 +680,11 @@ export default function ShopActivitiesPage() {
     <div className="min-h-screen bg-gray-100">
       <Header userData={userData} />
       
-      <div className="container mx-auto py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Shop Activities</h1>
-            <p className="text-muted-foreground">
+      <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+          <div className="mb-4 md:mb-0">
+            <h1 className="text-3xl font-bold text-gray-900">Shop Activities</h1>
+            <p className="text-gray-500 mt-1">
               Browse and add life-enhancing activities to your routine
             </p>
           </div>
@@ -544,7 +693,7 @@ export default function ShopActivitiesPage() {
               variant="outline" 
               size="icon" 
               onClick={() => setShowCart(!showCart)} 
-              className="relative"
+              className="relative bg-white hover:bg-gray-50"
             >
               <ShoppingCart className="h-6 w-6 text-primary" />
               {cartItems.length > 0 && (
@@ -553,7 +702,7 @@ export default function ShopActivitiesPage() {
                 </span>
               )}
             </Button>
-            <Store className="h-10 w-10 text-primary" />
+            <Store className="h-10 w-10 text-primary hidden md:block" />
           </div>
         </div>
         

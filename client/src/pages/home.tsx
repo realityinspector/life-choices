@@ -13,9 +13,63 @@ interface HomeProps {
 
 // Placeholder component for the What's Next view
 const WhatsNext = ({ onViewChange }: { onViewChange: (view: string) => void }) => {
-  const { userData, getNextActivity, completeActivity } = useUser();
+  const { userData, getNextActivity, completeActivity, activities } = useUser();
   const [currentActivity, setCurrentActivity] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [suggestedActivity, setSuggestedActivity] = useState<any>(null);
+  const [showingSuggestion, setShowingSuggestion] = useState(false);
+
+  // Sample suggested activities when user runs out of their own activities
+  const suggestedActivities = [
+    {
+      id: -1,
+      name: "Morning Meditation",
+      category: "Spirituality & Mindfulness",
+      frequency: 7,
+      frequencyUnit: "week",
+      duration: 20,
+      durationUnit: "minute",
+      lifeImpact: 8,
+      color: "#8884d8",
+      priority: 3,
+      exportToCalendar: false,
+      emoji: "🧘",
+      clusterId: null,
+      nextDue: new Date()
+    },
+    {
+      id: -2,
+      name: "Reading Non-Fiction",
+      category: "Learning & Growth",
+      frequency: 5,
+      frequencyUnit: "week",
+      duration: 30,
+      durationUnit: "minute",
+      lifeImpact: 6,
+      color: "#00C49F",
+      priority: 3,
+      exportToCalendar: false,
+      emoji: "📚",
+      clusterId: null,
+      nextDue: new Date()
+    },
+    {
+      id: -3,
+      name: "Yoga Practice",
+      category: "Health & Fitness",
+      frequency: 3,
+      frequencyUnit: "week",
+      duration: 1,
+      durationUnit: "hour",
+      lifeImpact: 7,
+      color: "#d0ed57",
+      priority: 3,
+      exportToCalendar: false,
+      emoji: "🧘‍♀️",
+      clusterId: null,
+      nextDue: new Date()
+    }
+  ];
 
   useEffect(() => {
     const loadNextActivity = async () => {
@@ -23,8 +77,22 @@ const WhatsNext = ({ onViewChange }: { onViewChange: (view: string) => void }) =
       try {
         const activity = await getNextActivity();
         setCurrentActivity(activity);
+        if (!activity && suggestedActivities.length > 0) {
+          // If no user-created activities, show a suggestion
+          const randomIndex = Math.floor(Math.random() * suggestedActivities.length);
+          setSuggestedActivity(suggestedActivities[randomIndex]);
+          setShowingSuggestion(true);
+        } else {
+          setShowingSuggestion(false);
+        }
       } catch (error) {
         console.error("Error loading next activity:", error);
+        // On error, also try to show a suggestion
+        if (suggestedActivities.length > 0) {
+          const randomIndex = Math.floor(Math.random() * suggestedActivities.length);
+          setSuggestedActivity(suggestedActivities[randomIndex]);
+          setShowingSuggestion(true);
+        }
       } finally {
         setLoading(false);
       }
@@ -34,18 +102,44 @@ const WhatsNext = ({ onViewChange }: { onViewChange: (view: string) => void }) =
   }, [getNextActivity]);
 
   const handleComplete = async () => {
-    if (currentActivity?.id) {
+    if (currentActivity?.id && !showingSuggestion) {
       await completeActivity(currentActivity.id);
       // Reload the next activity
       const nextActivity = await getNextActivity();
       setCurrentActivity(nextActivity);
+      if (!nextActivity && suggestedActivities.length > 0) {
+        // If no more activities, show a suggestion
+        const randomIndex = Math.floor(Math.random() * suggestedActivities.length);
+        setSuggestedActivity(suggestedActivities[randomIndex]);
+        setShowingSuggestion(true);
+      } else {
+        setShowingSuggestion(false);
+      }
+    } else if (showingSuggestion) {
+      // When completing a suggestion, just show another suggestion
+      const randomIndex = Math.floor(Math.random() * suggestedActivities.length);
+      setSuggestedActivity(suggestedActivities[randomIndex]);
     }
   };
 
   const handleSkip = async () => {
-    // Skip to the next activity without marking complete
-    const nextActivity = await getNextActivity();
-    setCurrentActivity(nextActivity);
+    if (!showingSuggestion) {
+      // Skip to the next activity without marking complete
+      const nextActivity = await getNextActivity();
+      setCurrentActivity(nextActivity);
+      if (!nextActivity && suggestedActivities.length > 0) {
+        // If no more activities, show a suggestion
+        const randomIndex = Math.floor(Math.random() * suggestedActivities.length);
+        setSuggestedActivity(suggestedActivities[randomIndex]);
+        setShowingSuggestion(true);
+      } else {
+        setShowingSuggestion(false);
+      }
+    } else {
+      // When skipping a suggestion, just show another suggestion
+      const randomIndex = Math.floor(Math.random() * suggestedActivities.length);
+      setSuggestedActivity(suggestedActivities[randomIndex]);
+    }
   };
 
   return (
@@ -63,21 +157,35 @@ const WhatsNext = ({ onViewChange }: { onViewChange: (view: string) => void }) =
           <div className="animate-spin h-10 w-10 border-4 border-teal-500 rounded-full border-t-transparent mx-auto mb-4"></div>
           <p className="text-gray-500">Loading your next activity...</p>
         </div>
-      ) : currentActivity ? (
+      ) : (currentActivity || (showingSuggestion && suggestedActivity)) ? (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-1">{currentActivity.name}</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">
+                {showingSuggestion ? suggestedActivity.name : currentActivity.name}
+                {showingSuggestion && (
+                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    Suggested
+                  </span>
+                )}
+              </h2>
               <p className="text-gray-500">
-                {currentActivity.duration} {currentActivity.durationUnit === 'minute' ? 'mins' : 'hours'} • {currentActivity.category}
+                {showingSuggestion ? suggestedActivity.duration : currentActivity.duration} 
+                {(showingSuggestion ? suggestedActivity.durationUnit : currentActivity.durationUnit) === 'minute' ? ' mins' : ' hours'} 
+                • {showingSuggestion ? suggestedActivity.category : currentActivity.category}
               </p>
-              {currentActivity.description && (
-                <p className="mt-4 text-gray-700">{currentActivity.description}</p>
+              {(showingSuggestion ? suggestedActivity.description : currentActivity.description) && (
+                <p className="mt-4 text-gray-700">
+                  {showingSuggestion ? suggestedActivity.description : currentActivity.description}
+                </p>
               )}
             </div>
             <div className="rounded-full h-12 w-12 flex items-center justify-center" 
-              style={{ backgroundColor: currentActivity.color + '20', color: currentActivity.color }}>
-              {currentActivity.emoji || '✓'}
+              style={{ 
+                backgroundColor: (showingSuggestion ? suggestedActivity.color : currentActivity.color) + '20', 
+                color: showingSuggestion ? suggestedActivity.color : currentActivity.color 
+              }}>
+              {showingSuggestion ? suggestedActivity.emoji : (currentActivity.emoji || '✓')}
             </div>
           </div>
           <div className="mt-6 flex space-x-4">
@@ -98,18 +206,29 @@ const WhatsNext = ({ onViewChange }: { onViewChange: (view: string) => void }) =
           </div>
           
           <div className="mt-4 flex justify-between border-t pt-4">
-            <button
-              onClick={() => onViewChange('shop-activities')}
-              className="text-teal-600 text-sm font-medium flex items-center"
-            >
-              Add More Activities
-            </button>
-            {currentActivity.exportToCalendar && (
+            {(!showingSuggestion && activities && activities.length > 0) ? (
+              <button
+                onClick={() => onViewChange('shop-activities')}
+                className="text-teal-600 text-sm font-medium flex items-center"
+              >
+                Add More Activities
+              </button>
+            ) : (
+              <button
+                onClick={() => onViewChange('shop-activities')}
+                className="text-teal-600 text-sm font-medium flex items-center"
+              >
+                Browse Activities
+              </button>
+            )}
+            
+            {(showingSuggestion ? suggestedActivity.exportToCalendar : currentActivity.exportToCalendar) && (
               <button className="text-teal-600 text-sm font-medium flex items-center">
                 <Calendar className="h-4 w-4 mr-1" />
                 Export to Calendar
               </button>
             )}
+            
             <button className="text-teal-600 text-sm font-medium flex items-center">
               <Share2 className="h-4 w-4 mr-1" />
               Share
@@ -249,8 +368,8 @@ const Home = ({ initialView = 'nextTask' }: HomeProps) => {
           onClick={() => setLocation('/shop-activities')}
           className="flex flex-col items-center text-gray-500"
         >
-          <Share2 size={20} />
-          <span className="text-xs">Share</span>
+          <Store size={20} />
+          <span className="text-xs">Browse</span>
         </button>
         <button 
           onClick={() => setActiveView('calendar')}
