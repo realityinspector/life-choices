@@ -33,9 +33,9 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
       completeSetup(userData);
       toast({
         title: "Login successful",
-        description: "Welcome back to Sundial!",
+        description: "Welcome back to Life Choices!",
       });
-      setLocation("/dashboard");
+      setLocation("/next");
     } else {
       toast({
         title: "Login failed",
@@ -112,9 +112,9 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
       completeSetup(userData);
       toast({
         title: "Registration successful",
-        description: "Welcome to Sundial!",
+        description: "Welcome to Life Choices!",
       });
-      setLocation("/dashboard");
+      setLocation("/next");
     } else {
       toast({
         title: "Registration failed",
@@ -213,8 +213,23 @@ const Login = () => {
       <div className="flex-1 flex flex-col justify-center items-center p-6">
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Sundial</h1>
-            <p className="text-gray-600 mt-2">Life Time Management Application</p>
+            <h1 className="text-3xl font-bold text-gray-900 text-teal-600 flex items-center justify-center">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-8 w-8 mr-2"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              Life Choices
+            </h1>
+            <p className="text-gray-600 mt-2">Do what matters, one choice at a time</p>
           </div>
 
           <Card className="shadow-lg border-0">
@@ -224,8 +239,8 @@ const Login = () => {
               </CardTitle>
               <CardDescription className="mb-4">
                 {activeTab === "login" 
-                  ? "Sign in to access your Sundial dashboard" 
-                  : "Start managing your lifetime effectively"
+                  ? "Sign in to access your Life Choices app" 
+                  : "Start making better choices every day"
                 }
               </CardDescription>
               
@@ -251,12 +266,12 @@ const Login = () => {
       </div>
 
       {/* Right side - Hero image and information */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-blue-500 to-blue-700 text-white p-10 items-center">
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-teal-600 to-teal-700 text-white p-10 items-center">
         <div className="max-w-lg mx-auto space-y-8">
           <div>
-            <h2 className="text-4xl font-bold tracking-tight">Visualize Your Lifetime</h2>
-            <p className="mt-4 text-xl text-blue-100">
-              Map your life's journey through the powerful metaphor of time as a 24-hour clock.
+            <h2 className="text-4xl font-bold tracking-tight">Make Better Choices Every Day</h2>
+            <p className="mt-4 text-xl text-teal-100">
+              Focus on what matters most with a simple, intuitive task management system.
             </p>
           </div>
 
@@ -274,13 +289,13 @@ const Login = () => {
                   strokeLinecap="round" 
                   strokeLinejoin="round"
                 >
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-semibold">Track Your Life Progress</h3>
-                <p className="text-blue-100">See where you are in your life journey with our interactive sundial.</p>
+                <h3 className="text-lg font-semibold">What's Next?</h3>
+                <p className="text-teal-100">Always know the most important thing to focus on right now.</p>
               </div>
             </div>
 
@@ -304,8 +319,8 @@ const Login = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-semibold">Plan Activities</h3>
-                <p className="text-blue-100">Create and manage activities to allocate your time effectively.</p>
+                <h3 className="text-lg font-semibold">Smart Activity Management</h3>
+                <p className="text-teal-100">Browse and discover pre-made activities to keep your life balanced.</p>
               </div>
             </div>
 
@@ -322,13 +337,15 @@ const Login = () => {
                   strokeLinecap="round" 
                   strokeLinejoin="round"
                 >
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-semibold">Time Machine</h3>
-                <p className="text-blue-100">Project future scenarios and see how your choices impact your lifetime.</p>
+                <h3 className="text-lg font-semibold">Share With Friends</h3>
+                <p className="text-teal-100">Invite friends to join your activities and build habits together.</p>
               </div>
             </div>
           </div>
