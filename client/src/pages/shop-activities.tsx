@@ -523,7 +523,11 @@ const SAMPLE_ACTIVITIES: Array<Required<ActivityInsert>> = [
     duration: 45,
     durationUnit: "minute",
     lifeImpact: 7,
-    color: "#0088FE"
+    color: "#0088FE",
+    emoji: "💪",
+    priority: 3,
+    exportToCalendar: false,
+    clusterId: null
   },
   {
     name: "Reading Non-Fiction",
@@ -964,6 +968,9 @@ export default function ShopActivitiesPage() {
                         activity={activity}
                         onAddToCart={handleAddToCart}
                         onAddNow={handleAddActivity}
+                        onComplete={handleCompleteActivity}
+                        onSkip={handleSkipActivity}
+                        userActivities={activities}
                       />
                     ))}
                 </div>
@@ -979,6 +986,9 @@ export default function ShopActivitiesPage() {
                         activity={activity}
                         onAddToCart={handleAddToCart}
                         onAddNow={handleAddActivity}
+                        onComplete={handleCompleteActivity}
+                        onSkip={handleSkipActivity}
+                        userActivities={activities}
                       />
                     ))}
                 </div>
@@ -1005,6 +1015,9 @@ export default function ShopActivitiesPage() {
                           activity={activity}
                           onAddToCart={handleAddToCart}
                           onAddNow={handleAddActivity}
+                          onComplete={handleCompleteActivity}
+                          onSkip={handleSkipActivity}
+                          userActivities={activities}
                           isRecommended={true}
                           recommendationReason={userData && activities ? getRecommendationReason(activity, userData, activities) : undefined}
                         />
