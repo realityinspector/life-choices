@@ -14,6 +14,7 @@ import CartPage from "@/pages/cart";
 import WhatsNextPage from "@/pages/whats-next";
 import ProfilePage from "@/pages/profile";
 import TasksPage from "@/pages/tasks";
+import CalendarPage from "@/pages/calendar";
 
 // Set the document title
 document.title = "Life Choices | Do what matters, one choice at a time";
@@ -75,10 +76,18 @@ function Router() {
       )}
       
       {/* Task management screens */}
-      {isUserSetup && <Route path="/activities" component={TasksPage} />}
+      {isUserSetup && (
+        <Route path="/activities">
+          {() => <Home initialView="activities" />}
+        </Route>
+      )}
       
       {/* Calendar view */}
-      {isUserSetup && <Route path="/calendar" component={CalendarPage} />}
+      {isUserSetup && (
+        <Route path="/calendar">
+          {() => <Home initialView="calendar" />}
+        </Route>
+      )}
       
       {/* User profile */}
       {isUserSetup && <Route path="/profile" component={ProfilePage} />}
@@ -86,9 +95,7 @@ function Router() {
       {/* Shopping and social features */}
       {isUserSetup && <Route path="/shop-activities" component={ShopActivitiesPage} />}
       {isUserSetup && <Route path="/cart" component={CartPage} />}
-      {isUserSetup && <Route path="/share">
-        {() => <CartPage />} {/* Temporary, will be replaced with dedicated share page */}
-      </Route>}
+      {isUserSetup && <Route path="/share" component={CartPage} />} {/* Temporary, will be replaced with dedicated share page */}
       
       {/* Analytics */}
       {isUserSetup && <Route path="/analytics" component={AnalyticsPage} />}
