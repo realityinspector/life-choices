@@ -19,9 +19,16 @@ interface ActivityCardProps {
   onAddToCart: (activity: ActivityInsert) => void;
   onAddNow: (activity: ActivityInsert) => void;
   isRecommended?: boolean;
+  recommendationReason?: string;
 }
 
-const ActivityCard = ({ activity, onAddToCart, onAddNow, isRecommended = false }: ActivityCardProps) => {
+const ActivityCard = ({ 
+  activity, 
+  onAddToCart, 
+  onAddNow, 
+  isRecommended = false,
+  recommendationReason
+}: ActivityCardProps) => {
   const getImpactColor = (impact: number | undefined) => {
     if (!impact) return "bg-gray-500";
     if (impact >= 8) return "bg-green-500";
@@ -42,7 +49,12 @@ const ActivityCard = ({ activity, onAddToCart, onAddNow, isRecommended = false }
           <Badge>{activity.category}</Badge>
         </div>
         <CardDescription>
-          {isRecommended ? "Recommended for your profile" : `${activity.frequency} x ${activity.frequencyUnit}`}
+          {!isRecommended && `${activity.frequency} x ${activity.frequencyUnit}`}
+          {isRecommended && recommendationReason ? (
+            <span className="text-primary font-medium">{recommendationReason}</span>
+          ) : isRecommended ? (
+            <span className="text-primary font-medium">Recommended for your profile</span>
+          ) : null}
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-2">
@@ -56,6 +68,13 @@ const ActivityCard = ({ activity, onAddToCart, onAddNow, isRecommended = false }
             <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
           </div>
         </div>
+        {isRecommended && !recommendationReason && (
+          <div className="mt-2 text-xs text-primary-foreground/70">
+            <span className="flex items-center">
+              <span className="mr-1">•</span> {activity.frequency} x {activity.frequencyUnit}
+            </span>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex space-x-2">
         <Button 
@@ -95,6 +114,66 @@ const ACTIVITY_CATEGORIES = [
 ];
 
 // Function to generate personalized recommendations based on user profile and current activities
+// Function to generate reasons for recommendations
+const getRecommendationReason = (
+  activity: Required<ActivityInsert>,
+  userData: UserData,
+  currentActivities: Activity[]
+): string => {
+  // Check if the user already has activities in this category
+  const userCategories = new Set(currentActivities.map(a => a.category));
+  
+  // Get current categories and activity names
+  const averageImpact = currentActivities.length > 0 
+    ? currentActivities.reduce((sum, a) => sum + (a.lifeImpact || 0), 0) / currentActivities.length
+    : 0;
+    
+  // Calculate total time allocated per week
+  const weeklyTimeAllocation = currentActivities.reduce((total, activity) => {
+    let weeklyTime = activity.duration;
+    if (activity.durationUnit === "hour") {
+      weeklyTime *= 60; // Convert to minutes
+    }
+    
+    // Convert to weekly frequency
+    if (activity.frequencyUnit === "day") {
+      weeklyTime *= (activity.frequency * 7);
+    } else if (activity.frequencyUnit === "week") {
+      weeklyTime *= activity.frequency;
+    } else if (activity.frequencyUnit === "month") {
+      weeklyTime *= (activity.frequency / 4);
+    } else if (activity.frequencyUnit === "year") {
+      weeklyTime *= (activity.frequency / 52);
+    }
+    
+    return total + weeklyTime;
+  }, 0);
+  
+  // Calculate available weekly time (excluding sleep) in minutes
+  const availableWeeklyTime = (24 * 7 - (userData.sleepHours || 8) * 7) * 60;
+  const timeUsagePercentage = (weeklyTimeAllocation / availableWeeklyTime) * 100;
+  
+  // Reasons based on various factors
+  if (activity.lifeImpact >= 8) {
+    return "High impact activity that could significantly improve your life quality";
+  }
+  
+  if (!userCategories.has(activity.category)) {
+    return `Adding ${activity.category} activities can create more balance in your routine`;
+  }
+  
+  if (timeUsagePercentage > 70 && activity.duration <= 30 && activity.durationUnit === "minute") {
+    return "Quick activity that fits well in your busy schedule";
+  }
+  
+  if (averageImpact < 6 && activity.lifeImpact > averageImpact) {
+    return "Higher impact than your current activities";
+  }
+  
+  return "Complements your existing routine well";
+};
+
+// Main recommendation generation function
 const generateRecommendations = (
   userData: UserData,
   currentActivities: Activity[],
@@ -348,11 +427,12 @@ const SAMPLE_ACTIVITIES: Array<Required<ActivityInsert>> = [
 
 export default function ShopActivitiesPage() {
   const { toast } = useToast();
-  const { userData, addActivity, addActivitiesToCart, getCartActivities, saveCartActivities } = useUser();
+  const { userData, activities, addActivity, addActivitiesToCart, getCartActivities, saveCartActivities } = useUser();
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [filteredActivities, setFilteredActivities] = useState<Required<ActivityInsert>[]>(SAMPLE_ACTIVITIES);
+  const [recommendedActivities, setRecommendedActivities] = useState<Required<ActivityInsert>[]>([]);
   const [cartItems, setCartItems] = useState<ActivityInsert[]>([]);
   const [showCart, setShowCart] = useState(false);
 
@@ -360,6 +440,23 @@ export default function ShopActivitiesPage() {
     // Initialize cart from user context
     setCartItems(getCartActivities());
   }, [getCartActivities]);
+
+  // Generate recommendations when user or activities change
+  useEffect(() => {
+    if (userData && activities) {
+      // Fill in missing required properties for TypeScript
+      const completeActivities = SAMPLE_ACTIVITIES.map(activity => ({
+        ...activity,
+        priority: 3,
+        exportToCalendar: false,
+        emoji: "✨",
+        clusterId: null
+      }));
+      
+      const recommendations = generateRecommendations(userData, activities, completeActivities);
+      setRecommendedActivities(recommendations);
+    }
+  }, [userData, activities]);
 
   useEffect(() => {
     // Filter activities based on search query and category
@@ -626,19 +723,44 @@ export default function ShopActivitiesPage() {
               </TabsContent>
 
               <TabsContent value="recommended" className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredActivities
-                    .filter((_, i) => i % 3 === 0) // Just a simulation of "recommended" activities
-                    .map((activity, index) => (
-                      <ActivityCard 
-                        key={index}
-                        activity={activity}
-                        onAddToCart={handleAddToCart}
-                        onAddNow={handleAddActivity}
-                        isRecommended={true}
-                      />
-                    ))}
-                </div>
+                {recommendedActivities.length > 0 ? (
+                  <>
+                    <div className="bg-primary/10 rounded-lg p-4 mb-6">
+                      <h3 className="text-lg font-medium mb-2 flex items-center">
+                        <Heart className="h-5 w-5 mr-2 text-primary" fill="currentColor" /> 
+                        Personalized Recommendations
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Based on your current activities and profile, we've selected these activities 
+                        that might enhance your life balance and overall impact.
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {recommendedActivities.map((activity, index) => (
+                        <ActivityCard 
+                          key={index}
+                          activity={activity}
+                          onAddToCart={handleAddToCart}
+                          onAddNow={handleAddActivity}
+                          isRecommended={true}
+                          recommendationReason={userData && activities ? getRecommendationReason(activity, userData, activities) : undefined}
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center p-10 bg-muted rounded-lg">
+                    <Heart className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="font-medium text-lg mb-2">No recommendations yet</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Add some activities to your routine to get personalized recommendations.
+                    </p>
+                    <Button onClick={() => document.querySelector('[data-value="all"]')?.click()}>
+                      Browse All Activities
+                    </Button>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>
