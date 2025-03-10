@@ -1,6 +1,8 @@
 import { useLocation } from "wouter";
 import { UserData } from "@shared/schema";
 import Navigation from "./navigation";
+import { CheckCircle2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface HeaderProps {
   userData?: UserData;
@@ -8,6 +10,7 @@ interface HeaderProps {
 
 const Header = ({ userData }: HeaderProps) => {
   const [location] = useLocation();
+  const isMobile = useIsMobile();
 
   return (
     <header className="bg-white shadow-sm">
@@ -16,21 +19,24 @@ const Header = ({ userData }: HeaderProps) => {
           <div className="flex items-center mb-4 md:mb-0">
             {/* App Logo */}
             <div className="flex-shrink-0">
-              <div className="text-primary font-serif font-bold text-3xl">
-                Sundial
+              <div className="text-teal-600 font-sans font-bold text-2xl flex items-center">
+                <CheckCircle2 className="h-6 w-6 mr-2" />
+                Life Choices
               </div>
             </div>
             
             {/* User greeting if available */}
             {userData && userData.name && (
-              <div className="ml-4 text-sm text-muted-foreground">
-                Welcome, <span className="font-medium text-foreground">{userData.name}</span>
+              <div className="ml-4 text-sm text-gray-500">
+                Welcome, <span className="font-medium text-gray-700">{userData.name}</span>
               </div>
             )}
           </div>
           
-          {/* Navigation */}
-          <Navigation currentPath={location} />
+          {/* Navigation - only show on desktop (mobile uses bottom navigation) */}
+          <div className="hidden md:block">
+            <Navigation currentPath={location} />
+          </div>
         </div>
       </div>
     </header>

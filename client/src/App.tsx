@@ -11,12 +11,15 @@ import LifeEventsPage from "@/pages/life-events";
 import AnalyticsPage from "@/pages/analytics";
 import ShopActivitiesPage from "@/pages/shop-activities";
 
+// Set the document title
+document.title = "Life Choices | Do what matters, one choice at a time";
+
 function Router() {
   const { isUserSetup } = useUser();
   const [location] = useLocation();
 
   // Free routes that don't require authentication
-  const freeRoutes = ["/", "/login"];
+  const freeRoutes = ["/", "/login", "/shared-activity"];
 
   // Check if we're on a free route
   const isOnFreeRoute = freeRoutes.includes(location);
@@ -31,14 +34,15 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPageWrapper} />
       <Route path="/login" component={LoginPage} />
-      {isUserSetup && <Route path="/dashboard">
-        {() => <Home initialView="dashboard" />}
+      {/* Updated routes to match our new mobile-first approach */}
+      {isUserSetup && <Route path="/whats-next">
+        {() => <Home initialView="nextTask" />}
       </Route>}
-      {isUserSetup && <Route path="/activities">
+      {isUserSetup && <Route path="/tasks">
         {() => <Home initialView="activities" />}
       </Route>}
-      {isUserSetup && <Route path="/time-machine">
-        {() => <Home initialView="projections" />}
+      {isUserSetup && <Route path="/calendar">
+        {() => <Home initialView="calendar" />}
       </Route>}
       {isUserSetup && <Route path="/profile">
         {() => <Home initialView="profile" />}
