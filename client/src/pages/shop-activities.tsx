@@ -500,7 +500,8 @@ const generateRecommendations = (
 
 // Sample activities data - in a real app, this would come from the database
 // Making sure all properties are defined to avoid TypeScript errors
-const SAMPLE_ACTIVITIES: Array<Required<ActivityInsert>> = [
+// Sample activities data
+const SAMPLE_ACTIVITIES: Array<ActivityInsert> = [
   {
     name: "Morning Meditation",
     category: "Spirituality & Mindfulness",
@@ -661,6 +662,18 @@ const SAMPLE_ACTIVITIES: Array<Required<ActivityInsert>> = [
   }
 ];
 
+// Helper function to ensure all activities have required properties
+function completeActivityData(activities: ActivityInsert[]): Required<ActivityInsert>[] {
+  return activities.map(activity => ({
+    ...activity,
+    priority: activity.priority ?? 3,
+    exportToCalendar: activity.exportToCalendar ?? false,
+    emoji: activity.emoji ?? "✨",
+    clusterId: activity.clusterId ?? null,
+    lifeImpact: activity.lifeImpact ?? 0
+  })) as Required<ActivityInsert>[];
+};
+
 export default function ShopActivitiesPage() {
   const { toast } = useToast();
   const { 
@@ -675,7 +688,7 @@ export default function ShopActivitiesPage() {
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [filteredActivities, setFilteredActivities] = useState<Required<ActivityInsert>[]>(SAMPLE_ACTIVITIES);
+  const [filteredActivities, setFilteredActivities] = useState<Required<ActivityInsert>[]>(completeActivityData(SAMPLE_ACTIVITIES));
   const [recommendedActivities, setRecommendedActivities] = useState<Required<ActivityInsert>[]>([]);
   const [cartItems, setCartItems] = useState<ActivityInsert[]>([]);
   const [showCart, setShowCart] = useState(false);
@@ -684,17 +697,6 @@ export default function ShopActivitiesPage() {
     // Initialize cart from user context
     setCartItems(getCartActivities());
   }, [getCartActivities]);
-
-  // Helper function to ensure all activities have required properties
-  const completeActivityData = (activities: any[]): Required<ActivityInsert>[] => {
-    return activities.map(activity => ({
-      ...activity,
-      priority: activity.priority ?? 3,
-      exportToCalendar: activity.exportToCalendar ?? false,
-      emoji: activity.emoji ?? "✨",
-      clusterId: activity.clusterId ?? null
-    }));
-  };
 
   // Generate recommendations when user or activities change
   useEffect(() => {
