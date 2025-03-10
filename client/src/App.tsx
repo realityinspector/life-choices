@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import { useUser, UserProvider } from "./context/user-context";
-import FreeSundialPage from "@/pages/free-sundial";
+import LandingPageWrapper from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import LifeEventsPage from "@/pages/life-events";
 import AnalyticsPage from "@/pages/analytics";
@@ -29,7 +29,7 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={FreeSundialPage} />
+      <Route path="/" component={LandingPageWrapper} />
       <Route path="/login" component={LoginPage} />
       {isUserSetup && <Route path="/dashboard">
         {() => <Home initialView="dashboard" />}

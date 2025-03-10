@@ -67,6 +67,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email"),
   age: integer("age").default(30),
+  lifeExpectancy: integer("life_expectancy").default(85),
   sleepHours: real("sleep_hours").default(8),
 });
 

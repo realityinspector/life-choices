@@ -31,6 +31,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     username: '',
     password: '',
     age: 30,
+    lifeExpectancy: 85,
     sleepHours: 8
   });
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -289,6 +290,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       username: '',
       password: '',
       age: 30,
+      lifeExpectancy: 85,
       sleepHours: 8
     });
     setActivities([]);
