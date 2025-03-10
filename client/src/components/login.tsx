@@ -29,6 +29,8 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
         return;
       }
       
+      console.log('Attempting to login with credentials:', { username });
+      
       // Actually authenticate with the server
       const response = await fetch('/api/login', {
         method: 'POST',
@@ -36,19 +38,45 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, password }),
-        credentials: 'include'
+        credentials: 'include'  // This is important for cookies to work
       });
       
       if (response.ok) {
         const userData = await response.json();
+        console.log('Login successful, user data:', userData);
+        
+        // Verify session cookies are set
+        console.log('Cookies after login:', document.cookie);
+        
         completeSetup(userData);
         toast({
           title: "Login successful",
           description: "Welcome back to Life Choices!",
         });
+        
+        // After successful login, immediately test if we can access a protected endpoint
+        try {
+          const userCheckResponse = await fetch('/api/user', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (userCheckResponse.ok) {
+            console.log('Authentication verified - protected endpoint accessible');
+          } else {
+            console.warn('Authentication issue - protected endpoint not accessible after login');
+          }
+        } catch (verifyError) {
+          console.error('Error verifying authentication:', verifyError);
+        }
+        
         setLocation("/whats-next");
       } else {
         const error = await response.json();
+        console.error('Login failed with error:', error);
         toast({
           title: "Login failed",
           description: error.message || "Authentication failed",
@@ -130,6 +158,8 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
         return;
       }
       
+      console.log('Attempting to register with credentials:', { username, name });
+      
       // Register with the server
       const response = await fetch('/api/register', {
         method: 'POST',
@@ -144,19 +174,45 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
           lifeExpectancy, 
           sleepHours: 8 
         }),
-        credentials: 'include'
+        credentials: 'include'  // This is important for cookies to work
       });
       
       if (response.ok) {
         const userData = await response.json();
+        console.log('Registration successful, user data:', userData);
+        
+        // Verify session cookies are set
+        console.log('Cookies after registration:', document.cookie);
+        
         completeSetup(userData);
         toast({
           title: "Registration successful",
           description: "Welcome to Life Choices!",
         });
+        
+        // After successful registration, immediately test if we can access a protected endpoint
+        try {
+          const userCheckResponse = await fetch('/api/user', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (userCheckResponse.ok) {
+            console.log('Authentication verified - protected endpoint accessible after registration');
+          } else {
+            console.warn('Authentication issue - protected endpoint not accessible after registration');
+          }
+        } catch (verifyError) {
+          console.error('Error verifying authentication after registration:', verifyError);
+        }
+        
         setLocation("/whats-next");
       } else {
         const error = await response.json();
+        console.error('Registration failed with error:', error);
         toast({
           title: "Registration failed",
           description: error.message || "Registration failed",
