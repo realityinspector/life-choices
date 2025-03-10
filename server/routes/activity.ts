@@ -13,6 +13,11 @@ function isAuthenticated(req: Request): boolean {
 interface AuthenticatedRequest extends Request {
   user?: {
     id: number;
+    username: string;
+    name: string;
+    age: number;
+    lifeExpectancy: number;
+    sleepHours: number;
     [key: string]: any;
   };
 }
@@ -51,8 +56,8 @@ activityRouter.get('/next', async (req: AuthenticatedRequest, res) => {
 });
 
 // Get activities by cluster
-activityRouter.get('/cluster/:clusterId', async (req, res) => {
-  if (!req.session.userId) {
+activityRouter.get('/cluster/:clusterId', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
@@ -62,12 +67,13 @@ activityRouter.get('/cluster/:clusterId', async (req, res) => {
 });
 
 // Create new activity
-activityRouter.post('/', async (req, res) => {
-  if (!req.session.userId) {
+activityRouter.post('/', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
   try {
+    const userId = req.user.id;
     const parsed = activitySchema.parse(req.body);
     const nextDue = new Date();
     
@@ -83,11 +89,12 @@ activityRouter.post('/', async (req, res) => {
     
     const activityData: ActivityInsert & { userId: number, nextDue: Date } = {
       ...parsed,
-      userId: req.session.userId,
+      userId: userId,
       nextDue
     };
     
     const activity = await storage.createActivity(activityData);
+    console.log("Created activity:", activity);
     res.json(activity);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -100,12 +107,13 @@ activityRouter.post('/', async (req, res) => {
 });
 
 // Update activity
-activityRouter.put('/:id', async (req, res) => {
-  if (!req.session.userId) {
+activityRouter.put('/:id', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
   const { id } = req.params;
+  const userId = req.user.id;
   
   try {
     const activityId = parseInt(id);
@@ -115,7 +123,7 @@ activityRouter.put('/:id', async (req, res) => {
       return res.status(404).json({ message: "Activity not found" });
     }
     
-    if (activity.userId !== req.session.userId) {
+    if (activity.userId !== userId) {
       return res.status(403).json({ message: "Not authorized to update this activity" });
     }
     
@@ -134,12 +142,13 @@ activityRouter.put('/:id', async (req, res) => {
 });
 
 // Complete an activity
-activityRouter.post('/:id/complete', async (req, res) => {
-  if (!req.session.userId) {
+activityRouter.post('/:id/complete', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
   const { id } = req.params;
+  const userId = req.user.id;
   
   try {
     const activityId = parseInt(id);
@@ -149,7 +158,7 @@ activityRouter.post('/:id/complete', async (req, res) => {
       return res.status(404).json({ message: "Activity not found" });
     }
     
-    if (activity.userId !== req.session.userId) {
+    if (activity.userId !== userId) {
       return res.status(403).json({ message: "Not authorized to complete this activity" });
     }
     
@@ -162,12 +171,13 @@ activityRouter.post('/:id/complete', async (req, res) => {
 });
 
 // Delete activity
-activityRouter.delete('/:id', async (req, res) => {
-  if (!req.session.userId) {
+activityRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
   const { id } = req.params;
+  const userId = req.user.id;
   
   try {
     const activityId = parseInt(id);
@@ -177,7 +187,7 @@ activityRouter.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: "Activity not found" });
     }
     
-    if (activity.userId !== req.session.userId) {
+    if (activity.userId !== userId) {
       return res.status(403).json({ message: "Not authorized to delete this activity" });
     }
     
@@ -190,13 +200,14 @@ activityRouter.delete('/:id', async (req, res) => {
 });
 
 // Delete all activities
-activityRouter.delete('/', async (req, res) => {
-  if (!req.session.userId) {
+activityRouter.delete('/', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
   try {
-    await storage.deleteAllActivities(req.session.userId);
+    const userId = req.user.id;
+    await storage.deleteAllActivities(userId);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting all activities:', error);
