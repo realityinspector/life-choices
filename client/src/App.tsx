@@ -10,6 +10,7 @@ import LoginPage from "@/pages/login";
 import LifeEventsPage from "@/pages/life-events";
 import AnalyticsPage from "@/pages/analytics";
 import ShopActivitiesPage from "@/pages/shop-activities";
+import CartPage from "@/pages/cart";
 
 // Set the document title
 document.title = "Life Choices | Do what matters, one choice at a time";
@@ -34,22 +35,62 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPageWrapper} />
       <Route path="/login" component={LoginPage} />
-      {/* Updated routes to match our new mobile-first approach */}
-      {isUserSetup && <Route path="/whats-next">
-        {() => <Home initialView="nextTask" />}
-      </Route>}
-      {isUserSetup && <Route path="/tasks">
-        {() => <Home initialView="activities" />}
-      </Route>}
-      {isUserSetup && <Route path="/calendar">
-        {() => <Home initialView="calendar" />}
-      </Route>}
-      {isUserSetup && <Route path="/profile">
-        {() => <Home initialView="profile" />}
-      </Route>}
-      {isUserSetup && <Route path="/life-events" component={LifeEventsPage} />}
+      
+      {/* Main app - for authenticated users */}
+      {isUserSetup && (
+        <Route path="/dashboard">
+          {() => <Home initialView="dashboard" />}
+        </Route>
+      )}
+      
+      {/* "What's Next" view as home for authenticated users */}
+      {isUserSetup && (
+        <Route path="/next">
+          {() => <Home initialView="nextTask" />}
+        </Route>
+      )}
+      
+      {/* If user is authenticated and goes to root, show What's Next */}
+      {isUserSetup && (
+        <Route path="/">
+          {() => <Home initialView="nextTask" />}
+        </Route>
+      )}
+      
+      {/* Task management screens */}
+      {isUserSetup && (
+        <Route path="/activities">
+          {() => <Home initialView="activities" />}
+        </Route>
+      )}
+      
+      {/* Calendar view */}
+      {isUserSetup && (
+        <Route path="/calendar">
+          {() => <Home initialView="calendar" />}
+        </Route>
+      )}
+      
+      {/* User profile */}
+      {isUserSetup && (
+        <Route path="/profile">
+          {() => <Home initialView="profile" />}
+        </Route>
+      )}
+      
+      {/* Shopping and social features */}
       {isUserSetup && <Route path="/shop-activities" component={ShopActivitiesPage} />}
+      {isUserSetup && <Route path="/cart" component={CartPage} />}
+      {isUserSetup && <Route path="/share">
+        {() => <CartPage />} {/* Temporary, will be replaced with dedicated share page */}
+      </Route>}
+      
+      {/* Analytics */}
       {isUserSetup && <Route path="/analytics" component={AnalyticsPage} />}
+      
+      {/* Legacy routes */}
+      {isUserSetup && <Route path="/life-events" component={LifeEventsPage} />}
+      
       <Route component={NotFound} />
     </Switch>
   );

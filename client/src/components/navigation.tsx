@@ -1,5 +1,15 @@
 import { Link } from "wouter";
-import { Calendar, Activity, Clock, User, ShoppingBag, BarChart2, Store } from "lucide-react";
+import { 
+  CheckCircle2, 
+  ListChecks, 
+  Calendar, 
+  User, 
+  ShoppingCart, 
+  BarChart2, 
+  Store, 
+  Share2, 
+  Home
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavigationProps {
@@ -10,27 +20,27 @@ const Navigation = ({ currentPath }: NavigationProps) => {
   // Define the main navigation items
   const navItems = [
     {
-      label: "Dashboard",
-      path: "/dashboard",
+      label: "Home",
+      path: "/",
+      icon: <Home className="h-4 w-4 mr-2" />,
+    },
+    {
+      label: "What's Next",
+      path: "/next",
+      icon: <CheckCircle2 className="h-4 w-4 mr-2" />,
+    },
+    {
+      label: "Tasks",
+      path: "/activities",
+      icon: <ListChecks className="h-4 w-4 mr-2" />,
+    },
+    {
+      label: "Calendar",
+      path: "/calendar",
       icon: <Calendar className="h-4 w-4 mr-2" />,
     },
     {
-      label: "Activities",
-      path: "/activities",
-      icon: <Activity className="h-4 w-4 mr-2" />,
-    },
-    {
-      label: "Time Machine",
-      path: "/time-machine",
-      icon: <Clock className="h-4 w-4 mr-2" />,
-    },
-    {
-      label: "Life Events",
-      path: "/life-events",
-      icon: <ShoppingBag className="h-4 w-4 mr-2" />,
-    },
-    {
-      label: "Shop Activities",
+      label: "Browse",
       path: "/shop-activities",
       icon: <Store className="h-4 w-4 mr-2" />,
     },
@@ -46,21 +56,52 @@ const Navigation = ({ currentPath }: NavigationProps) => {
     },
   ];
 
+  // Define utility buttons that appear separately
+  const utilityButtons = [
+    {
+      label: "Cart",
+      path: "/cart",
+      icon: <ShoppingCart className="h-4 w-4 mr-2" />,
+    },
+    {
+      label: "Share",
+      path: "/share",
+      icon: <Share2 className="h-4 w-4 mr-2" />,
+    }
+  ];
+
   return (
-    <nav className="flex flex-wrap items-center space-x-1 md:space-x-2">
-      {navItems.map((item) => (
-        <Link key={item.path} href={item.path}>
-          <Button
-            variant={currentPath === item.path ? "default" : "ghost"}
-            size="sm"
-            className="text-sm"
-          >
-            {item.icon}
-            {item.label}
-          </Button>
-        </Link>
-      ))}
-    </nav>
+    <div className="flex justify-between w-full">
+      <nav className="flex flex-wrap items-center space-x-1 md:space-x-2">
+        {navItems.map((item) => (
+          <Link key={item.path} href={item.path}>
+            <Button
+              variant={currentPath === item.path ? "default" : "ghost"}
+              size="sm"
+              className="text-sm"
+            >
+              {item.icon}
+              {item.label}
+            </Button>
+          </Link>
+        ))}
+      </nav>
+
+      <div className="flex items-center space-x-1">
+        {utilityButtons.map((item) => (
+          <Link key={item.path} href={item.path}>
+            <Button
+              variant={currentPath === item.path ? "default" : "outline"}
+              size="sm"
+              className="text-sm"
+            >
+              {item.icon}
+              {item.label}
+            </Button>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 };
 
