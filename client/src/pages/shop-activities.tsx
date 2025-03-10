@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/user-context";
 import { Activity, ActivityInsert, UserData } from "@shared/schema";
-import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link, Lock, Globe } from "lucide-react";
+import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link, Lock, Globe, Calendar, ArrowRight } from "lucide-react";
 import Header from "@/components/header";
 import { useLocation } from "wouter";
 
@@ -659,7 +659,15 @@ const SAMPLE_ACTIVITIES: Array<Required<ActivityInsert>> = [
 
 export default function ShopActivitiesPage() {
   const { toast } = useToast();
-  const { userData, activities, addActivity, addActivitiesToCart, getCartActivities, saveCartActivities } = useUser();
+  const { 
+    userData, 
+    activities, 
+    addActivity, 
+    addActivitiesToCart, 
+    getCartActivities, 
+    saveCartActivities,
+    completeActivity 
+  } = useUser();
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -724,6 +732,23 @@ export default function ShopActivitiesPage() {
     toast({
       title: "Added to Cart",
       description: `${activity.name} has been added to your shopping cart.`,
+    });
+  };
+  
+  const handleCompleteActivity = (activity: Activity) => {
+    completeActivity(activity.id);
+    toast({
+      title: "Activity Completed",
+      description: `${activity.name} has been marked as complete.`,
+    });
+  };
+  
+  const handleSkipActivity = (activity: Activity) => {
+    // Skip functionality - might be added to backend later
+    // For now, we just show a notification
+    toast({
+      title: "Activity Skipped",
+      description: `${activity.name} has been skipped for now.`,
     });
   };
   
@@ -911,6 +936,9 @@ export default function ShopActivitiesPage() {
                       activity={activity}
                       onAddToCart={handleAddToCart}
                       onAddNow={handleAddActivity}
+                      onComplete={handleCompleteActivity}
+                      onSkip={handleSkipActivity}
+                      userActivities={activities}
                     />
                   ))}
                 </div>
