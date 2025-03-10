@@ -685,26 +685,32 @@ export default function ShopActivitiesPage() {
     setCartItems(getCartActivities());
   }, [getCartActivities]);
 
+  // Helper function to ensure all activities have required properties
+  const completeActivityData = (activities: any[]): Required<ActivityInsert>[] => {
+    return activities.map(activity => ({
+      ...activity,
+      priority: activity.priority ?? 3,
+      exportToCalendar: activity.exportToCalendar ?? false,
+      emoji: activity.emoji ?? "✨",
+      clusterId: activity.clusterId ?? null
+    }));
+  };
+
   // Generate recommendations when user or activities change
   useEffect(() => {
     if (userData && activities) {
-      // Fill in missing required properties for TypeScript
-      const completeActivities = SAMPLE_ACTIVITIES.map(activity => ({
-        ...activity,
-        priority: 3,
-        exportToCalendar: false,
-        emoji: "✨",
-        clusterId: null
-      }));
+      // Use our helper function to ensure activities have required properties
+      const completeActivities = completeActivityData(SAMPLE_ACTIVITIES);
       
       const recommendations = generateRecommendations(userData, activities, completeActivities);
       setRecommendedActivities(recommendations);
     }
   }, [userData, activities]);
-
+  
   useEffect(() => {
     // Filter activities based on search query and category
-    let result = SAMPLE_ACTIVITIES;
+    const completedSamples = completeActivityData(SAMPLE_ACTIVITIES);
+    let result = completedSamples;
     
     if (searchQuery.trim() !== "") {
       result = result.filter(activity => 
