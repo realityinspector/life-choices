@@ -5,7 +5,7 @@ import Profile from "@/components/profile";
 import { useUser } from "@/context/user-context";
 import Header from "@/components/header";
 import { useLocation } from "wouter";
-import { CheckCircle2, ArrowRight, Calendar, Share2, ListChecks } from "lucide-react";
+import { CheckCircle2, ArrowRight, Calendar, Share2, ListChecks, Store } from "lucide-react";
 
 interface HomeProps {
   initialView?: string;
