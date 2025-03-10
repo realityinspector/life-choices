@@ -18,16 +18,22 @@ interface ActivityCardProps {
   activity: Required<ActivityInsert>;
   onAddToCart: (activity: ActivityInsert) => void;
   onAddNow: (activity: ActivityInsert) => void;
+  onComplete?: (activity: Activity) => void;
+  onSkip?: (activity: Activity) => void;
   isRecommended?: boolean;
   recommendationReason?: string;
+  userActivities: Activity[];
 }
 
 const ActivityCard = ({ 
   activity, 
   onAddToCart, 
   onAddNow, 
+  onComplete,
+  onSkip,
   isRecommended = false,
-  recommendationReason
+  recommendationReason,
+  userActivities
 }: ActivityCardProps) => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharePrivacy, setSharePrivacy] = useState<"private" | "link" | "public">("private");
@@ -73,21 +79,57 @@ const ActivityCard = ({
     }
   };
 
+  // Check if this activity already exists in the user's activities
+  const activityExists = userActivities.some(a => a.name === activity.name);
+  
+  // Find the activity in user's activities if it exists
+  const existingActivity = userActivities.find(a => a.name === activity.name);
+
+  const handleExportToCalendar = () => {
+    if (!existingActivity) return;
+    
+    // Create a calendar event URL
+    const eventTitle = encodeURIComponent(existingActivity.name);
+    const eventDescription = encodeURIComponent(`${existingActivity.category} activity - Life Impact: ${existingActivity.lifeImpact}`);
+    const startDate = new Date();
+    const endDate = new Date(startDate.getTime() + (existingActivity.duration * (existingActivity.durationUnit === 'hour' ? 60 : 1) * 60 * 1000));
+    
+    // Format dates for calendar URLs
+    const formatDate = (date: Date) => {
+      return date.toISOString().replace(/-|:|\.\d+/g, "");
+    };
+    
+    // Google Calendar URL
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&details=${eventDescription}&dates=${formatDate(startDate)}/${formatDate(endDate)}`;
+    
+    // Open in a new tab
+    window.open(googleCalendarUrl, '_blank');
+    
+    toast({
+      title: "Calendar Link Generated",
+      description: "Event has been created and can be added to your calendar",
+    });
+  };
+
   return (
     <>
-      <Card className={`overflow-hidden h-full flex flex-col ${isRecommended ? "border-primary border-2" : ""}`}>
+      <Card className={`overflow-hidden h-full flex flex-col ${isRecommended ? "border-primary border-2" : ""} ${activityExists ? "border-green-400" : ""}`}>
         <div className={`h-1.5 ${getImpactColor(activity.lifeImpact)}`} />
         <CardHeader className="pb-2 pt-3">
           <div className="flex justify-between items-start">
             <CardTitle className="text-base flex items-center">
               {activity.name}
+              {activityExists && <Check className="h-3.5 w-3.5 ml-1.5 text-green-500" />}
               {isRecommended && <Heart className="h-3.5 w-3.5 ml-1.5 text-red-500 fill-red-500" />}
             </CardTitle>
             <Badge className="text-xs">{activity.category}</Badge>
           </div>
           <CardDescription className="mt-1 text-xs">
-            {!isRecommended && `${activity.frequency} x ${activity.frequencyUnit}`}
-            {isRecommended && recommendationReason ? (
+            {activityExists ? (
+              <span className="text-green-600 font-medium">Already in your activities</span>
+            ) : !isRecommended ? (
+              `${activity.frequency} x ${activity.frequencyUnit}`
+            ) : isRecommended && recommendationReason ? (
               <span className="text-primary font-medium">{recommendationReason}</span>
             ) : isRecommended ? (
               <span className="text-primary font-medium">Recommended for your profile</span>
@@ -105,7 +147,7 @@ const ActivityCard = ({
               <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
             </div>
           </div>
-          {isRecommended && !recommendationReason && (
+          {isRecommended && !recommendationReason && !activityExists && (
             <div className="mt-2 text-xs text-primary-foreground/70">
               <span className="flex items-center">
                 <span className="mr-1">•</span> {activity.frequency} x {activity.frequencyUnit}
@@ -114,34 +156,70 @@ const ActivityCard = ({
           )}
         </CardContent>
         <CardFooter className="flex flex-col space-y-1.5 pt-2">
-          <div className="flex w-full space-x-2">
-            <Button 
-              className="flex-1 text-xs h-8" 
-              size="sm"
-              onClick={() => onAddToCart(activity)}
-            >
-              <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-              Add to Cart
-            </Button>
-            <Button 
-              className="flex-1 text-xs h-8" 
-              size="sm"
-              variant="outline"
-              onClick={() => onAddNow(activity)}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Add Now
-            </Button>
-          </div>
-          <Button 
-            className="w-full text-xs h-8" 
-            size="sm"
-            variant="ghost"
-            onClick={() => setShowShareModal(true)}
-          >
-            <Share2 className="h-3.5 w-3.5 mr-1.5" />
-            Share Activity
-          </Button>
+          {activityExists ? (
+            <>
+              <div className="flex w-full space-x-2">
+                <Button 
+                  className="flex-1 text-xs h-8" 
+                  size="sm"
+                  variant="default"
+                  onClick={() => existingActivity && onComplete && onComplete(existingActivity)}
+                >
+                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                  Complete
+                </Button>
+                <Button 
+                  className="flex-1 text-xs h-8" 
+                  size="sm"
+                  variant="outline"
+                  onClick={() => existingActivity && onSkip && onSkip(existingActivity)}
+                >
+                  <ArrowRight className="h-3.5 w-3.5 mr-1.5" />
+                  Skip
+                </Button>
+              </div>
+              <Button 
+                className="w-full text-xs h-8" 
+                size="sm"
+                variant="ghost"
+                onClick={handleExportToCalendar}
+              >
+                <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                Add to Calendar
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="flex w-full space-x-2">
+                <Button 
+                  className="flex-1 text-xs h-8" 
+                  size="sm"
+                  onClick={() => onAddToCart(activity)}
+                >
+                  <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+                  Add to Cart
+                </Button>
+                <Button 
+                  className="flex-1 text-xs h-8" 
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onAddNow(activity)}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add Now
+                </Button>
+              </div>
+              <Button 
+                className="w-full text-xs h-8" 
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowShareModal(true)}
+              >
+                <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                Share Activity
+              </Button>
+            </>
+          )}
         </CardFooter>
       </Card>
       
