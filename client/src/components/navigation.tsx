@@ -87,11 +87,6 @@ const Navigation = ({ currentPath }: NavigationProps) => {
       label: "Cart",
       path: "/cart",
       icon: <ShoppingCart className="h-4 w-4 mr-2" />,
-    },
-    {
-      label: "Share",
-      path: "/share",
-      icon: <Share2 className="h-4 w-4 mr-2" />,
     }
   ];
 
