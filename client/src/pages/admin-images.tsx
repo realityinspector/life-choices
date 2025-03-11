@@ -62,6 +62,7 @@ export default function AdminImagesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activitySearchQuery, setActivitySearchQuery] = useState('');
   const [showOnlyNonMatches, setShowOnlyNonMatches] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
