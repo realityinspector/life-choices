@@ -6,6 +6,7 @@ import fs from "fs";
 import { Together } from "together-ai";
 import { ActivityImage, InsertActivityImage, Activity } from "../../shared/schema";
 import { getAllSampleActivities } from "../../shared/sample-activities";
+import { importActivities } from "../../scripts/import-activities";
 
 // Set up storage for uploaded files
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -363,5 +364,28 @@ adminRouter.delete("/activity-image/:id", async (req: AuthenticatedRequest, res)
   } catch (error) {
     console.error("Error deleting activity image:", error);
     res.status(500).json({ error: "Failed to delete activity image" });
+  }
+});
+
+// Import activities from CSV file
+adminRouter.post("/import-activities", async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const userId = req.user.id;
+    console.log(`Starting import of activities from CSV for user ${userId}...`);
+    
+    const importCount = await importActivities(userId);
+    
+    console.log(`Successfully imported ${importCount} activities for user ${userId}`);
+    res.json({ 
+      message: `Successfully imported ${importCount} activities`,
+      count: importCount
+    });
+  } catch (error) {
+    console.error("Error importing activities from CSV:", error);
+    res.status(500).json({ error: "Failed to import activities from CSV", details: error });
   }
 });

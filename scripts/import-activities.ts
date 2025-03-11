@@ -130,11 +130,18 @@ export async function importActivities(userId: number): Promise<number> {
     const csvPath = path.join(process.cwd(), 'shared', 'data.csv');
     const fileContent = fs.readFileSync(csvPath, { encoding: 'utf-8' });
     
+    console.log(`Reading CSV file from ${csvPath}`);
+    
     // Parse the CSV data
     const parser = parse(fileContent, {
       columns: true,
       skip_empty_lines: true,
       trim: true,
+      // Handle quotes and potential special characters
+      delimiter: ',',
+      quote: '"',
+      escape: '"',
+      relax_column_count: true
     });
 
     const records: any[] = [];
@@ -142,8 +149,16 @@ export async function importActivities(userId: number): Promise<number> {
       records.push(record);
     }
     
-    // Skip the header row
-    const dataRecords = records.slice(0);
+    console.log(`Parsed ${records.length} records from CSV file`);
+    
+    // Filter out any completely empty records
+    const dataRecords = records.filter(record => {
+      // Check if at least one required field exists
+      return (
+        (record['default eventLabelNoRelationship'] || record['updatedEventLabelNoRelationship']) &&
+        parseFloat(record['default Expected or Desired Events / Year'] || '0') > 0
+      );
+    });
     
     // Transform CSV data to activities
     const activities: (ActivityInsert & { userId: number })[] = dataRecords.map(record => {
@@ -207,6 +222,12 @@ export async function importActivities(userId: number): Promise<number> {
       // Determine priority (1-5 scale)
       const priority = determinePriority(lifePoints, emotionValue);
       
+      // Calculate next due date - default to tomorrow
+      const now = new Date();
+      const nextDue = new Date();
+      nextDue.setDate(now.getDate() + 1);
+      nextDue.setHours(9, 0, 0, 0); // Set to 9 AM
+
       return {
         userId,
         name: fullLabel,
@@ -220,6 +241,10 @@ export async function importActivities(userId: number): Promise<number> {
         priority,
         emoji,
         exportToCalendar: Boolean(parseInt(record['default Calendared'] || '0')),
+        completionCount: 0,
+        clusterId: null,
+        lastCompleted: null,
+        nextDue: nextDue 
       };
     });
     
@@ -253,8 +278,12 @@ export async function importActivities(userId: number): Promise<number> {
   }
 }
 
-// If this script is run directly
-if (require.main === module) {
+// For ES Module environment, we can't use require.main === module
+// Instead we can check if this script is being imported or run directly
+// The import.meta.url vs process.argv[1] check serves a similar purpose
+const isRunningDirectly = import.meta.url === `file://${process.argv[1]}`;
+
+if (isRunningDirectly) {
   // Use a default user ID (admin user) when run directly
   const DEFAULT_USER_ID = 1;
   

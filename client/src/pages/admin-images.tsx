@@ -386,6 +386,36 @@ export default function AdminImagesPage() {
     }
   });
   
+  // Import activities from CSV mutation
+  const importActivitiesMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('/api/admin/import-activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Import Successful',
+        description: `Successfully imported ${data.count} activities from CSV.`,
+      });
+      // Refresh activities list
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/activities'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+    },
+    onError: (error) => {
+      console.error('Error importing activities:', error);
+      toast({
+        title: 'Import Error',
+        description: 'Failed to import activities from CSV file.',
+        variant: 'destructive',
+      });
+    }
+  });
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files).map(file => ({
@@ -723,9 +753,10 @@ export default function AdminImagesPage() {
       <h1 className="text-3xl font-bold mb-6">Activity Image Management</h1>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="upload">Upload & Match</TabsTrigger>
           <TabsTrigger value="manage">Manage Images</TabsTrigger>
+          <TabsTrigger value="import">Import Activities</TabsTrigger>
         </TabsList>
         
         <TabsContent value="upload" className="space-y-4">
@@ -1261,6 +1292,70 @@ export default function AdminImagesPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        </TabsContent>
+        
+        <TabsContent value="import">
+          <Card>
+            <CardHeader>
+              <CardTitle>Import Activities from CSV</CardTitle>
+              <CardDescription>
+                Import activities from the data.csv file in the shared directory.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-md">
+                <h3 className="text-amber-800 font-medium flex items-center mb-2">
+                  <AlertCircle className="h-5 w-5 mr-2" />
+                  Important Information
+                </h3>
+                <p className="text-amber-700 text-sm">
+                  This will import activities from the <code>shared/data.csv</code> file into the database for your user.
+                  The process will map CSV fields to our activity schema and create new activities. This cannot be undone.
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-center p-6">
+                <Button 
+                  size="lg"
+                  onClick={() => importActivitiesMutation.mutate()}
+                  disabled={importActivitiesMutation.isPending}
+                >
+                  {importActivitiesMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Importing Activities...
+                    </>
+                  ) : (
+                    'Import Activities from CSV'
+                  )}
+                </Button>
+              </div>
+              
+              {importActivitiesMutation.isSuccess && (
+                <div className="bg-green-50 border border-green-200 p-4 rounded-md">
+                  <h3 className="text-green-800 font-medium flex items-center mb-2">
+                    <CheckCircle2 className="h-5 w-5 mr-2" />
+                    Import Successful
+                  </h3>
+                  <p className="text-green-700">
+                    Successfully imported {importActivitiesMutation.data?.count} activities from CSV.
+                  </p>
+                </div>
+              )}
+              
+              {importActivitiesMutation.isError && (
+                <div className="bg-red-50 border border-red-200 p-4 rounded-md">
+                  <h3 className="text-red-800 font-medium flex items-center mb-2">
+                    <AlertCircle className="h-5 w-5 mr-2" />
+                    Import Failed
+                  </h3>
+                  <p className="text-red-700">
+                    An error occurred while importing activities. Please try again or check the server logs for more details.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
