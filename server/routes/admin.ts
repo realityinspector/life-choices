@@ -39,7 +39,7 @@ const upload = multer({
 
 // Setup Together AI client
 const together = new Together({
-  apiKey: process.env.TOGETHER_API_KEY || "REDACTED_TOGETHER_API_KEY"
+  apiKey: process.env.TOGETHER_API_KEY
 });
 
 export interface AuthenticatedRequest extends Request {
