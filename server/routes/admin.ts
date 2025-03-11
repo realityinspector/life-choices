@@ -25,7 +25,8 @@ const imageStorage = multer.diskStorage({
 const upload = multer({ 
   storage: imageStorage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max file size
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
+    files: 50, // Increase maximum number of files per upload
   },
   fileFilter: (req, file, cb) => {
     // Accept only image files
@@ -99,15 +100,25 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
       messages: [
         {
           role: "system",
-          content: "You are an assistant that matches filenames to activities. Given a filename and a list of activities, determine which activity the filename best matches. Return just the exact activity name from the list that matches, or 'No match' if none match well."
+          content: "You are an expert assistant that matches image filenames to activity names. You understand naming conventions and can find meaningful connections between descriptive filenames and activity names, even when they're not exact matches. Use semantic meaning to find the best activity for each image."
         },
         {
           role: "user",
-          content: `Filename: ${filename}\nActivities: ${JSON.stringify(activityNames)}\n\nWhich activity does this filename best match? Return only the exact name of the matching activity or 'No match'.`
+          content: `I need to match this image filename to one of our existing activities.
+          
+Filename: ${filename}
+
+Available activities:
+${JSON.stringify(activityNames, null, 2)}
+
+Which activity does this image filename best match? Consider word variations, synonyms, and related concepts when making your match. If multiple matches are possible, select the one with the highest confidence. If no good match exists (below 50% confidence), respond with exactly "No match".
+
+IMPORTANT: Return ONLY the exact activity name from the list or "No match". Do not include any explanations or additional text.`
         }
       ],
       model: "meta-llama/Llama-3.2-3B-Instruct-Turbo",
-      temperature: 0.1,
+      temperature: 0.2, // Slightly higher to allow for more creative matching
+      max_tokens: 100, // Limit response length to ensure we just get the activity name
     });
 
     // Extract the suggested match
@@ -133,7 +144,7 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
 });
 
 // Upload image file(s)
-adminRouter.post("/upload", upload.array("images", 20), async (req: AuthenticatedRequest, res) => {
+adminRouter.post("/upload", upload.array("images", 50), async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
       return res.status(400).json({ error: "No files were uploaded" });
