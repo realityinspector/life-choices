@@ -263,9 +263,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       // Fallback to client-side logic for determining next activity
       const now = new Date();
       
+      // Filter activities that are due now or past due
       // Sort activities by priority and due date
       const sortedActivities = [...activities]
-        .filter(a => a.nextDue !== null)
+        .filter(a => {
+          // Only include activities that are:
+          // 1. Due now or in the past (nextDue <= current date), or
+          // 2. Don't have a nextDue date set
+          if (!a.nextDue) return true;
+          const dueDate = new Date(a.nextDue);
+          return dueDate <= now;
+        })
         .sort((a, b) => {
           // First by priority (lower number = higher priority)
           if ((a.priority || 5) !== (b.priority || 5)) {
