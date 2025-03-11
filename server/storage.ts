@@ -141,8 +141,13 @@ export class DatabaseStorage implements IStorage {
 
   // Activity methods
   async getActivities(userId?: number): Promise<Activity[]> {
-    if (!userId) return [];
-    return db.select().from(activities).where(eq(activities.userId, userId));
+    if (userId) {
+      // If userId is provided, get activities for that user
+      return db.select().from(activities).where(eq(activities.userId, userId));
+    } else {
+      // If no userId is provided, get all activities across all users
+      return db.select().from(activities);
+    }
   }
 
   async getActivity(id: number): Promise<Activity | undefined> {
