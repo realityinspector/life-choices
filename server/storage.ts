@@ -4,7 +4,7 @@ import { UserData, ActivityInsert, User, Activity, users, activities, InsertUser
   LLMConversation, InsertLLMConversation, llmConversations, LLMMessage, InsertLLMMessage, llmMessages,
   ActivityCluster, InsertActivityCluster, activityClusters, ActivityInvitation, InsertActivityInvitation, activityInvitations,
   ActivityImage, InsertActivityImage, activityImages } from "@shared/schema";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc, or, lte } from "drizzle-orm";
 import session from "express-session";
 import pgSessionPkg from "connect-pg-simple";
 import { pool, db } from "./db";
@@ -185,11 +185,23 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getNextActivity(userId: number): Promise<Activity | undefined> {
-    // Get the next due activity for this user, sorted by priority and due date
+    // Get the next due activity for this user, only show activities that are due now or past due
+    // And sort by priority and due date
     const now = new Date();
+    
     const result = await db.select()
       .from(activities)
-      .where(eq(activities.userId, userId))
+      .where(
+        and(
+          eq(activities.userId, userId),
+          or(
+            // Activity is due now (nextDue <= current date)
+            lte(activities.nextDue, now),
+            // Activity has no next due date set yet
+            isNull(activities.nextDue)
+          )
+        )
+      )
       .orderBy(activities.priority, activities.nextDue)
       .limit(1);
     
