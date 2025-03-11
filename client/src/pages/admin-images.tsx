@@ -78,7 +78,7 @@ function ActivitySearch({
         return acc;
       }, {})
     ).sort(([a], [b]) => a.localeCompare(b)) : 
-    [["All Activities", activities]];
+    [["All Activities", activities]] as [string, Activity[]][];
   
   // Filter based on whether it's a shop or database activity
   const getActivitySource = (activity: Activity): string => {
@@ -119,7 +119,7 @@ function ActivitySearch({
             <ScrollArea className="h-[300px]">
               {groupedActivities.map(([category, items]) => {
                 // Filter items based on search
-                const filteredItems = items.filter(activity =>
+                const filteredItems = items.filter((activity: Activity) =>
                   activity.name.toLowerCase().includes(search.toLowerCase()) ||
                   activity.category.toLowerCase().includes(search.toLowerCase())
                 );
@@ -128,7 +128,7 @@ function ActivitySearch({
                 
                 return (
                   <CommandGroup key={category} heading={category}>
-                    {filteredItems.map(activity => (
+                    {filteredItems.map((activity: Activity) => (
                       <CommandItem
                         key={activity.id}
                         value={`${activity.id}-${activity.name}`}
@@ -630,15 +630,13 @@ export default function AdminImagesPage() {
     setIsMatching(false);
   };
   
-  const handleActivityChange = (fileIndex: number, activityId: number) => {
-    const matchedActivity = activities.find(a => a.id === activityId);
-    
+  const handleActivityChange = (fileIndex: number, activity: Activity | null) => {
     setFiles(prev => prev.map((f, idx) => 
       idx === fileIndex ? { 
         ...f, 
-        activityId,
-        suggestedActivity: matchedActivity,
-        status: 'matched' 
+        activityId: activity?.id ?? null,
+        suggestedActivity: activity ?? undefined,
+        status: activity ? 'matched' : 'uploaded'  
       } : f
     ));
   };
@@ -925,56 +923,15 @@ export default function AdminImagesPage() {
                             ) : fileState.suggestedMatch || '-'}
                           </TableCell>
                           <TableCell>
-                            {fileState.status === 'uploaded' || fileState.status === 'matched' || fileState.status === 'failed' ? (
-                              searchActive ? (
-                                <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-1">
-                                  {activities
-                                    .filter(activity => 
-                                      activity.name.toLowerCase().includes(searchQuery.toLowerCase())
-                                    )
-                                    .map(activity => (
-                                      <div 
-                                        key={activity.id}
-                                        className={`p-1 cursor-pointer hover:bg-gray-100 rounded ${
-                                          fileState.activityId === activity.id ? 'bg-blue-100' : ''
-                                        }`}
-                                        onClick={() => handleActivityChange(index, activity.id)}
-                                      >
-                                        {activity.name}
-                                      </div>
-                                    ))
-                                  }
-                                  {activities.filter(activity => 
-                                    activity.name.toLowerCase().includes(searchQuery.toLowerCase())
-                                  ).length === 0 && (
-                                    <div className="p-1 text-muted-foreground">No matching activities</div>
-                                  )}
-                                </div>
-                              ) : (
-                                <select
-                                  className="w-full border border-gray-300 rounded-md p-1"
-                                  value={fileState.activityId || ''}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    if (!isNaN(val)) {
-                                      handleActivityChange(index, val);
-                                    }
-                                  }}
-                                  disabled={isMatching}
-                                >
-                                  <option value="">Select an activity</option>
-                                  {activities.length === 0 ? (
-                                    <option disabled>Loading activities...</option>
-                                  ) : (
-                                    activities.map(activity => (
-                                      <option key={activity.id} value={activity.id}>
-                                        {activity.name}
-                                      </option>
-                                    ))
-                                  )}
-                                </select>
-                              )
-                            ) : '-'}
+                            {fileState.status === 'uploaded' || fileState.status === 'matched' || fileState.status === 'failed' ? 
+                              <ActivitySearch
+                                activities={activities}
+                                selectedActivity={fileState.suggestedActivity || null}
+                                onSelect={(activity) => handleActivityChange(index, activity)}
+                                placeholder="Select an activity..."
+                                showCategories={true}
+                              />
+                             : '-'}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1230,47 +1187,30 @@ export default function AdminImagesPage() {
               
               <div className="space-y-4 pt-4">
                 <div className="flex flex-col space-y-2">
-                  <label htmlFor="search-activity">Search for an activity</label>
-                  <Input
-                    id="search-activity"
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Type to search activities..."
+                  <label>Select an activity for bulk assignment</label>
+                  <ActivitySearch
+                    activities={activities}
+                    selectedActivity={selectedActivity}
+                    onSelect={setSelectedActivity}
+                    placeholder="Select an activity..."
+                    showCategories={true}
                   />
                 </div>
                 
-                <div className="h-64 overflow-y-auto border rounded-md p-2">
-                  {activities
-                    .filter(activity => 
-                      !searchQuery || activity.name.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map(activity => (
-                      <div
-                        key={activity.id}
-                        className="p-2 cursor-pointer hover:bg-gray-100 rounded-md"
-                        onClick={() => setSelectedActivity(activity)}
-                      >
-                        <div className="flex items-center">
-                          {selectedActivity?.id === activity.id ? (
-                            <Check className="h-4 w-4 text-green-500 mr-2" />
-                          ) : (
-                            <div className="w-4 h-4 mr-2" />
-                          )}
-                          <span>{activity.name}</span>
-                        </div>
-                      </div>
-                    ))
-                  }
-                  
-                  {activities.filter(activity => 
-                    !searchQuery || activity.name.toLowerCase().includes(searchQuery.toLowerCase())
-                  ).length === 0 && (
-                    <div className="p-2 text-muted-foreground">
-                      No matching activities found
+                {selectedActivity && (
+                  <div className="flex items-center p-2 border rounded-md">
+                    <div className="flex items-center flex-1">
+                      <span className="font-semibold">Selected:</span>
+                      <span className="ml-2 flex items-center">
+                        {selectedActivity.emoji && <span className="mr-1">{selectedActivity.emoji}</span>}
+                        {selectedActivity.name}
+                      </span>
                     </div>
-                  )}
-                </div>
+                    <Badge variant="outline" className="ml-2 text-xs">
+                      {selectedActivity.id >= 1000 ? 'Shop Item' : 'Database'}
+                    </Badge>
+                  </div>
+                )}
               </div>
               
               <DialogFooter>
