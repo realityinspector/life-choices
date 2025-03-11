@@ -52,6 +52,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/clusters', clusterRouter);
   app.use('/api/admin', requireAdmin, adminRouter);
 
+
+
   // User routes - protected
   app.put('/api/user', requireAuth, async (req, res) => {
     try {
