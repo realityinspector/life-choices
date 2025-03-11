@@ -72,10 +72,10 @@ export default function AdminImagesPage() {
   
   // Fetch activities for dropdown selection
   const { data: activities = [] } = useQuery<Activity[]>({
-    queryKey: ['/api/admin/activities'],
+    queryKey: ['/api/activities'],
     queryFn: async ({ signal }) => {
       try {
-        const res = await apiRequest('/api/admin/activities', { signal });
+        const res = await apiRequest('/api/activities', { signal });
         return res.json();
       } catch (error) {
         console.error('Error fetching activities:', error);
@@ -158,13 +158,20 @@ export default function AdminImagesPage() {
   // Suggest match mutation
   const suggestMatchMutation = useMutation({
     mutationFn: async (filename: string) => {
-      const res = await apiRequest('/api/admin/suggest-match', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename }),
-      });
-      
-      return res.json();
+      try {
+        const res = await apiRequest('/api/admin/suggest-match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename }),
+        });
+        
+        const data = await res.json();
+        console.log('Matching result for', filename, data);
+        return data;
+      } catch (error) {
+        console.error('Error in suggest match:', error);
+        throw error;
+      }
     }
   });
   
@@ -806,15 +813,24 @@ export default function AdminImagesPage() {
                                 <select
                                   className="w-full border border-gray-300 rounded-md p-1"
                                   value={fileState.activityId || ''}
-                                  onChange={(e) => handleActivityChange(index, parseInt(e.target.value))}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val)) {
+                                      handleActivityChange(index, val);
+                                    }
+                                  }}
                                   disabled={isMatching}
                                 >
                                   <option value="">Select an activity</option>
-                                  {activities.map(activity => (
-                                    <option key={activity.id} value={activity.id}>
-                                      {activity.name}
-                                    </option>
-                                  ))}
+                                  {activities.length === 0 ? (
+                                    <option disabled>Loading activities...</option>
+                                  ) : (
+                                    activities.map(activity => (
+                                      <option key={activity.id} value={activity.id}>
+                                        {activity.name}
+                                      </option>
+                                    ))
+                                  )}
                                 </select>
                               )
                             ) : '-'}
@@ -936,9 +952,11 @@ export default function AdminImagesPage() {
                                 {editingImageId === image.id ? (
                                   <select
                                     className="w-full border border-gray-300 rounded-md p-1"
-                                    value={image.activityId}
+                                    value={image.activityId || ''}
                                     onChange={async (e) => {
                                       const activityId = parseInt(e.target.value);
+                                      if (isNaN(activityId)) return;
+                                      
                                       // Update association
                                       try {
                                         await associateImageMutation.mutateAsync({
@@ -960,11 +978,15 @@ export default function AdminImagesPage() {
                                     }}
                                   >
                                     <option value="">Select an activity</option>
-                                    {activities.map(activity => (
-                                      <option key={activity.id} value={activity.id}>
-                                        {activity.name}
-                                      </option>
-                                    ))}
+                                    {activities.length === 0 ? (
+                                      <option disabled>Loading activities...</option>
+                                    ) : (
+                                      activities.map(activity => (
+                                        <option key={activity.id} value={activity.id}>
+                                          {activity.name}
+                                        </option>
+                                      ))
+                                    )}
                                   </select>
                                 ) : (
                                   <div className="flex items-center justify-between">
