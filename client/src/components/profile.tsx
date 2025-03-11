@@ -14,7 +14,7 @@ const Profile = ({}: ProfileProps) => {
     name: userData.name,
     username: userData.username,
     email: userData.email || '',
-    age: userData.age
+    age: userData.age || 0
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,7 +140,7 @@ const Profile = ({}: ProfileProps) => {
                   <input 
                     type="number" 
                     id="profileAge" 
-                    value={formData.age}
+                    value={formData.age || ''}
                     onChange={handleChange}
                     min="1" 
                     max="120" 
