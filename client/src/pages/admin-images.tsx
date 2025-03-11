@@ -211,12 +211,12 @@ export default function AdminImagesPage() {
   const [searchActive, setSearchActive] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Fetch activities for dropdown selection
+  // Fetch activities for dropdown selection (including both database activities and shop catalog)
   const { data: activities = [] } = useQuery<Activity[]>({
-    queryKey: ['/api/activities'],
+    queryKey: ['/api/admin/activities'],
     queryFn: async ({ signal }) => {
       try {
-        const res = await apiRequest('/api/activities', { signal });
+        const res = await apiRequest('/api/admin/activities', { signal });
         return res.json();
       } catch (error) {
         console.error('Error fetching activities:', error);
