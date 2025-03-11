@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useUser } from "@/context/user-context";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Trash2 } from "lucide-react";
+import { Download, Trash2, ShieldCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ProfileProps {}
 
 const Profile = ({}: ProfileProps) => {
-  const { userData, updateUserData, resetData } = useUser();
+  const { userData, updateUserData, resetData, isAdmin } = useUser();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -24,11 +25,11 @@ const Profile = ({}: ProfileProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Preserve the existing lifeExpectancy and sleepHours when updating
+    // Update only the fields that we're editing
     updateUserData({
-      ...formData,
-      lifeExpectancy: userData.lifeExpectancy,
-      sleepHours: userData.sleepHours
+      ...userData,  // Preserve all existing fields
+      name: formData.name,
+      age: formData.age
     });
     toast({
       title: "Profile updated",
@@ -73,8 +74,18 @@ const Profile = ({}: ProfileProps) => {
     <div className="px-4 py-6 sm:px-0">
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:px-6">
-          <h2 className="text-lg font-medium text-gray-900">Your Profile</h2>
-          <p className="mt-1 text-sm text-gray-500">Update your personal details</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-medium text-gray-900">Your Profile</h2>
+              <p className="mt-1 text-sm text-gray-500">Update your personal details</p>
+            </div>
+            {isAdmin && (
+              <Badge variant="secondary" className="flex items-center gap-1 bg-primary-100 text-primary-800">
+                <ShieldCheck className="h-4 w-4" />
+                Admin
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="border-t border-gray-200">
           <form onSubmit={handleSubmit}>
@@ -118,6 +129,27 @@ const Profile = ({}: ProfileProps) => {
           </form>
         </div>
       </div>
+      
+      {isAdmin && (
+        <div className="mt-6 bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:px-6">
+            <h2 className="text-lg font-medium text-gray-900">Admin Access</h2>
+            <p className="mt-1 text-sm text-gray-500">Special privileges for administrators</p>
+          </div>
+          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+            <p className="text-sm text-gray-600 mb-4">
+              You have administrator privileges. You can access admin features to manage images, activities, and more.
+            </p>
+            <a 
+              href="/admin/images" 
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <ShieldCheck className="h-5 w-5 mr-2" />
+              Admin Dashboard
+            </a>
+          </div>
+        </div>
+      )}
       
       <div className="mt-6 bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:px-6">
