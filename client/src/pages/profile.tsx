@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useUser } from '@/context/user-context';
-import { ListChecks, Plus, Calendar, ShoppingCart, User } from 'lucide-react';
+import { ListChecks, Plus, Calendar, ShoppingCart, User, Settings } from 'lucide-react';
 import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import Profile from '@/components/profile';
 
 export default function ProfilePage() {
-  const { userData } = useUser();
+  const { userData, isAdmin } = useUser();
   const { toast } = useToast();
 
   if (!userData) {

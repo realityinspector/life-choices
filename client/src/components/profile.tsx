@@ -12,23 +12,32 @@ const Profile = ({}: ProfileProps) => {
   
   const [formData, setFormData] = useState({
     name: userData.name,
+    username: userData.username,
+    email: userData.email || '',
     age: userData.age
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
+    const fieldName = id.replace('profile', '').toLowerCase();
+    
+    // Only convert age to number, keep other fields as string
+    const fieldValue = fieldName === 'age' ? Number(value) : value;
+    
     setFormData({
       ...formData,
-      [id.replace('profile', '').toLowerCase()]: id === 'profileName' ? value : Number(value)
+      [fieldName]: fieldValue
     });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Update only the fields that we're editing
+    // Update all editable fields
     updateUserData({
       ...userData,  // Preserve all existing fields
       name: formData.name,
+      username: formData.username,
+      email: formData.email,
       age: formData.age
     });
     toast({
@@ -100,6 +109,29 @@ const Profile = ({}: ProfileProps) => {
                     onChange={handleChange}
                     className="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border" 
                     required 
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="profileUsername" className="block text-sm font-medium text-gray-700">Username</label>
+                  <input 
+                    type="text" 
+                    id="profileUsername" 
+                    value={formData.username}
+                    onChange={handleChange}
+                    className="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border" 
+                    required 
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="profileEmail" className="block text-sm font-medium text-gray-700">Email Address</label>
+                  <input 
+                    type="email" 
+                    id="profileEmail" 
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border" 
                   />
                 </div>
                 
