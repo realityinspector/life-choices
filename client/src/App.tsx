@@ -76,18 +76,10 @@ function Router() {
       )}
       
       {/* Task management screens */}
-      {isUserSetup && (
-        <Route path="/activities">
-          {() => <Home initialView="activities" />}
-        </Route>
-      )}
+      {isUserSetup && <Route path="/activities" component={TasksPage} />}
       
       {/* Calendar view */}
-      {isUserSetup && (
-        <Route path="/calendar">
-          {() => <Home initialView="calendar" />}
-        </Route>
-      )}
+      {isUserSetup && <Route path="/calendar" component={CalendarPage} />}
       
       {/* User profile */}
       {isUserSetup && <Route path="/profile" component={ProfilePage} />}
