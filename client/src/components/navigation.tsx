@@ -9,7 +9,8 @@ import {
   Store, 
   Share2, 
   Home,
-  LogOut
+  LogOut,
+  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/user-context";
@@ -20,7 +21,7 @@ interface NavigationProps {
 }
 
 const Navigation = ({ currentPath }: NavigationProps) => {
-  const { logout } = useUser();
+  const { logout, isAdmin } = useUser();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
@@ -84,6 +85,15 @@ const Navigation = ({ currentPath }: NavigationProps) => {
       icon: <ShoppingCart className="h-4 w-4 mr-2" />,
     }
   ];
+  
+  // Add admin button if user is admin
+  if (isAdmin) {
+    utilityButtons.push({
+      label: "Admin",
+      path: "/admin-images",
+      icon: <Settings className="h-4 w-4 mr-2" />,
+    });
+  }
 
   return (
     <div className="flex justify-between w-full">

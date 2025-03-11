@@ -7,6 +7,7 @@ interface UserContextType {
   isUserSetup: boolean;
   userData: UserData;
   activities: Activity[];
+  isAdmin: boolean;
   completeSetup: (userData: UserData) => void;
   updateUserData: (userData: UserData) => void;
   addActivity: (activity: ActivityInsert) => void;
@@ -37,6 +38,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   });
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityCart, setActivityCart] = useState<ActivityInsert[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Load data from API on initial render and handle auth state
   useEffect(() => {
@@ -70,6 +72,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             if (activitiesResponse.ok) {
               const activities = await activitiesResponse.json();
               setActivities(activities);
+            }
+            
+            // Check if user is admin
+            try {
+              const adminCheckResponse = await fetch('/api/user/admin-check', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (adminCheckResponse.ok) {
+                const { isAdmin: adminStatus } = await adminCheckResponse.json();
+                setIsAdmin(adminStatus);
+              }
+            } catch (error) {
+              console.error('Error checking admin status:', error);
             }
             
             // Load cart from localStorage (cart is client-side only)
@@ -379,6 +399,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       isUserSetup,
       userData,
       activities,
+      isAdmin,
       completeSetup,
       updateUserData,
       addActivity,
