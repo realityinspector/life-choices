@@ -4,7 +4,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { Together } from "together-ai";
-import { ActivityImage, InsertActivityImage } from "../../shared/schema";
+import { ActivityImage, InsertActivityImage, Activity } from "../../shared/schema";
+import { getAllSampleActivities } from "../../shared/sample-activities";
 
 // Set up storage for uploaded files
 const uploadDir = path.join(process.cwd(), "uploads");
