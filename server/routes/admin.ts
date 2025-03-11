@@ -76,10 +76,19 @@ adminRouter.use(requireAuth);
 // Get all activities for dropdown selection - separate from user's activities
 adminRouter.get("/activities", async (req: AuthenticatedRequest, res) => {
   try {
-    // Get all activities for all users
-    const activities = await storage.getActivities();
-    console.log("Admin activities fetch:", activities.length, "activities found");
-    res.json(activities);
+    // Get all activities from database for all users
+    const dbActivities = await storage.getActivities();
+    
+    // Get all sample activities
+    const sampleActivities = getAllSampleActivities();
+    
+    // Combine both sets of activities
+    const allActivities = [...dbActivities, ...sampleActivities];
+    
+    console.log("Admin activities fetch:", allActivities.length, "activities found",
+                `(${dbActivities.length} from database, ${sampleActivities.length} samples)`);
+    
+    res.json(allActivities);
   } catch (error) {
     console.error("Error fetching activities:", error);
     res.status(500).json({ error: "Failed to fetch activities" });
@@ -107,8 +116,14 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
 
     console.log("Starting AI matching for filename:", filename);
 
-    // Get all activities for context
-    const activities = await storage.getActivities();
+    // Get all activities from database
+    const dbActivities = await storage.getActivities();
+    
+    // Get all sample activities
+    const sampleActivities = getAllSampleActivities();
+    
+    // Combine both sets of activities
+    const activities = [...dbActivities, ...sampleActivities];
     const activityNames = activities.map(a => a.name);
     
     if (activityNames.length === 0) {
@@ -120,7 +135,7 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
       });
     }
     
-    console.log(`Found ${activityNames.length} activities for matching:`, activityNames);
+    console.log(`Found ${activityNames.length} activities for matching (${dbActivities.length} from DB, ${sampleActivities.length} samples)`);
 
     // Extract likely words from filename
     // Remove extension, convert camelCase/PascalCase to spaces, replace underscores and dashes
@@ -140,18 +155,24 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
         messages: [
           {
             role: "system",
-            content: "You are an AI that matches filenames to activity names. Your task is to return ONLY the exact activity name that matches best, or 'No match'. Do not add explanations or any other text. Format your response with just the activity name or 'No match'."
+            content: "You are an AI that matches image filenames to activity names. Your task is to determine the most appropriate activity match based on the filename. The filenames typically describe images of people performing various activities. You should return ONLY the exact activity name that matches best, or 'No match'. Do not add explanations or any other text."
           },
           {
             role: "user",
-            content: `Match this filename to ONE of these activities:
+            content: `Match this image filename to ONE of these activities:
             
-Filename: ${processedFilename}
+Image filename: ${processedFilename}
 
 Available activities:
 ${activityNames.join("\n")}
 
-If no good match exists (below 50% confidence), just respond with exactly: No match`
+The image likely depicts someone performing the activity. Consider what the filename might be describing visually.
+
+IMPORTANT RULES:
+1. Return ONLY the exact activity name from the list
+2. If no good match exists (below 50% confidence), respond with exactly: No match
+3. Do not modify or abbreviate the activity name
+4. Do not add any explanations or additional text`
           }
         ],
         model: "meta-llama/Llama-3.2-3B-Instruct-Turbo",

@@ -1,10 +1,31 @@
-import { ActivityInsert } from "./schema";
+import { Activity } from "./schema";
+
+// Custom type to handle sample activities that we'll transform
+// to match the real schema when needed
+type SampleActivity = {
+  id?: number; // Will be assigned when converted to Activity
+  name: string;
+  category: string;
+  frequency: number;
+  frequencyUnit: "day" | "week" | "month" | "year";
+  duration: number;
+  durationUnit: "minute" | "hour";
+  lifeImpact: number;
+  color: string;
+  priority: number | null;
+  emoji: string | null;
+  exportToCalendar: boolean;
+  userId?: number; // Will be assigned when needed
+  completionCount?: number;
+  clusterId?: number | null;
+  lastCompleted?: Date | null;
+  nextDue?: Date;
+};
 
 // Function to generate a sample set of activities
-export const SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
+export const SAMPLE_ACTIVITIES: SampleActivity[] = [
   {
     name: "Morning Meditation",
-    description: "Start your day with 15 minutes of mindfulness meditation to reduce stress and improve focus.",
     category: "Spirituality & Mindfulness",
     frequency: 7,
     frequencyUnit: "week",
@@ -15,16 +36,9 @@ export const SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 1,
     emoji: "🧘",
     exportToCalendar: false,
-    completionCount: 0,
-    userId: 0, // Will be replaced when added
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Family Time",
-    description: "Set aside quality time with your family to strengthen bonds and create lasting memories.",
     category: "Family & Relationships",
     frequency: 3, 
     frequencyUnit: "week",
@@ -35,16 +49,9 @@ export const SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 2,
     emoji: "👨‍👩‍👧‍👦",
     exportToCalendar: true,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Reading Books",
-    description: "Expand your knowledge and imagination by reading books regularly.",
     category: "Learning & Development",
     frequency: 5,
     frequencyUnit: "week",
@@ -55,16 +62,9 @@ export const SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 3,
     emoji: "📚",
     exportToCalendar: false,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Exercise Routine",
-    description: "Maintain physical fitness with a regular exercise regimen.",
     category: "Health & Fitness",
     frequency: 4,
     frequencyUnit: "week",
@@ -75,16 +75,9 @@ export const SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 1,
     emoji: "🏃",
     exportToCalendar: true,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Journaling",
-    description: "Reflect on your thoughts and experiences through regular journaling.",
     category: "Spirituality & Mindfulness",
     frequency: 7,
     frequencyUnit: "week",
@@ -95,20 +88,13 @@ export const SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 4,
     emoji: "✏️",
     exportToCalendar: false,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   }
 ];
 
 // More diverse activities
-export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
+export const MORE_SAMPLE_ACTIVITIES: SampleActivity[] = [
   {
     name: "Yoga Practice",
-    description: "Improve flexibility, strength, and mental clarity through regular yoga sessions.",
     category: "Health & Fitness",
     frequency: 3,
     frequencyUnit: "week",
@@ -119,16 +105,9 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 3,
     emoji: "🧘‍♀️",
     exportToCalendar: true,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Language Learning",
-    description: "Learn a new language to enhance cognitive abilities and cultural understanding.",
     category: "Learning & Development",
     frequency: 5,
     frequencyUnit: "week",
@@ -139,16 +118,9 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 5,
     emoji: "🗣️",
     exportToCalendar: false,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Volunteer Work",
-    description: "Contribute to your community through volunteer work.",
     category: "Community & Social",
     frequency: 1,
     frequencyUnit: "week",
@@ -159,16 +131,9 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 6,
     emoji: "🤝",
     exportToCalendar: true,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Career Development",
-    description: "Invest time in learning new skills relevant to your career growth.",
     category: "Career & Finance",
     frequency: 2,
     frequencyUnit: "week",
@@ -179,16 +144,9 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 2,
     emoji: "💼",
     exportToCalendar: false,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Meal Preparation",
-    description: "Plan and prepare healthy meals for the week.",
     category: "Health & Fitness",
     frequency: 1,
     frequencyUnit: "week",
@@ -199,16 +157,9 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 4,
     emoji: "🍲",
     exportToCalendar: false,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Hobby Time",
-    description: "Dedicate time to a hobby that brings you joy and fulfillment.",
     category: "Leisure & Recreation",
     frequency: 2,
     frequencyUnit: "week",
@@ -219,16 +170,9 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 7,
     emoji: "🎨",
     exportToCalendar: false,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Digital Detox",
-    description: "Take a break from screens and digital devices to reduce stress and be more present.",
     category: "Spirituality & Mindfulness",
     frequency: 1,
     frequencyUnit: "week",
@@ -239,16 +183,9 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 8,
     emoji: "📵",
     exportToCalendar: true,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Nature Walk",
-    description: "Connect with nature through regular walks in natural settings.",
     category: "Health & Fitness",
     frequency: 2,
     frequencyUnit: "week",
@@ -259,16 +196,9 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 5,
     emoji: "🌳",
     exportToCalendar: false,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Financial Planning",
-    description: "Review and update your financial plans and budgets.",
     category: "Career & Finance",
     frequency: 1,
     frequencyUnit: "month",
@@ -279,16 +209,9 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 6,
     emoji: "💰",
     exportToCalendar: true,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   },
   {
     name: "Social Gathering",
-    description: "Organize or attend social events to maintain and build relationships.",
     category: "Community & Social",
     frequency: 2,
     frequencyUnit: "month",
@@ -299,16 +222,36 @@ export const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
     priority: 9,
     emoji: "🎉",
     exportToCalendar: true,
-    completionCount: 0,
-    userId: 0,
-    clusterId: null,
-    lastCompleted: null,
-    nextDue: new Date(),
-    completed: false
   }
 ];
 
-// Combine all sample activities
-export const getAllSampleActivities = (): Required<ActivityInsert>[] => {
-  return [...SAMPLE_ACTIVITIES, ...MORE_SAMPLE_ACTIVITIES];
+// Convert a sample activity to an Activity object with all required fields
+function convertToActivity(sample: SampleActivity, id: number): Activity {
+  return {
+    id,
+    name: sample.name,
+    userId: sample.userId || 999, // Special user ID for sample activities
+    category: sample.category,
+    frequency: sample.frequency,
+    frequencyUnit: sample.frequencyUnit,
+    duration: sample.duration, 
+    durationUnit: sample.durationUnit,
+    lifeImpact: sample.lifeImpact,
+    color: sample.color,
+    priority: sample.priority,
+    lastCompleted: sample.lastCompleted || null,
+    nextDue: sample.nextDue || new Date(),
+    completionCount: sample.completionCount || 0,
+    exportToCalendar: sample.exportToCalendar,
+    emoji: sample.emoji,
+    clusterId: sample.clusterId || null
+  };
+}
+
+// Combine all sample activities and convert to Activity objects
+export const getAllSampleActivities = (): Activity[] => {
+  let idCounter = 1000; // Start IDs at 1000 to avoid conflicts with real activities
+  const allSamples = [...SAMPLE_ACTIVITIES, ...MORE_SAMPLE_ACTIVITIES];
+  
+  return allSamples.map(sample => convertToActivity(sample, idCounter++));
 };
