@@ -26,12 +26,16 @@ function Router() {
 
   // Free routes that don't require authentication
   const freeRoutes = ["/", "/login", "/shared-activity"];
+  
+  // Admin routes - these bypass normal user authentication
+  const adminRoutes = ["/admin/images"];
+  const isAdminRoute = adminRoutes.some(route => location.startsWith(route));
 
   // Check if we're on a free route
   const isOnFreeRoute = freeRoutes.includes(location);
 
-  // If the user is not set up and not on a free route, redirect to login
-  if (!isUserSetup && !isOnFreeRoute) {
+  // If the user is not set up and not on a free route or admin route, redirect to login
+  if (!isUserSetup && !isOnFreeRoute && !isAdminRoute) {
     window.location.href = "/login";
     return null;
   }
@@ -96,8 +100,8 @@ function Router() {
       {/* Legacy routes */}
       {isUserSetup && <Route path="/life-events" component={LifeEventsPage} />}
       
-      {/* Admin routes */}
-      {isUserSetup && <Route path="/admin/images" component={AdminImagesPage} />}
+      {/* Admin routes - accessible with or without normal user setup */}
+      <Route path="/admin/images" component={AdminImagesPage} />
       
       <Route component={NotFound} />
     </Switch>

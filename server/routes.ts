@@ -32,8 +32,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
-    // @ts-ignore - user will always exist due to isAuthenticated check
-    const username = req.user?.username;
+    // user will always exist due to isAuthenticated check
+    // Get username from request user object
+    const username = req.user && typeof req.user === 'object' ? 
+                    (req.user as {username?: string}).username || '' : '';
     
     // List of admin usernames - add your username here
     const adminUsers = ['realityinspector'];
