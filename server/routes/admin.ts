@@ -61,10 +61,23 @@ function isAuthenticated(req: Request): boolean {
 
 export const adminRouter = Router();
 
-// Get all activities for dropdown selection
+// Middleware to check if user is authenticated
+const requireAuth = (req: AuthenticatedRequest, res: Response, next: any) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  next();
+};
+
+// Apply auth middleware to all admin routes
+adminRouter.use(requireAuth);
+
+// Get all activities for dropdown selection - separate from user's activities
 adminRouter.get("/activities", async (req: AuthenticatedRequest, res) => {
   try {
+    // Get all activities for all users
     const activities = await storage.getActivities();
+    console.log("Admin activities fetch:", activities.length, "activities found");
     res.json(activities);
   } catch (error) {
     console.error("Error fetching activities:", error);
@@ -91,22 +104,48 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "Filename is required" });
     }
 
+    console.log("Starting AI matching for filename:", filename);
+
     // Get all activities for context
     const activities = await storage.getActivities();
     const activityNames = activities.map(a => a.name);
+    
+    if (activityNames.length === 0) {
+      console.log("Warning: No activities found to match against");
+      return res.json({
+        filename,
+        suggestedMatch: "No match",
+        activityId: null
+      });
+    }
+    
+    console.log(`Found ${activityNames.length} activities for matching`);
+
+    // Extract likely words from filename
+    // Remove extension, convert camelCase/PascalCase to spaces, replace underscores and dashes
+    const processedFilename = filename
+      .replace(/\.[^/.]+$/, "") // Remove extension
+      .replace(/([a-z])([A-Z])/g, "$1 $2") // Convert camelCase to spaces
+      .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2") // Convert PascalCase to spaces
+      .replace(/[_-]/g, " "); // Replace underscores and dashes with spaces
+      
+    console.log("Processed filename for matching:", processedFilename);
 
     // Use Together AI to suggest matching
-    const response = await together.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert assistant that matches image filenames to activity names. You understand naming conventions and can find meaningful connections between descriptive filenames and activity names, even when they're not exact matches. Use semantic meaning to find the best activity for each image."
-        },
-        {
-          role: "user",
-          content: `I need to match this image filename to one of our existing activities.
-          
-Filename: ${filename}
+    try {
+      console.log("Sending request to Together AI...");
+      
+      const response = await together.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert assistant that matches image filenames to activity names. You understand naming conventions and can find meaningful connections between descriptive filenames and activity names, even when they're not exact matches. Use semantic meaning to find the best activity for each image."
+          },
+          {
+            role: "user",
+            content: `I need to match this image filename to one of our existing activities.
+            
+Filename: ${processedFilename}
 
 Available activities:
 ${JSON.stringify(activityNames, null, 2)}
@@ -114,32 +153,101 @@ ${JSON.stringify(activityNames, null, 2)}
 Which activity does this image filename best match? Consider word variations, synonyms, and related concepts when making your match. If multiple matches are possible, select the one with the highest confidence. If no good match exists (below 50% confidence), respond with exactly "No match".
 
 IMPORTANT: Return ONLY the exact activity name from the list or "No match". Do not include any explanations or additional text.`
-        }
-      ],
-      model: "meta-llama/Llama-3.2-3B-Instruct-Turbo",
-      temperature: 0.2, // Slightly higher to allow for more creative matching
-      max_tokens: 100, // Limit response length to ensure we just get the activity name
-    });
+          }
+        ],
+        model: "meta-llama/Llama-3.2-3B-Instruct-Turbo",
+        temperature: 0.2, // Slightly higher to allow for more creative matching
+        max_tokens: 100, // Limit response length to ensure we just get the activity name
+      });
 
-    // Extract the suggested match
-    const suggestedMatch = response.choices && 
-                          response.choices.length > 0 && 
-                          response.choices[0].message && 
-                          response.choices[0].message.content 
-                            ? response.choices[0].message.content.trim() 
-                            : "No match";
-    
-    // Find the matching activity
-    const matchedActivity = activities.find(a => a.name === suggestedMatch);
-    
-    res.json({
-      filename,
-      suggestedMatch,
-      activityId: matchedActivity?.id || null
-    });
+      console.log("Together AI response received:", response.choices?.[0]?.message?.content);
+
+      // Extract the suggested match
+      const suggestedMatch = response.choices && 
+                            response.choices.length > 0 && 
+                            response.choices[0].message && 
+                            response.choices[0].message.content 
+                              ? response.choices[0].message.content.trim() 
+                              : "No match";
+      
+      // Check if suggested match exactly matches one of our activities
+      const exactMatchActivity = activities.find(a => a.name === suggestedMatch);
+      
+      // If not exact match, try to find the best partial match
+      let matchedActivity = exactMatchActivity;
+      if (!matchedActivity && suggestedMatch !== "No match") {
+        console.log("No exact match found. Trying to find a partial match for:", suggestedMatch);
+        
+        // If the model returned something that's not "No match" but doesn't match exactly,
+        // try to find the closest activity by simple string similarity
+        const closestActivity = activities.reduce((closest, activity) => {
+          // Simple string containment check
+          const activityNameLower = activity.name.toLowerCase();
+          const suggestedMatchLower = suggestedMatch.toLowerCase();
+          
+          if (
+            activityNameLower.includes(suggestedMatchLower) || 
+            suggestedMatchLower.includes(activityNameLower)
+          ) {
+            return activity;
+          }
+          
+          return closest;
+        }, null);
+        
+        matchedActivity = closestActivity;
+      }
+      
+      const result = {
+        filename,
+        suggestedMatch,
+        activityId: matchedActivity?.id || null
+      };
+      
+      console.log("Match result:", result);
+      res.json(result);
+      
+    } catch (togetherError) {
+      console.error("Together AI API error:", togetherError);
+      
+      // Fallback to simple partial matching if API fails
+      const words = processedFilename.toLowerCase().split(/\s+/);
+      let bestMatch = null;
+      let bestMatchScore = 0;
+      
+      for (const activity of activities) {
+        const activityName = activity.name.toLowerCase();
+        // Count how many words from the filename appear in the activity name
+        const matchingWords = words.filter(word => 
+          word.length > 2 && activityName.includes(word)
+        );
+        
+        if (matchingWords.length > bestMatchScore) {
+          bestMatchScore = matchingWords.length;
+          bestMatch = activity;
+        }
+      }
+      
+      // Return the result with the best match if we have one
+      if (bestMatch && bestMatchScore > 0) {
+        console.log("Using fallback matching, found:", bestMatch.name);
+        res.json({
+          filename,
+          suggestedMatch: bestMatch.name,
+          activityId: bestMatch.id
+        });
+      } else {
+        console.log("No match found using fallback matching");
+        res.json({
+          filename,
+          suggestedMatch: "No match",
+          activityId: null
+        });
+      }
+    }
   } catch (error) {
     console.error("Error suggesting match:", error);
-    res.status(500).json({ error: "Failed to suggest match" });
+    res.status(500).json({ error: "Failed to suggest match", details: error.message });
   }
 });
 
