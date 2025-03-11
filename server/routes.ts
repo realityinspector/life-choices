@@ -26,10 +26,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
   
+  // Admin route middleware - allow specific users admin access
+  const requireAdmin = (req: Request, res: any, next: any) => {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    // @ts-ignore - user will always exist due to isAuthenticated check
+    const username = req.user?.username;
+    
+    // List of admin usernames - add your username here
+    const adminUsers = ['realityinspector'];
+    
+    if (!adminUsers.includes(username)) {
+      return res.status(403).json({ message: "Forbidden: Admin access required" });
+    }
+    
+    next();
+  };
+  
   // Register the new activity and cluster routers
   app.use('/api/activities', activityRouter);
   app.use('/api/clusters', clusterRouter);
-  app.use('/api/admin', requireAuth, adminRouter);
+  app.use('/api/admin', requireAdmin, adminRouter);
 
   // User routes - protected
   app.put('/api/user', requireAuth, async (req, res) => {
