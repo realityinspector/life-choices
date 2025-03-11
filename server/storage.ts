@@ -29,6 +29,12 @@ export interface IStorage {
   getNextActivity(userId: number): Promise<Activity | undefined>;
   completeActivity(id: number): Promise<Activity | undefined>;
   
+  // Activity image methods
+  getActivityImages(activityId?: number): Promise<ActivityImage[]>;
+  getActivityImage(id: number): Promise<ActivityImage | undefined>;
+  createActivityImage(image: InsertActivityImage): Promise<ActivityImage>;
+  deleteActivityImage(id: number): Promise<void>;
+  
   // Activity cluster methods
   getActivityClusters(): Promise<ActivityCluster[]>;
   getActivityCluster(id: number): Promise<ActivityCluster | undefined>;

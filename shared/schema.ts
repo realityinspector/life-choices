@@ -242,3 +242,22 @@ export type InsertLifeEvent = typeof lifeEvents.$inferInsert;
 
 export type UserLifeEvent = typeof userLifeEvents.$inferSelect;
 export type InsertUserLifeEvent = typeof userLifeEvents.$inferInsert;
+
+// Activity Images schema
+export const activityImages = pgTable("activity_images", {
+  id: serial("id").primaryKey(),
+  activityId: integer("activity_id").references(() => activities.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  originalFilename: text("original_filename").notNull(),
+  path: text("path").notNull(),
+  mimeType: text("mime_type").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const activityImageSchema = createInsertSchema(activityImages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ActivityImage = typeof activityImages.$inferSelect;
+export type InsertActivityImage = typeof activityImages.$inferInsert;
