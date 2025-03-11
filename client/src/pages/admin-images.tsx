@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
 import { Activity, ActivityImage } from '@shared/schema';
 import { Loader2, CheckCircle2, XCircle, Unlink, FileImage, Upload, Search, 
-         Save, Edit, Filter, AlertCircle, Check, X } from 'lucide-react';
+         Save, Edit, Filter, AlertCircle, Check, X, ChevronsUpDown, ChevronDown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,146 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+// Reusable Activity Search Component
+interface ActivitySearchProps {
+  activities: Activity[];
+  selectedActivity: Activity | null;
+  onSelect: (activity: Activity | null) => void;
+  placeholder?: string;
+  showCategories?: boolean;
+}
+
+function ActivitySearch({ 
+  activities, 
+  selectedActivity, 
+  onSelect, 
+  placeholder = "Search for activities...", 
+  showCategories = true 
+}: ActivitySearchProps) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const [search, setSearch] = useState("");
+  
+  // Group activities by category if needed
+  const groupedActivities = showCategories ? 
+    Object.entries(
+      activities.reduce((acc: Record<string, Activity[]>, activity) => {
+        if (!acc[activity.category]) {
+          acc[activity.category] = [];
+        }
+        acc[activity.category].push(activity);
+        return acc;
+      }, {})
+    ).sort(([a], [b]) => a.localeCompare(b)) : 
+    [["All Activities", activities]];
+  
+  // Filter based on whether it's a shop or database activity
+  const getActivitySource = (activity: Activity): string => {
+    return activity.id >= 1000 ? 'Shop Item' : 'Database';
+  };
+  
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between text-left font-normal"
+        >
+          {selectedActivity ? (
+            <div className="flex items-center gap-2 truncate">
+              <span className="truncate">{selectedActivity.name}</span>
+              <Badge variant="outline" className="ml-2 text-xs">
+                {getActivitySource(selectedActivity)}
+              </Badge>
+            </div>
+          ) : (
+            placeholder
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder={placeholder} 
+            value={search} 
+            onValueChange={setSearch} 
+          />
+          <CommandList>
+            <CommandEmpty>No activities found.</CommandEmpty>
+            <ScrollArea className="h-[300px]">
+              {groupedActivities.map(([category, items]) => {
+                // Filter items based on search
+                const filteredItems = items.filter(activity =>
+                  activity.name.toLowerCase().includes(search.toLowerCase()) ||
+                  activity.category.toLowerCase().includes(search.toLowerCase())
+                );
+                
+                if (filteredItems.length === 0) return null;
+                
+                return (
+                  <CommandGroup key={category} heading={category}>
+                    {filteredItems.map(activity => (
+                      <CommandItem
+                        key={activity.id}
+                        value={`${activity.id}-${activity.name}`}
+                        onSelect={() => {
+                          onSelect(activity);
+                          setOpen(false);
+                        }}
+                        className="flex justify-between"
+                      >
+                        <div className="flex items-center">
+                          <span>{activity.emoji || "🔍"}</span>
+                          <span className="ml-2">{activity.name}</span>
+                        </div>
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          {getActivitySource(activity)}
+                        </Badge>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                );
+              })}
+            </ScrollArea>
+            {selectedActivity && (
+              <div className="p-1 border-t">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-muted-foreground"
+                  onClick={() => {
+                    onSelect(null);
+                    setOpen(false);
+                  }}
+                >
+                  Clear selection
+                </Button>
+              </div>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 interface FileUploadState {
   file: File;
