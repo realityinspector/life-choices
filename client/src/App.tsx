@@ -15,6 +15,7 @@ import WhatsNextPage from "@/pages/whats-next";
 import ProfilePage from "@/pages/profile";
 import TasksPage from "@/pages/tasks";
 import CalendarPage from "@/pages/calendar";
+import AdminImagesPage from "@/pages/admin-images";
 
 // Set the document title
 document.title = "Life Choices | Do what matters, one choice at a time";
@@ -94,6 +95,9 @@ function Router() {
       
       {/* Legacy routes */}
       {isUserSetup && <Route path="/life-events" component={LifeEventsPage} />}
+      
+      {/* Admin routes */}
+      {isUserSetup && <Route path="/admin/images" component={AdminImagesPage} />}
       
       <Route component={NotFound} />
     </Switch>

@@ -19,6 +19,9 @@ interface FileUploadState {
   loading: boolean;
   activityId?: number | null;
   status: 'idle' | 'matching' | 'matched' | 'failed' | 'uploaded';
+  filename?: string;
+  path?: string;
+  mimeType?: string;
 }
 
 interface AssociationRequest {
@@ -40,9 +43,9 @@ export default function AdminImagesPage() {
   // Fetch activities for dropdown selection
   const { data: activities = [] } = useQuery<Activity[]>({
     queryKey: ['/api/admin/activities'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        const res = await apiRequest('/api/admin/activities');
+        const res = await apiRequest('/api/admin/activities', { signal });
         return res.json();
       } catch (error) {
         console.error('Error fetching activities:', error);
@@ -54,9 +57,9 @@ export default function AdminImagesPage() {
   // Fetch existing activity images
   const { data: activityImages = [], refetch: refetchImages } = useQuery<ActivityImage[]>({
     queryKey: ['/api/admin/activity-images'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        const res = await apiRequest('/api/admin/activity-images');
+        const res = await apiRequest('/api/admin/activity-images', { signal });
         return res.json();
       } catch (error) {
         console.error('Error fetching activity images:', error);
