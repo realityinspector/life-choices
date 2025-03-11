@@ -7,6 +7,7 @@ import { fromZodError } from "zod-validation-error";
 import { setupAuth } from "./auth";
 import { activityRouter } from "./routes/activity";
 import { clusterRouter } from "./routes/cluster";
+import { adminRouter } from "./routes/admin";
 
 // Type guard to check if user is authenticated
 function isAuthenticated(req: Request): boolean {
@@ -28,6 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register the new activity and cluster routers
   app.use('/api/activities', activityRouter);
   app.use('/api/clusters', clusterRouter);
+  app.use('/api/admin', requireAuth, adminRouter);
 
   // User routes - protected
   app.put('/api/user', requireAuth, async (req, res) => {

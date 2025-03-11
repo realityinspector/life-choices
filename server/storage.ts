@@ -2,7 +2,8 @@ import { UserData, ActivityInsert, User, Activity, users, activities, InsertUser
   EventCategory, InsertEventCategory, LifeEvent, InsertLifeEvent, UserLifeEvent, InsertUserLifeEvent, 
   eventCategories, lifeEvents, userLifeEvents, SystemPrompt, InsertSystemPrompt, systemPrompts,
   LLMConversation, InsertLLMConversation, llmConversations, LLMMessage, InsertLLMMessage, llmMessages,
-  ActivityCluster, InsertActivityCluster, activityClusters, ActivityInvitation, InsertActivityInvitation, activityInvitations } from "@shared/schema";
+  ActivityCluster, InsertActivityCluster, activityClusters, ActivityInvitation, InsertActivityInvitation, activityInvitations,
+  ActivityImage, InsertActivityImage, activityImages } from "@shared/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import session from "express-session";
 import pgSessionPkg from "connect-pg-simple";
@@ -320,6 +321,28 @@ export class DatabaseStorage implements IStorage {
     return db.select()
       .from(activityInvitations)
       .where(eq(activityInvitations.senderUserId, userId));
+  }
+  
+  // Activity image methods
+  async getActivityImages(activityId?: number): Promise<ActivityImage[]> {
+    if (activityId) {
+      return db.select().from(activityImages).where(eq(activityImages.activityId, activityId));
+    }
+    return db.select().from(activityImages);
+  }
+  
+  async getActivityImage(id: number): Promise<ActivityImage | undefined> {
+    const result = await db.select().from(activityImages).where(eq(activityImages.id, id));
+    return result[0];
+  }
+  
+  async createActivityImage(image: InsertActivityImage): Promise<ActivityImage> {
+    const result = await db.insert(activityImages).values(image).returning();
+    return result[0];
+  }
+  
+  async deleteActivityImage(id: number): Promise<void> {
+    await db.delete(activityImages).where(eq(activityImages.id, id));
   }
   
   // Event category methods

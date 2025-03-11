@@ -39,7 +39,7 @@ const upload = multer({
 
 // Setup Together AI client
 const together = new Together({
-  apiKey: process.env.TOGETHER_API_KEY || ""
+  apiKey: process.env.TOGETHER_API_KEY || "REDACTED_TOGETHER_API_KEY"
 });
 
 export interface AuthenticatedRequest extends Request {
@@ -55,7 +55,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 function isAuthenticated(req: Request): boolean {
-  return req.session && req.session.userId !== undefined;
+  return req.isAuthenticated();
 }
 
 export const adminRouter = Router();
@@ -111,7 +111,12 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
     });
 
     // Extract the suggested match
-    const suggestedMatch = response.choices[0].message.content.trim();
+    const suggestedMatch = response.choices && 
+                          response.choices.length > 0 && 
+                          response.choices[0].message && 
+                          response.choices[0].message.content 
+                            ? response.choices[0].message.content.trim() 
+                            : "No match";
     
     // Find the matching activity
     const matchedActivity = activities.find(a => a.name === suggestedMatch);
