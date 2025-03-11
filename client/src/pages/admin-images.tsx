@@ -246,28 +246,53 @@ export default function AdminImagesPage() {
       return;
     }
     
+    // Determine batch size - process in chunks of 40 files to avoid overwhelming the server
+    const BATCH_SIZE = 40;
+    const totalBatches = Math.ceil(filesToUpload.length / BATCH_SIZE);
+    
     try {
-      // Simulate progress
+      // Start progress simulation
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 95) {
             clearInterval(progressInterval);
             return prev;
           }
-          return prev + 5;
+          return prev + 2;
         });
-      }, 200);
+      }, 300);
       
-      await uploadMutation.mutateAsync(filesToUpload);
+      // Process files in batches
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const start = batchIndex * BATCH_SIZE;
+        const end = Math.min(start + BATCH_SIZE, filesToUpload.length);
+        const currentBatch = filesToUpload.slice(start, end);
+        
+        // Update progress to reflect batch progress
+        setUploadProgress(Math.floor((batchIndex / totalBatches) * 90));
+        
+        // Wait for batch to upload before continuing
+        await uploadMutation.mutateAsync(currentBatch);
+        
+        // Small delay between batches to avoid overwhelming the server
+        if (batchIndex < totalBatches - 1) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
       
       clearInterval(progressInterval);
       setUploadProgress(100);
+      
+      toast({
+        title: 'Upload Complete',
+        description: `Successfully uploaded ${filesToUpload.length} files.`,
+      });
       
     } catch (error) {
       console.error('Error uploading files:', error);
       toast({
         title: 'Upload Error',
-        description: 'Failed to upload files. Please try again.',
+        description: 'Failed to upload some files. You may need to try again with fewer files at once.',
         variant: 'destructive',
       });
       setIsUploading(false);
@@ -285,15 +310,22 @@ export default function AdminImagesPage() {
     
     setIsMatching(true);
     
-    // Process each file sequentially
-    for (let i = 0; i < files.length; i++) {
-      const fileState = files[i];
+    // Get files that need matching
+    const filesToMatch = files.filter(f => f.status === 'uploaded');
+    const totalFiles = filesToMatch.length;
+    
+    // Set batch size for concurrent processing (not too many to avoid rate limits)
+    const CONCURRENT_BATCH_SIZE = 5;
+    
+    // Create a function to process a single file
+    const processFile = async (fileIndex: number) => {
+      const fileState = files[fileIndex];
       
-      if (fileState.status !== 'uploaded') continue;
+      if (fileState.status !== 'uploaded') return;
       
       // Update status for this file
       setFiles(prev => prev.map((f, idx) => 
-        idx === i ? { ...f, status: 'matching', loading: true } : f
+        idx === fileIndex ? { ...f, status: 'matching', loading: true } : f
       ));
       
       try {
@@ -305,7 +337,7 @@ export default function AdminImagesPage() {
         
         // Update file state with match result
         setFiles(prev => prev.map((f, idx) => 
-          idx === i ? { 
+          idx === fileIndex ? { 
             ...f, 
             status: result.activityId ? 'matched' : 'failed',
             suggestedMatch: result.suggestedMatch,
@@ -314,17 +346,53 @@ export default function AdminImagesPage() {
             loading: false 
           } : f
         ));
-        
       } catch (error) {
         console.error(`Error matching file ${fileState.file.name}:`, error);
         setFiles(prev => prev.map((f, idx) => 
-          idx === i ? { ...f, status: 'failed', loading: false } : f
+          idx === fileIndex ? { ...f, status: 'failed', loading: false } : f
         ));
       }
+    };
+    
+    // Process files in smaller batches
+    for (let batchIndex = 0; batchIndex < Math.ceil(totalFiles / CONCURRENT_BATCH_SIZE); batchIndex++) {
+      const batchPromises: Promise<void>[] = [];
       
-      // Small delay to avoid rate limiting
-      await new Promise(r => setTimeout(r, 300));
+      // Calculate which files to process in this batch
+      const uploadedFiles = files.filter(f => f.status === 'uploaded');
+      const startIdx = batchIndex * CONCURRENT_BATCH_SIZE;
+      const endIdx = Math.min(startIdx + CONCURRENT_BATCH_SIZE, uploadedFiles.length);
+      
+      // Create batch of promises
+      for (let i = startIdx; i < endIdx; i++) {
+        // Find the index of this uploaded file in the original files array
+        const fileIndex = files.findIndex((f, idx) => 
+          f === uploadedFiles[i]
+        );
+        
+        if (fileIndex !== -1) {
+          batchPromises.push(processFile(fileIndex));
+        }
+      }
+      
+      // Process this batch concurrently
+      await Promise.all(batchPromises);
+      
+      // Add a small delay between batches
+      if (batchIndex < Math.ceil(totalFiles / CONCURRENT_BATCH_SIZE) - 1) {
+        await new Promise(r => setTimeout(r, 500));
+      }
     }
+    
+    // Show results summary
+    const matchedCount = files.filter(f => f.status === 'matched').length;
+    const failedCount = files.filter(f => f.status === 'failed').length;
+    
+    toast({
+      title: 'Matching Complete',
+      description: `Successfully matched ${matchedCount} files. ${failedCount} files had no automatic matches.`,
+      duration: 5000,
+    });
     
     setIsMatching(false);
   };
@@ -361,17 +429,53 @@ export default function AdminImagesPage() {
       return;
     }
     
+    // Set a reasonable batch size for database operations
+    const BATCH_SIZE = 50;
+    const totalBatches = Math.ceil(validAssociations.length / BATCH_SIZE);
+    
     try {
-      await batchAssociateMutation.mutateAsync(validAssociations);
+      // Show processing toast
+      toast({
+        title: 'Processing',
+        description: `Saving ${validAssociations.length} image associations...`
+      });
+      
+      let savedCount = 0;
+      
+      // Process in batches
+      for (let i = 0; i < totalBatches; i++) {
+        const start = i * BATCH_SIZE;
+        const end = Math.min(start + BATCH_SIZE, validAssociations.length);
+        const batch = validAssociations.slice(start, end);
+        
+        // Save this batch
+        const result = await batchAssociateMutation.mutateAsync(batch);
+        savedCount += result.results?.length || 0;
+        
+        // Small delay between batches
+        if (i < totalBatches - 1) {
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+      
+      // Show success message
+      toast({
+        title: 'Save Complete',
+        description: `Successfully saved ${savedCount} image associations.`,
+        duration: 5000,
+      });
       
       // Clear processed files
       setFiles([]);
+      
+      // Update to the "manage" tab to see the results
+      setActiveTab('manage');
       
     } catch (error) {
       console.error('Error saving associations:', error);
       toast({
         title: 'Save Error',
-        description: 'Failed to save associations. Please try again.',
+        description: 'Failed to save some associations. You can try again with smaller batches.',
         variant: 'destructive',
       });
     }
