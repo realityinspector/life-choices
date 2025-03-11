@@ -1049,66 +1049,33 @@ export default function AdminImagesPage() {
                               <TableCell>
                                 {editingImageId === image.id ? (
                                   <div className="space-y-2">
-                                    <Input
-                                      type="text"
+                                    <ActivitySearch
+                                      activities={activities}
+                                      selectedActivity={activities.find(a => a.id === image.activityId) || null}
+                                      onSelect={async (selectedActivity) => {
+                                        if (selectedActivity) {
+                                          try {
+                                            await associateImageMutation.mutateAsync({
+                                              activityId: selectedActivity.id,
+                                              filename: image.filename,
+                                              originalFilename: image.originalFilename,
+                                              path: image.path,
+                                              mimeType: image.mimeType
+                                            });
+                                            setEditingImageId(null);
+                                          } catch (error) {
+                                            console.error('Error updating image:', error);
+                                            toast({
+                                              title: 'Update Error',
+                                              description: 'Failed to update image association.',
+                                              variant: 'destructive',
+                                            });
+                                          }
+                                        }
+                                      }}
                                       placeholder="Search for activities..."
-                                      className="w-full"
-                                      value={activitySearchQuery}
-                                      onChange={(e) => setActivitySearchQuery(e.target.value)}
+                                      showCategories={true}
                                     />
-                                    
-                                    <div className="max-h-48 overflow-y-auto border rounded-md p-1">
-                                      {activities.length === 0 ? (
-                                        <div className="p-2 text-gray-500">No activities found</div>
-                                      ) : (
-                                        activities
-                                          .filter(activity => 
-                                            !activitySearchQuery || 
-                                            activity.name.toLowerCase().includes(activitySearchQuery.toLowerCase())
-                                          )
-                                          .map(activity => (
-                                            <div
-                                              key={activity.id}
-                                              className={`p-2 cursor-pointer hover:bg-gray-100 rounded ${
-                                                activity.id === image.activityId ? 'bg-blue-50' : ''
-                                              }`}
-                                              onClick={async () => {
-                                                try {
-                                                  await associateImageMutation.mutateAsync({
-                                                    activityId: activity.id,
-                                                    filename: image.filename,
-                                                    originalFilename: image.originalFilename,
-                                                    path: image.path,
-                                                    mimeType: image.mimeType
-                                                  });
-                                                  setEditingImageId(null);
-                                                  setActivitySearchQuery('');
-                                                } catch (error) {
-                                                  console.error('Error updating image:', error);
-                                                  toast({
-                                                    title: 'Update Error',
-                                                    description: 'Failed to update image association.',
-                                                    variant: 'destructive',
-                                                  });
-                                                }
-                                              }}
-                                            >
-                                              <div className="flex items-center">
-                                                <span className="ml-2">{activity.name}</span>
-                                              </div>
-                                            </div>
-                                          ))
-                                      )}
-                                      
-                                      {activities.filter(activity => 
-                                        !activitySearchQuery || 
-                                        activity.name.toLowerCase().includes(activitySearchQuery.toLowerCase())
-                                      ).length === 0 && (
-                                        <div className="p-2 text-gray-500">
-                                          No matching activities
-                                        </div>
-                                      )}
-                                    </div>
                                     
                                     <div className="flex justify-end">
                                       <Button 
@@ -1116,7 +1083,6 @@ export default function AdminImagesPage() {
                                         variant="outline"
                                         onClick={() => {
                                           setEditingImageId(null);
-                                          setActivitySearchQuery('');
                                         }}
                                       >
                                         Cancel
