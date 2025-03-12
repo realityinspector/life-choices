@@ -194,13 +194,21 @@ export default function WhatsNextPage() {
       variant: 'default',
     });
     
-    // Get the next suggested activity
-    setCurrentSuggestedActivity(getRandomSuggestedActivity());
+    // Set loading state
+    setLoading(true);
+    
+    // Always try to load planned activities first before showing another suggestion
+    setTimeout(() => {
+      loadNextActivity([]);
+    }, 1000); // Short delay to let the database update
   };
   
   const handleSkipSuggestion = () => {
-    // Get a different suggested activity
-    setCurrentSuggestedActivity(getRandomSuggestedActivity());
+    // Set loading state
+    setLoading(true);
+    
+    // Check for actual planned activities first before showing another suggestion
+    loadNextActivity([]);
   };
 
   return (
