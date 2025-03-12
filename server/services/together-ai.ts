@@ -1,5 +1,8 @@
 import Together from "together-ai";
 import { ActivityInsert } from "../../shared/schema";
+import fs from "fs";
+import path from "path";
+import { Buffer } from "buffer";
 
 // Define the structure of the LLM response for activity generation
 interface ActivityGenerationResponse {
@@ -16,9 +19,18 @@ interface ActivityGenerationResponse {
   priority?: number; // 1-5
 }
 
+// Stability AI image generation response
+interface ImageGenerationResponse {
+  filename: string;
+  originalFilename: string;
+  path: string;
+  mimeType: string;
+}
+
 export class TogetherAIService {
   private client: Together;
-  private model = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
+  private textModel = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
+  private imageModel = "stabilityai/stable-diffusion-xl-base-1.0";
   
   constructor() {
     const apiKey = process.env.TOGETHER_API_KEY;
@@ -144,7 +156,7 @@ Respond with a valid JSON object containing all the required properties.`;
           { role: "system", content: this.generateSystemPrompt() },
           { role: "user", content: this.generateUserPrompt(filename) }
         ],
-        model: this.model,
+        model: this.textModel,
         temperature: 0.7,
         max_tokens: 1000
       });
