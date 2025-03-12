@@ -8,11 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/user-context";
-import { Activity, ActivityInsert, UserData } from "@shared/schema";
-import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link as LinkIcon, Lock, Globe, Calendar, ArrowRight, User, ListChecks } from "lucide-react";
+import { Activity, ActivityInsert, UserData, ActivityImage } from "@shared/schema";
+import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link as LinkIcon, Lock, Globe, Calendar, ArrowRight, User, ListChecks, Image } from "lucide-react";
 import Header from "@/components/header";
 import { Link, useLocation } from "wouter";
 import Navigation from "@/components/navigation";
+import { SAMPLE_ACTIVITIES, MORE_SAMPLE_ACTIVITIES } from "@shared/sample-activities";
+import { apiRequest } from "@/lib/queryClient";
 
 // Activity Card component for consistency across tabs
 interface ActivityCardProps {
@@ -24,6 +26,7 @@ interface ActivityCardProps {
   isRecommended?: boolean;
   recommendationReason?: string;
   userActivities: Activity[];
+  activityImages?: ActivityImage[];
 }
 
 const ActivityCard = ({ 
@@ -34,12 +37,18 @@ const ActivityCard = ({
   onSkip,
   isRecommended = false,
   recommendationReason,
-  userActivities
+  userActivities,
+  activityImages = []
 }: ActivityCardProps) => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharePrivacy, setSharePrivacy] = useState<"private" | "link" | "public">("private");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Find images for this activity
+  const activityImagesForActivity = activityImages.filter(img => 
+    img.activityId === (activity as Activity).id
+  );
   
   const getImpactColor = (impact: number | undefined) => {
     if (!impact) return "bg-gray-500";
@@ -116,6 +125,18 @@ const ActivityCard = ({
     <>
       <Card className={`overflow-hidden h-full flex flex-col ${isRecommended ? "border-primary border-2" : ""} ${activityExists ? "border-green-400" : ""}`}>
         <div className={`h-1.5 ${getImpactColor(activity.lifeImpact)}`} />
+        
+        {/* Show image if available */}
+        {activityImagesForActivity.length > 0 && (
+          <div className="relative aspect-video overflow-hidden">
+            <img 
+              src={activityImagesForActivity[0].path} 
+              alt={activity.name}
+              className="object-cover w-full h-full"
+            />
+          </div>
+        )}
+        
         <CardHeader className="pb-2 pt-3">
           <div className="flex justify-between items-start">
             <CardTitle className="text-base flex items-center">
@@ -379,283 +400,50 @@ const getRecommendationReason = (
   
   // Calculate available weekly time (excluding sleep) in minutes
   const availableWeeklyTime = (24 * 7 - (userData.sleepHours || 8) * 7) * 60;
-  const timeUsagePercentage = (weeklyTimeAllocation / availableWeeklyTime) * 100;
+  const timePercentage = (weeklyTimeAllocation / availableWeeklyTime) * 100;
   
-  // Reasons based on various factors
-  if (activity.lifeImpact >= 8) {
-    return "High impact activity that could benefit your well-being";
-  }
-  
+  // New category
   if (!userCategories.has(activity.category)) {
-    return `You don't have any ${activity.category} activities yet`;
+    return `Adds a new ${activity.category} category to your routine`;
   }
   
+  // High impact activity
   if (activity.lifeImpact > averageImpact + 2) {
-    return "Higher impact than your current activities";
+    return `Higher impact than your average activities`;
   }
   
-  if (timeUsagePercentage < 30) {
-    return "You have plenty of free time for new activities";
+  // Balance time commitments
+  if (timePercentage < 30 && (activity.duration <= 30 && activity.durationUnit === "minute")) {
+    return `Quick activity that fits your schedule`;
+  } else if (timePercentage > 70 && (activity.frequency <= 2 && activity.frequencyUnit === "week")) {
+    return `Low-frequency activity for your busy schedule`;
   }
   
+  // Based on user's age
+  if (userData.age < 30 && activity.category === "Learning & Growth") {
+    return `Great for skill development in your ${userData.age}s`;
+  } else if (userData.age >= 30 && userData.age < 50 && activity.category === "Career & Finance") {
+    return `Important for career advancement at your age`;
+  } else if (userData.age >= 50 && (activity.category === "Health & Fitness" || activity.category === "Spirituality & Mindfulness")) {
+    return `Beneficial for wellbeing at your life stage`;
+  }
+  
+  // Fallback
   return "Complements your current lifestyle";
 };
 
-// Function to generate a sample set of activities
-const SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
-  {
-    name: "Morning Meditation",
-    description: "Start your day with 15 minutes of mindfulness meditation to reduce stress and improve focus.",
-    category: "Spirituality & Mindfulness",
-    frequency: 7,
-    frequencyUnit: "week",
-    duration: 15,
-    durationUnit: "minute",
-    lifeImpact: 7,
-    completed: false
-  },
-  {
-    name: "Read Non-Fiction",
-    description: "Expand your knowledge by reading non-fiction books on topics that interest you.",
-    category: "Learning & Growth",
-    frequency: 3,
-    frequencyUnit: "week",
-    duration: 30,
-    durationUnit: "minute",
-    lifeImpact: 6,
-    completed: false
-  },
-  {
-    name: "High-Intensity Interval Training",
-    description: "Boost cardiovascular health and burn calories efficiently with HIIT workouts.",
-    category: "Health & Fitness",
-    frequency: 3,
-    frequencyUnit: "week",
-    duration: 25,
-    durationUnit: "minute",
-    lifeImpact: 8,
-    completed: false
-  },
-  {
-    name: "Deep Work Sessions",
-    description: "Schedule focused work periods without distractions to maximize productivity.",
-    category: "Work & Career",
-    frequency: 5,
-    frequencyUnit: "week",
-    duration: 2,
-    durationUnit: "hour",
-    lifeImpact: 9,
-    completed: false
-  },
-  {
-    name: "Family Game Night",
-    description: "Strengthen family bonds through fun, engaging games and activities.",
-    category: "Relationships",
-    frequency: 1,
-    frequencyUnit: "week",
-    duration: 2,
-    durationUnit: "hour",
-    lifeImpact: 7,
-    completed: false
-  },
-  {
-    name: "Nature Walk",
-    description: "Connect with nature by taking mindful walks in natural settings.",
-    category: "Leisure & Recreation",
-    frequency: 2,
-    frequencyUnit: "week",
-    duration: 1,
-    durationUnit: "hour",
-    lifeImpact: 5,
-    completed: false
-  },
-  {
-    name: "Learn a New Language",
-    description: "Expand your horizons by learning a new language through consistent practice.",
-    category: "Learning & Growth",
-    frequency: 4,
-    frequencyUnit: "week",
-    duration: 20,
-    durationUnit: "minute",
-    lifeImpact: 6,
-    completed: false
-  },
-  {
-    name: "Volunteer at Local Community Center",
-    description: "Give back to your community by volunteering your time and skills.",
-    category: "Service & Community",
-    frequency: 2,
-    frequencyUnit: "month",
-    duration: 3,
-    durationUnit: "hour",
-    lifeImpact: 8,
-    completed: false
-  },
-  {
-    name: "Digital Detox",
-    description: "Take a break from screens and digital devices to reduce stress and be more present.",
-    category: "Spirituality & Mindfulness",
-    frequency: 1,
-    frequencyUnit: "week",
-    duration: 4,
-    durationUnit: "hour",
-    lifeImpact: 6,
-    completed: false
-  },
-  {
-    name: "Cook a New Recipe",
-    description: "Explore culinary creativity by trying new recipes and cooking techniques.",
-    category: "Creativity",
-    frequency: 1,
-    frequencyUnit: "week",
-    duration: 1,
-    durationUnit: "hour",
-    lifeImpact: 4,
-    completed: false
-  },
-  {
-    name: "Weekend Hike",
-    description: "Explore nature trails and get exercise through regular hiking excursions.",
-    category: "Travel & Adventure",
-    frequency: 2,
-    frequencyUnit: "month",
-    duration: 3,
-    durationUnit: "hour",
-    lifeImpact: 7,
-    completed: false
-  },
-  {
-    name: "Monthly Budget Review",
-    description: "Stay on top of your finances with regular budget reviews and planning.",
-    category: "Home & Life Management",
-    frequency: 1,
-    frequencyUnit: "month",
-    duration: 1,
-    durationUnit: "hour",
-    lifeImpact: 8,
-    completed: false
-  },
-  {
-    name: "Learn a Musical Instrument",
-    description: "Develop your musical abilities by learning to play an instrument of your choice.",
-    category: "Creativity",
-    frequency: 3,
-    frequencyUnit: "week",
-    duration: 30,
-    durationUnit: "minute",
-    lifeImpact: 5,
-    completed: false
-  },
-  {
-    name: "Gratitude Journaling",
-    description: "Cultivate a positive mindset by regularly writing down things you're grateful for.",
-    category: "Spirituality & Mindfulness",
-    frequency: 5,
-    frequencyUnit: "week",
-    duration: 10,
-    durationUnit: "minute",
-    lifeImpact: 6,
-    completed: false
-  },
-  {
-    name: "Professional Networking",
-    description: "Build and maintain your professional network through regular outreach.",
-    category: "Work & Career",
-    frequency: 2,
-    frequencyUnit: "week",
-    duration: 1,
-    durationUnit: "hour",
-    lifeImpact: 7,
-    completed: false
-  },
-  {
-    name: "Weekly Meal Prep",
-    description: "Save time and eat healthier by preparing meals in advance.",
-    category: "Home & Life Management",
-    frequency: 1,
-    frequencyUnit: "week",
-    duration: 2,
-    durationUnit: "hour",
-    lifeImpact: 6,
-    completed: false
-  }
-];
+// TypeScript helper to make sure we can add required fields to ActivityInsert
+interface EnhancedActivityInsert extends ActivityInsert {
+  description?: string;
+  completed?: boolean;
+}
 
-const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
-  {
-    name: "Yoga Practice",
-    description: "Improve flexibility, strength, and mental clarity through regular yoga sessions.",
-    category: "Health & Fitness",
-    frequency: 3,
-    frequencyUnit: "week",
-    duration: 45,
-    durationUnit: "minute",
-    lifeImpact: 7,
-    completed: false
-  },
-  {
-    name: "Creative Writing",
-    description: "Express yourself and develop your writing skills through regular creative writing.",
-    category: "Creativity",
-    frequency: 2,
-    frequencyUnit: "week",
-    duration: 1,
-    durationUnit: "hour",
-    lifeImpact: 5,
-    completed: false
-  },
-  {
-    name: "Language Exchange",
-    description: "Practice a foreign language with native speakers through conversation exchanges.",
-    category: "Learning & Growth",
-    frequency: 1,
-    frequencyUnit: "week",
-    duration: 1,
-    durationUnit: "hour",
-    lifeImpact: 6,
-    completed: false
-  },
-  {
-    name: "Photography Walk",
-    description: "Combine walking with photography to appreciate your surroundings and develop your eye.",
-    category: "Creativity",
-    frequency: 1,
-    frequencyUnit: "week",
-    duration: 1,
-    durationUnit: "hour",
-    lifeImpact: 4,
-    completed: false
-  },
-  {
-    name: "Strength Training",
-    description: "Build muscle and bone density through regular strength training workouts.",
-    category: "Health & Fitness",
-    frequency: 3,
-    frequencyUnit: "week",
-    duration: 45,
-    durationUnit: "minute",
-    lifeImpact: 8,
-    completed: false
-  },
-  {
-    name: "Date Night",
-    description: "Strengthen your romantic relationship with regular quality time together.",
-    category: "Relationships",
-    frequency: 1,
-    frequencyUnit: "week",
-    duration: 3,
-    durationUnit: "hour",
-    lifeImpact: 8,
-    completed: false
-  }
-];
-
-function completeActivityData(activities: ActivityInsert[]): Required<ActivityInsert>[] {
+function completeActivityData(activities: EnhancedActivityInsert[]): Required<EnhancedActivityInsert>[] {
   return activities.map(a => ({
     ...a,
     description: a.description || "",
     completed: a.completed ?? false
-  })) as Required<ActivityInsert>[];
+  })) as Required<EnhancedActivityInsert>[];
 }
 
 export default function ShopActivitiesPage() {
@@ -667,22 +455,45 @@ export default function ShopActivitiesPage() {
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
   
+  // Fetch activities with images
+  const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
+    queryKey: ['/api/activities/with-images'],
+    queryFn: async ({ signal }) => {
+      try {
+        const res = await apiRequest('/api/activities/with-images', { signal });
+        return res.json();
+      } catch (error) {
+        console.error('Error fetching activities with images:', error);
+        return [];
+      }
+    }
+  });
+  
+  // Extract all images for easier reference
+  const allActivityImages = activitiesWithImages.flatMap(a => a.images);
+  
   useEffect(() => {
     // Load cart items when the component mounts
     setCartItems(getCartActivities());
   }, [getCartActivities]);
   
+  // Process sample activities to ensure they have description and completed fields
+  const enhancedSampleActivities = completeActivityData(
+    SAMPLE_ACTIVITIES.map(a => ({ ...a, description: "", completed: false }))
+  );
+  
+  const enhancedMoreSampleActivities = completeActivityData(
+    MORE_SAMPLE_ACTIVITIES.map(a => ({ ...a, description: "", completed: false }))
+  );
+  
   // Generate a set of all available activities
-  const allActivities = new Set<Required<ActivityInsert>>([
-    ...SAMPLE_ACTIVITIES,
-    ...MORE_SAMPLE_ACTIVITIES
-  ]);
+  const allActivities = [...enhancedSampleActivities, ...enhancedMoreSampleActivities];
   
   // Filter activities based on search and category
-  const filteredActivities = Array.from(allActivities).filter(activity => {
+  const filteredActivities = allActivities.filter(activity => {
     const matchesSearch = searchQuery === "" || 
       activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (activity.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
       activity.category.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesCategory = selectedCategory === null || activity.category === selectedCategory;
@@ -692,7 +503,7 @@ export default function ShopActivitiesPage() {
   
   // Generate recommended activities for the user
   const recommendedActivities = userData && activities 
-    ? Array.from(allActivities)
+    ? allActivities
       .filter(a => !activities.some(ua => ua.name === a.name)) // Don't recommend activities the user already has
       .sort(() => Math.random() - 0.5) // Shuffle
       .slice(0, 6) // Take the first 6
@@ -831,21 +642,31 @@ export default function ShopActivitiesPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {cartItems.map((item, i) => (
-                      <Card key={i} className="overflow-hidden">
-                        <div className={`h-1.5 ${getImpactColor(item.lifeImpact)}`} />
-                        <div className="p-3">
-                          <div className="flex justify-between mb-1.5">
-                            <h3 className="font-medium text-sm">{item.name}</h3>
-                            <Badge className="text-xs">{item.category}</Badge>
+                    {cartItems.map((item, i) => {
+                      const getImpactColor = (impact: number | undefined) => {
+                        if (!impact) return "bg-gray-500";
+                        if (impact >= 8) return "bg-green-500";
+                        if (impact >= 5) return "bg-blue-500";
+                        if (impact >= 3) return "bg-yellow-500";
+                        return "bg-gray-500";
+                      };
+                      
+                      return (
+                        <Card key={i} className="overflow-hidden">
+                          <div className={`h-1.5 ${getImpactColor(item.lifeImpact)}`} />
+                          <div className="p-3">
+                            <div className="flex justify-between mb-1.5">
+                              <h3 className="font-medium text-sm">{item.name}</h3>
+                              <Badge className="text-xs">{item.category}</Badge>
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>{item.frequency} x {item.frequencyUnit}</span>
+                              <span>{item.duration} {item.durationUnit}{item.duration > 1 ? 's' : ''}</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>{item.frequency} x {item.frequencyUnit}</span>
-                            <span>{item.duration} {item.durationUnit}{item.duration > 1 ? 's' : ''}</span>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -914,7 +735,7 @@ export default function ShopActivitiesPage() {
 
             <TabsContent value="all" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from(filteredActivities).map((activity, index) => (
+                {filteredActivities.map((activity, index) => (
                   <ActivityCard 
                     key={index}
                     activity={activity}
@@ -923,6 +744,7 @@ export default function ShopActivitiesPage() {
                     onComplete={handleCompleteActivity}
                     onSkip={handleSkipActivity}
                     userActivities={activities}
+                    activityImages={allActivityImages}
                   />
                 ))}
               </div>
@@ -940,7 +762,7 @@ export default function ShopActivitiesPage() {
 
             <TabsContent value="high-impact" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from(filteredActivities)
+                {filteredActivities
                   .filter(a => a.lifeImpact >= 7)
                   .map((activity, index) => (
                     <ActivityCard 
@@ -951,6 +773,7 @@ export default function ShopActivitiesPage() {
                       onComplete={handleCompleteActivity}
                       onSkip={handleSkipActivity}
                       userActivities={activities}
+                      activityImages={allActivityImages}
                     />
                   ))}
               </div>
@@ -958,7 +781,7 @@ export default function ShopActivitiesPage() {
 
             <TabsContent value="quick" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from(filteredActivities)
+                {filteredActivities
                   .filter(a => a.duration <= 30 && a.durationUnit === "minute")
                   .map((activity, index) => (
                     <ActivityCard 
@@ -969,6 +792,7 @@ export default function ShopActivitiesPage() {
                       onComplete={handleCompleteActivity}
                       onSkip={handleSkipActivity}
                       userActivities={activities}
+                      activityImages={allActivityImages}
                     />
                   ))}
               </div>
@@ -989,7 +813,7 @@ export default function ShopActivitiesPage() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Array.from(recommendedActivities).map((activity, index) => (
+                    {recommendedActivities.map((activity, index) => (
                       <ActivityCard 
                         key={index}
                         activity={activity}
@@ -999,26 +823,20 @@ export default function ShopActivitiesPage() {
                         onSkip={handleSkipActivity}
                         userActivities={activities}
                         isRecommended={true}
-                        recommendationReason={userData && activities ? getRecommendationReason(activity, userData, activities) : undefined}
+                        recommendationReason={getRecommendationReason(activity, userData, activities)}
+                        activityImages={allActivityImages}
                       />
                     ))}
                   </div>
                 </>
               ) : (
                 <div className="text-center p-10 bg-muted rounded-lg">
-                  <Heart className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="font-medium text-lg mb-2">No recommendations yet</h3>
+                  <User className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-medium text-lg mb-2">No recommendations available</h3>
                   <p className="text-muted-foreground mb-6">
-                    Add some activities to your routine to get personalized recommendations.
+                    Add some activities to your profile to get personalized recommendations.
                   </p>
-                  <Button onClick={() => {
-                    const element = document.querySelector('[data-value="all"]');
-                    if (element && element instanceof HTMLElement) {
-                      element.click();
-                    }
-                  }}>
-                    Browse All Activities
-                  </Button>
+                  <Button onClick={() => setLocation("/profile")}>Update Your Profile</Button>
                 </div>
               )}
             </TabsContent>
@@ -1026,48 +844,7 @@ export default function ShopActivitiesPage() {
         </div>
       </main>
       
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-2 px-4 grid grid-cols-6 gap-1 text-center">
-        <Link href="/" className="flex flex-col items-center py-1 text-gray-500">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          <span className="text-xs mt-1">Next</span>
-        </Link>
-        
-        <Link href="/activities" className="flex flex-col items-center py-1 text-gray-500">
-          <ListChecks className="h-6 w-6" />
-          <span className="text-xs mt-1">Tasks</span>
-        </Link>
-        
-        <Link href="/shop-activities" className="flex flex-col items-center py-1 text-teal-600">
-          <Store className="h-6 w-6" />
-          <span className="text-xs mt-1">Browse</span>
-        </Link>
-        
-        <Link href="/calendar" className="flex flex-col items-center py-1 text-gray-500">
-          <Calendar className="h-6 w-6" />
-          <span className="text-xs mt-1">Calendar</span>
-        </Link>
-        
-        <Link href="/cart" className="flex flex-col items-center py-1 text-gray-500 relative">
-          <ShoppingCart className="h-6 w-6" />
-          {cartItems.length > 0 && (
-            <span className="absolute top-0 right-1/4 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-              {cartItems.length}
-            </span>
-          )}
-          <span className="text-xs mt-1">Cart</span>
-        </Link>
-        
-        <Link href="/profile" className="flex flex-col items-center py-1 text-gray-500">
-          <User className="h-6 w-6" />
-          <span className="text-xs mt-1">Profile</span>
-        </Link>
-      </div>
-      
-      {/* Spacer for fixed bottom navigation */}
-      <div className="h-16 md:h-0"></div>
+      <Navigation currentPath="/shop-activities" />
     </div>
   );
 }

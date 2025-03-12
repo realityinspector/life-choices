@@ -1,0 +1,1081 @@
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/context/user-context";
+import { Activity, ActivityInsert, UserData, ActivityImage } from "@shared/schema";
+import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link as LinkIcon, Lock, Globe, Calendar, ArrowRight, User, ListChecks, Image } from "lucide-react";
+import Header from "@/components/header";
+import { Link, useLocation } from "wouter";
+import Navigation from "@/components/navigation";
+import { SAMPLE_ACTIVITIES, MORE_SAMPLE_ACTIVITIES } from "@shared/sample-activities";
+import { apiRequest } from "@/lib/queryClient";
+
+// Activity Card component for consistency across tabs
+interface ActivityCardProps {
+  activity: Required<ActivityInsert>;
+  onAddToCart: (activity: ActivityInsert) => void;
+  onAddNow: (activity: ActivityInsert) => void;
+  onComplete?: (activity: Activity) => void;
+  onSkip?: (activity: Activity) => void;
+  isRecommended?: boolean;
+  recommendationReason?: string;
+  userActivities: Activity[];
+}
+
+const ActivityCard = ({ 
+  activity, 
+  onAddToCart, 
+  onAddNow, 
+  onComplete,
+  onSkip,
+  isRecommended = false,
+  recommendationReason,
+  userActivities
+}: ActivityCardProps) => {
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePrivacy, setSharePrivacy] = useState<"private" | "link" | "public">("private");
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const { toast } = useToast();
+  
+  const getImpactColor = (impact: number | undefined) => {
+    if (!impact) return "bg-gray-500";
+    if (impact >= 8) return "bg-green-500";
+    if (impact >= 5) return "bg-blue-500";
+    if (impact >= 3) return "bg-yellow-500";
+    return "bg-gray-500";
+  };
+
+  const handleShare = () => {
+    // In a real app, this would call an API to generate a shareable link
+    // For now, we'll just simulate it
+    if (sharePrivacy === "private") {
+      toast({
+        title: "Cannot share private activity",
+        description: "Please change the privacy setting to generate a shareable link.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const shareableUrl = `https://lifechoices.app/share/${activity.name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 8)}`;
+    setShareUrl(shareableUrl);
+    
+    toast({
+      title: sharePrivacy === "public" ? "Activity shared publicly" : "Share link generated",
+      description: "You can now share this activity with others",
+    });
+  };
+  
+  const copyToClipboard = () => {
+    if (shareUrl) {
+      navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: "Copied to clipboard",
+        description: "Share link has been copied to your clipboard",
+      });
+    }
+  };
+
+  // Check if this activity already exists in the user's activities
+  const activityExists = userActivities.some(a => a.name === activity.name);
+  
+  // Find the activity in user's activities if it exists
+  const existingActivity = userActivities.find(a => a.name === activity.name);
+
+  const handleExportToCalendar = () => {
+    if (!existingActivity) return;
+    
+    // Create a calendar event URL
+    const eventTitle = encodeURIComponent(existingActivity.name);
+    const eventDescription = encodeURIComponent(`${existingActivity.category} activity - Life Impact: ${existingActivity.lifeImpact}`);
+    const startDate = new Date();
+    const endDate = new Date(startDate.getTime() + (existingActivity.duration * (existingActivity.durationUnit === 'hour' ? 60 : 1) * 60 * 1000));
+    
+    // Format dates for calendar URLs
+    const formatDate = (date: Date) => {
+      return date.toISOString().replace(/-|:|\.\d+/g, "");
+    };
+    
+    // Google Calendar URL
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&details=${eventDescription}&dates=${formatDate(startDate)}/${formatDate(endDate)}`;
+    
+    // Open in a new tab
+    window.open(googleCalendarUrl, '_blank');
+    
+    toast({
+      title: "Calendar Link Generated",
+      description: "Event has been created and can be added to your calendar",
+    });
+  };
+
+  return (
+    <>
+      <Card className={`overflow-hidden h-full flex flex-col ${isRecommended ? "border-primary border-2" : ""} ${activityExists ? "border-green-400" : ""}`}>
+        <div className={`h-1.5 ${getImpactColor(activity.lifeImpact)}`} />
+        <CardHeader className="pb-2 pt-3">
+          <div className="flex justify-between items-start">
+            <CardTitle className="text-base flex items-center">
+              {activity.name}
+              {activityExists && <Check className="h-3.5 w-3.5 ml-1.5 text-green-500" />}
+              {isRecommended && <Heart className="h-3.5 w-3.5 ml-1.5 text-red-500 fill-red-500" />}
+            </CardTitle>
+            <Badge className="text-xs">{activity.category}</Badge>
+          </div>
+          <CardDescription className="mt-1 text-xs">
+            {activityExists ? (
+              <span className="text-green-600 font-medium">Already in your activities</span>
+            ) : !isRecommended ? (
+              `${activity.frequency} x ${activity.frequencyUnit}`
+            ) : isRecommended && recommendationReason ? (
+              <span className="text-primary font-medium">{recommendationReason}</span>
+            ) : isRecommended ? (
+              <span className="text-primary font-medium">Recommended for your profile</span>
+            ) : null}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pb-2 pt-0 flex-grow">
+          <div className="flex justify-between text-xs">
+            <div className="flex items-center">
+              <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+              <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center">
+              <Zap className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+              <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+            </div>
+          </div>
+          {isRecommended && !recommendationReason && !activityExists && (
+            <div className="mt-2 text-xs text-primary-foreground/70">
+              <span className="flex items-center">
+                <span className="mr-1">•</span> {activity.frequency} x {activity.frequencyUnit}
+              </span>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-1.5 pt-2">
+          {activityExists ? (
+            <>
+              <div className="flex w-full space-x-2">
+                <Button 
+                  className="flex-1 text-xs h-8" 
+                  size="sm"
+                  variant="default"
+                  onClick={() => existingActivity && onComplete && onComplete(existingActivity)}
+                >
+                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                  Complete
+                </Button>
+                <Button 
+                  className="flex-1 text-xs h-8" 
+                  size="sm"
+                  variant="outline"
+                  onClick={() => existingActivity && onSkip && onSkip(existingActivity)}
+                >
+                  <ArrowRight className="h-3.5 w-3.5 mr-1.5" />
+                  Skip
+                </Button>
+              </div>
+              <Button 
+                className="w-full text-xs h-8" 
+                size="sm"
+                variant="ghost"
+                onClick={handleExportToCalendar}
+              >
+                <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                Add to Calendar
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="flex w-full space-x-2">
+                <Button 
+                  className="flex-1 text-xs h-8" 
+                  size="sm"
+                  onClick={() => onAddToCart(activity)}
+                >
+                  <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+                  Add to Cart
+                </Button>
+                <Button 
+                  className="flex-1 text-xs h-8" 
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onAddNow(activity)}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add Now
+                </Button>
+              </div>
+              <Button 
+                className="w-full text-xs h-8" 
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowShareModal(true)}
+              >
+                <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                Share Activity
+              </Button>
+            </>
+          )}
+        </CardFooter>
+      </Card>
+      
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Share "{activity.name}"</h3>
+              <Button size="sm" variant="ghost" onClick={() => setShowShareModal(false)}>
+                &times;
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">Privacy Settings</h4>
+                <div className="flex flex-col space-y-2">
+                  <div 
+                    className={`p-3 border rounded-md cursor-pointer flex justify-between items-center ${sharePrivacy === 'private' ? 'border-primary bg-primary/5' : ''}`}
+                    onClick={() => setSharePrivacy('private')}
+                  >
+                    <div className="flex items-center">
+                      <div className="h-6 w-6 mr-2 flex items-center justify-center bg-gray-100 rounded-full">
+                        <Lock className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">Private</div>
+                        <div className="text-xs text-gray-500">Only you can see this activity</div>
+                      </div>
+                    </div>
+                    {sharePrivacy === 'private' && <Check className="h-5 w-5 text-primary" />}
+                  </div>
+                  
+                  <div 
+                    className={`p-3 border rounded-md cursor-pointer flex justify-between items-center ${sharePrivacy === 'link' ? 'border-primary bg-primary/5' : ''}`}
+                    onClick={() => setSharePrivacy('link')}
+                  >
+                    <div className="flex items-center">
+                      <div className="h-6 w-6 mr-2 flex items-center justify-center bg-blue-100 rounded-full">
+                        <LinkIcon className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">Anyone with the link</div>
+                        <div className="text-xs text-gray-500">Anyone with the link can view</div>
+                      </div>
+                    </div>
+                    {sharePrivacy === 'link' && <Check className="h-5 w-5 text-primary" />}
+                  </div>
+                  
+                  <div 
+                    className={`p-3 border rounded-md cursor-pointer flex justify-between items-center ${sharePrivacy === 'public' ? 'border-primary bg-primary/5' : ''}`}
+                    onClick={() => setSharePrivacy('public')}
+                  >
+                    <div className="flex items-center">
+                      <div className="h-6 w-6 mr-2 flex items-center justify-center bg-green-100 rounded-full">
+                        <Globe className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">Public</div>
+                        <div className="text-xs text-gray-500">Anyone can find this activity</div>
+                      </div>
+                    </div>
+                    {sharePrivacy === 'public' && <Check className="h-5 w-5 text-primary" />}
+                  </div>
+                </div>
+              </div>
+              
+              {shareUrl && (
+                <div>
+                  <h4 className="font-medium mb-2">Share Link</h4>
+                  <div className="flex">
+                    <input 
+                      type="text" 
+                      value={shareUrl}
+                      readOnly
+                      className="flex-1 p-2 text-sm border rounded-l-md focus:outline-none"
+                    />
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="rounded-l-none" 
+                      onClick={copyToClipboard}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="pt-2 flex justify-end space-x-2">
+                <Button variant="outline" size="sm" onClick={() => setShowShareModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleShare} disabled={sharePrivacy === 'private' && shareUrl === null}>
+                  {shareUrl ? 'Generate New Link' : 'Generate Share Link'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+// Sample categories for activities
+const ACTIVITY_CATEGORIES = [
+  "Health & Fitness",
+  "Learning & Growth",
+  "Work & Career",
+  "Relationships",
+  "Leisure & Recreation",
+  "Spirituality & Mindfulness",
+  "Creativity",
+  "Service & Community",
+  "Travel & Adventure",
+  "Home & Life Management"
+];
+
+// Function to generate personalized recommendations based on user profile and current activities
+// Function to generate reasons for recommendations
+const getRecommendationReason = (
+  activity: Required<ActivityInsert>,
+  userData: UserData,
+  currentActivities: Activity[]
+): string => {
+  // Check if the user already has activities in this category
+  const userCategories = new Set(currentActivities.map(a => a.category));
+  
+  // Get current categories and activity names
+  const averageImpact = currentActivities.length > 0 
+    ? currentActivities.reduce((sum, a) => sum + (a.lifeImpact || 0), 0) / currentActivities.length
+    : 0;
+    
+  // Calculate total time allocated per week
+  const weeklyTimeAllocation = currentActivities.reduce((total, activity) => {
+    let weeklyTime = activity.duration;
+    if (activity.durationUnit === "hour") {
+      weeklyTime *= 60; // Convert to minutes
+    }
+    
+    // Convert to weekly frequency
+    if (activity.frequencyUnit === "day") {
+      weeklyTime *= (activity.frequency * 7);
+    } else if (activity.frequencyUnit === "week") {
+      weeklyTime *= activity.frequency;
+    } else if (activity.frequencyUnit === "month") {
+      weeklyTime *= (activity.frequency / 4);
+    } else if (activity.frequencyUnit === "year") {
+      weeklyTime *= (activity.frequency / 52);
+    }
+    
+    return total + weeklyTime;
+  }, 0);
+  
+  // Calculate available weekly time (excluding sleep) in minutes
+  const availableWeeklyTime = (24 * 7 - (userData.sleepHours || 8) * 7) * 60;
+  const timeUsagePercentage = (weeklyTimeAllocation / availableWeeklyTime) * 100;
+  
+  // Reasons based on various factors
+  if (activity.lifeImpact >= 8) {
+    return "High impact activity that could benefit your well-being";
+  }
+  
+  if (!userCategories.has(activity.category)) {
+    return `You don't have any ${activity.category} activities yet`;
+  }
+  
+  if (activity.lifeImpact > averageImpact + 2) {
+    return "Higher impact than your current activities";
+  }
+  
+  if (timeUsagePercentage < 30) {
+    return "You have plenty of free time for new activities";
+  }
+  
+  return "Complements your current lifestyle";
+};
+
+// Function to generate a sample set of activities
+// Using imported SAMPLE_ACTIVITIES from shared/sample-activities
+/*
+const SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
+  {
+    name: "Morning Meditation",
+    description: "Start your day with 15 minutes of mindfulness meditation to reduce stress and improve focus.",
+    category: "Spirituality & Mindfulness",
+    frequency: 7,
+    frequencyUnit: "week",
+    duration: 15,
+    durationUnit: "minute",
+    lifeImpact: 7,
+    completed: false
+  },
+*/
+  {
+    name: "Read Non-Fiction",
+    description: "Expand your knowledge by reading non-fiction books on topics that interest you.",
+    category: "Learning & Growth",
+    frequency: 3,
+    frequencyUnit: "week",
+    duration: 30,
+    durationUnit: "minute",
+    lifeImpact: 6,
+    completed: false
+  },
+  {
+    name: "High-Intensity Interval Training",
+    description: "Boost cardiovascular health and burn calories efficiently with HIIT workouts.",
+    category: "Health & Fitness",
+    frequency: 3,
+    frequencyUnit: "week",
+    duration: 25,
+    durationUnit: "minute",
+    lifeImpact: 8,
+    completed: false
+  },
+  {
+    name: "Deep Work Sessions",
+    description: "Schedule focused work periods without distractions to maximize productivity.",
+    category: "Work & Career",
+    frequency: 5,
+    frequencyUnit: "week",
+    duration: 2,
+    durationUnit: "hour",
+    lifeImpact: 9,
+    completed: false
+  },
+  {
+    name: "Family Game Night",
+    description: "Strengthen family bonds through fun, engaging games and activities.",
+    category: "Relationships",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 2,
+    durationUnit: "hour",
+    lifeImpact: 7,
+    completed: false
+  },
+  {
+    name: "Nature Walk",
+    description: "Connect with nature by taking mindful walks in natural settings.",
+    category: "Leisure & Recreation",
+    frequency: 2,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 5,
+    completed: false
+  },
+  {
+    name: "Learn a New Language",
+    description: "Expand your horizons by learning a new language through consistent practice.",
+    category: "Learning & Growth",
+    frequency: 4,
+    frequencyUnit: "week",
+    duration: 20,
+    durationUnit: "minute",
+    lifeImpact: 6,
+    completed: false
+  },
+  {
+    name: "Volunteer at Local Community Center",
+    description: "Give back to your community by volunteering your time and skills.",
+    category: "Service & Community",
+    frequency: 2,
+    frequencyUnit: "month",
+    duration: 3,
+    durationUnit: "hour",
+    lifeImpact: 8,
+    completed: false
+  },
+  {
+    name: "Digital Detox",
+    description: "Take a break from screens and digital devices to reduce stress and be more present.",
+    category: "Spirituality & Mindfulness",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 4,
+    durationUnit: "hour",
+    lifeImpact: 6,
+    completed: false
+  },
+  {
+    name: "Cook a New Recipe",
+    description: "Explore culinary creativity by trying new recipes and cooking techniques.",
+    category: "Creativity",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 4,
+    completed: false
+  },
+  {
+    name: "Weekend Hike",
+    description: "Explore nature trails and get exercise through regular hiking excursions.",
+    category: "Travel & Adventure",
+    frequency: 2,
+    frequencyUnit: "month",
+    duration: 3,
+    durationUnit: "hour",
+    lifeImpact: 7,
+    completed: false
+  },
+  {
+    name: "Monthly Budget Review",
+    description: "Stay on top of your finances with regular budget reviews and planning.",
+    category: "Home & Life Management",
+    frequency: 1,
+    frequencyUnit: "month",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 8,
+    completed: false
+  },
+  {
+    name: "Learn a Musical Instrument",
+    description: "Develop your musical abilities by learning to play an instrument of your choice.",
+    category: "Creativity",
+    frequency: 3,
+    frequencyUnit: "week",
+    duration: 30,
+    durationUnit: "minute",
+    lifeImpact: 5,
+    completed: false
+  },
+  {
+    name: "Gratitude Journaling",
+    description: "Cultivate a positive mindset by regularly writing down things you're grateful for.",
+    category: "Spirituality & Mindfulness",
+    frequency: 5,
+    frequencyUnit: "week",
+    duration: 10,
+    durationUnit: "minute",
+    lifeImpact: 6,
+    completed: false
+  },
+  {
+    name: "Professional Networking",
+    description: "Build and maintain your professional network through regular outreach.",
+    category: "Work & Career",
+    frequency: 2,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 7,
+    completed: false
+  },
+  {
+    name: "Weekly Meal Prep",
+    description: "Save time and eat healthier by preparing meals in advance.",
+    category: "Home & Life Management",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 2,
+    durationUnit: "hour",
+    lifeImpact: 6,
+    completed: false
+  }
+];
+
+// Using imported MORE_SAMPLE_ACTIVITIES from shared/sample-activities
+/*
+const MORE_SAMPLE_ACTIVITIES: Required<ActivityInsert>[] = [
+  {
+    name: "Yoga Practice",
+    description: "Improve flexibility, strength, and mental clarity through regular yoga sessions.",
+    category: "Health & Fitness",
+    frequency: 3,
+    frequencyUnit: "week",
+    duration: 45,
+    durationUnit: "minute",
+    lifeImpact: 7,
+    completed: false
+  },
+*/
+  {
+    name: "Creative Writing",
+    description: "Express yourself and develop your writing skills through regular creative writing.",
+    category: "Creativity",
+    frequency: 2,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 5,
+    completed: false
+  },
+  {
+    name: "Language Exchange",
+    description: "Practice a foreign language with native speakers through conversation exchanges.",
+    category: "Learning & Growth",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 6,
+    completed: false
+  },
+  {
+    name: "Photography Walk",
+    description: "Combine walking with photography to appreciate your surroundings and develop your eye.",
+    category: "Creativity",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 1,
+    durationUnit: "hour",
+    lifeImpact: 4,
+    completed: false
+  },
+  {
+    name: "Strength Training",
+    description: "Build muscle and bone density through regular strength training workouts.",
+    category: "Health & Fitness",
+    frequency: 3,
+    frequencyUnit: "week",
+    duration: 45,
+    durationUnit: "minute",
+    lifeImpact: 8,
+    completed: false
+  },
+  {
+    name: "Date Night",
+    description: "Strengthen your romantic relationship with regular quality time together.",
+    category: "Relationships",
+    frequency: 1,
+    frequencyUnit: "week",
+    duration: 3,
+    durationUnit: "hour",
+    lifeImpact: 8,
+    completed: false
+  }
+];
+
+function completeActivityData(activities: ActivityInsert[]): Required<ActivityInsert>[] {
+  return activities.map(a => ({
+    ...a,
+    description: a.description || "",
+    completed: a.completed ?? false
+  })) as Required<ActivityInsert>[];
+}
+
+export default function ShopActivitiesPage() {
+  const { userData, activities, addActivity, completeActivity: completeUserActivity, addActivitiesToCart, getCartActivities } = useUser();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showCart, setShowCart] = useState(false);
+  const [cartItems, setCartItems] = useState<ActivityInsert[]>([]);
+  const { toast } = useToast();
+  const [location, setLocation] = useLocation();
+  
+  useEffect(() => {
+    // Load cart items when the component mounts
+    setCartItems(getCartActivities());
+  }, [getCartActivities]);
+  
+  // Generate a set of all available activities
+  const allActivities = new Set<Required<ActivityInsert>>([
+    ...SAMPLE_ACTIVITIES,
+    ...MORE_SAMPLE_ACTIVITIES
+  ]);
+  
+  // Filter activities based on search and category
+  const filteredActivities = Array.from(allActivities).filter(activity => {
+    const matchesSearch = searchQuery === "" || 
+      activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.category.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = selectedCategory === null || activity.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+  
+  // Generate recommended activities for the user
+  const recommendedActivities = userData && activities 
+    ? Array.from(allActivities)
+      .filter(a => !activities.some(ua => ua.name === a.name)) // Don't recommend activities the user already has
+      .sort(() => Math.random() - 0.5) // Shuffle
+      .slice(0, 6) // Take the first 6
+    : [];
+  
+  const handleAddActivity = (activity: ActivityInsert) => {
+    addActivity(activity);
+    
+    toast({
+      title: "Activity Added",
+      description: `${activity.name} has been added to your activities.`
+    });
+  };
+  
+  const handleAddToCart = (activity: ActivityInsert) => {
+    if (cartItems.some(item => item.name === activity.name)) {
+      toast({
+        title: "Already in Cart",
+        description: `${activity.name} is already in your cart.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addActivitiesToCart([activity]);
+    setCartItems(prev => [...prev, activity]);
+    
+    toast({
+      title: "Added to Cart",
+      description: `${activity.name} has been added to your cart.`
+    });
+  };
+  
+  const handleCheckout = () => {
+    toast({
+      title: "Checkout Complete",
+      description: `${cartItems.length} activities have been added to your routine.`
+    });
+    
+    // Add all cart items to the user's activities
+    cartItems.forEach(activity => {
+      addActivity(activity);
+    });
+    
+    // Clear the cart
+    setCartItems([]);
+    addActivitiesToCart([]);
+    
+    // Close the cart drawer
+    setShowCart(false);
+  };
+  
+  const handleCompleteActivity = (activity: Activity) => {
+    completeUserActivity(activity.id);
+    
+    toast({
+      title: "Activity Completed",
+      description: `You've completed ${activity.name} for today.`
+    });
+  };
+  
+  const handleSkipActivity = (activity: Activity) => {
+    // This would typically update the activity's next due date
+    // For now, we'll just show a toast
+    toast({
+      title: "Activity Skipped",
+      description: `${activity.name} will be rescheduled for later.`
+    });
+  };
+  
+  if (!userData) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <h1 className="text-2xl font-bold mb-4">Please log in to browse activities</h1>
+        <Button onClick={() => setLocation("/login")}>
+          Log In or Sign Up
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Simple header */}
+      <div className="bg-white p-4 flex items-center justify-between border-b">
+        <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
+        <div className="flex items-center">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => setShowCart(!showCart)} 
+            className="relative bg-white hover:bg-gray-50"
+          >
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            {cartItems.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                {cartItems.length}
+              </span>
+            )}
+          </Button>
+        </div>
+      </div>
+      
+      <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Page Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+            <Store className="h-6 w-6 text-primary mr-2" />
+            Shop Activities
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Browse and add life-enhancing activities to your routine
+          </p>
+        </div>
+        
+        {/* Shopping Cart Drawer */}
+        {showCart && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
+            <div className="bg-background w-full max-w-md h-full flex flex-col overflow-hidden">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h2 className="text-xl font-bold">Your Shopping Cart</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowCart(false)}>
+                  &times;
+                </Button>
+              </div>
+              
+              <div className="flex-1 overflow-auto p-4">
+                {cartItems.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center">
+                    <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Your cart is empty</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Browse activities and add them to your cart
+                    </p>
+                    <Button onClick={() => setShowCart(false)}>Shop Activities</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {cartItems.map((item, i) => (
+                      <Card key={i} className="overflow-hidden">
+                        <div className={`h-1.5 ${getImpactColor(item.lifeImpact)}`} />
+                        <div className="p-3">
+                          <div className="flex justify-between mb-1.5">
+                            <h3 className="font-medium text-sm">{item.name}</h3>
+                            <Badge className="text-xs">{item.category}</Badge>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>{item.frequency} x {item.frequencyUnit}</span>
+                            <span>{item.duration} {item.durationUnit}{item.duration > 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {cartItems.length > 0 && (
+                <div className="p-4 border-t">
+                  <Button 
+                    className="w-full" 
+                    onClick={handleCheckout}
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Checkout ({cartItems.length} item{cartItems.length !== 1 ? 's' : ''})
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Search box and Categories in one row */}
+        <div className="mb-6 space-y-4">
+          {/* Search box */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              className="pl-10"
+              placeholder="Search activities..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
+          {/* Simplified Categories */}
+          <div className="bg-white p-3 rounded-lg shadow-sm">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={selectedCategory === null ? "default" : "outline"}
+                onClick={() => setSelectedCategory(null)}
+              >
+                All
+              </Button>
+              {ACTIVITY_CATEGORIES.map((category) => (
+                <Button
+                  key={category}
+                  size="sm"
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category.split(' & ')[0]}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Activities content */}
+        <div>
+          <Tabs defaultValue="all">
+            <TabsList className="mb-4">
+              <TabsTrigger value="all">All Activities</TabsTrigger>
+              <TabsTrigger value="high-impact">High Impact</TabsTrigger>
+              <TabsTrigger value="quick">Quick Activities</TabsTrigger>
+              <TabsTrigger value="recommended">Recommended</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="all" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from(filteredActivities).map((activity, index) => (
+                  <ActivityCard 
+                    key={index}
+                    activity={activity}
+                    onAddToCart={handleAddToCart}
+                    onAddNow={handleAddActivity}
+                    onComplete={handleCompleteActivity}
+                    onSkip={handleSkipActivity}
+                    userActivities={activities}
+                  />
+                ))}
+              </div>
+              
+              {filteredActivities.length === 0 && (
+                <div className="text-center p-10 bg-muted rounded-lg">
+                  <Search className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-medium text-lg mb-2">No activities found</h3>
+                  <p className="text-muted-foreground">
+                    Try adjusting your search or filters to find activities.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="high-impact" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from(filteredActivities)
+                  .filter(a => a.lifeImpact >= 7)
+                  .map((activity, index) => (
+                    <ActivityCard 
+                      key={index}
+                      activity={activity}
+                      onAddToCart={handleAddToCart}
+                      onAddNow={handleAddActivity}
+                      onComplete={handleCompleteActivity}
+                      onSkip={handleSkipActivity}
+                      userActivities={activities}
+                    />
+                  ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="quick" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from(filteredActivities)
+                  .filter(a => a.duration <= 30 && a.durationUnit === "minute")
+                  .map((activity, index) => (
+                    <ActivityCard 
+                      key={index}
+                      activity={activity}
+                      onAddToCart={handleAddToCart}
+                      onAddNow={handleAddActivity}
+                      onComplete={handleCompleteActivity}
+                      onSkip={handleSkipActivity}
+                      userActivities={activities}
+                    />
+                  ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="recommended" className="space-y-4">
+              {recommendedActivities.length > 0 ? (
+                <>
+                  <div className="bg-primary/10 rounded-lg p-4 mb-6">
+                    <h3 className="text-lg font-medium mb-2 flex items-center">
+                      <Heart className="h-5 w-5 mr-2 text-primary" fill="currentColor" /> 
+                      Personalized Recommendations
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Based on your current activities and profile, we've selected these activities 
+                      that might enhance your life balance and overall impact.
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from(recommendedActivities).map((activity, index) => (
+                      <ActivityCard 
+                        key={index}
+                        activity={activity}
+                        onAddToCart={handleAddToCart}
+                        onAddNow={handleAddActivity}
+                        onComplete={handleCompleteActivity}
+                        onSkip={handleSkipActivity}
+                        userActivities={activities}
+                        isRecommended={true}
+                        recommendationReason={userData && activities ? getRecommendationReason(activity, userData, activities) : undefined}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-10 bg-muted rounded-lg">
+                  <Heart className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-medium text-lg mb-2">No recommendations yet</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Add some activities to your routine to get personalized recommendations.
+                  </p>
+                  <Button onClick={() => {
+                    const element = document.querySelector('[data-value="all"]');
+                    if (element && element instanceof HTMLElement) {
+                      element.click();
+                    }
+                  }}>
+                    Browse All Activities
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+      
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-2 px-4 grid grid-cols-6 gap-1 text-center">
+        <Link href="/" className="flex flex-col items-center py-1 text-gray-500">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          <span className="text-xs mt-1">Next</span>
+        </Link>
+        
+        <Link href="/activities" className="flex flex-col items-center py-1 text-gray-500">
+          <ListChecks className="h-6 w-6" />
+          <span className="text-xs mt-1">Tasks</span>
+        </Link>
+        
+        <Link href="/shop-activities" className="flex flex-col items-center py-1 text-teal-600">
+          <Store className="h-6 w-6" />
+          <span className="text-xs mt-1">Browse</span>
+        </Link>
+        
+        <Link href="/calendar" className="flex flex-col items-center py-1 text-gray-500">
+          <Calendar className="h-6 w-6" />
+          <span className="text-xs mt-1">Calendar</span>
+        </Link>
+        
+        <Link href="/cart" className="flex flex-col items-center py-1 text-gray-500 relative">
+          <ShoppingCart className="h-6 w-6" />
+          {cartItems.length > 0 && (
+            <span className="absolute top-0 right-1/4 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              {cartItems.length}
+            </span>
+          )}
+          <span className="text-xs mt-1">Cart</span>
+        </Link>
+        
+        <Link href="/profile" className="flex flex-col items-center py-1 text-gray-500">
+          <User className="h-6 w-6" />
+          <span className="text-xs mt-1">Profile</span>
+        </Link>
+      </div>
+      
+      {/* Spacer for fixed bottom navigation */}
+      <div className="h-16 md:h-0"></div>
+    </div>
+  );
+}
