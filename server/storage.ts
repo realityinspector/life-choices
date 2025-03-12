@@ -187,11 +187,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getNextActivity(userId: number): Promise<Activity | undefined> {
-    // Get the next due activity for this user, only show activities that are due now or past due
-    // And sort by priority and due date
     const now = new Date();
     
-    const result = await db.select()
+    // First try to get activities that are due now or past due
+    const overdueResult = await db.select()
       .from(activities)
       .where(
         and(
@@ -207,7 +206,25 @@ export class DatabaseStorage implements IStorage {
       .orderBy(activities.priority, activities.nextDue)
       .limit(1);
     
-    return result[0];
+    // If we have an overdue activity, return it
+    if (overdueResult.length > 0) {
+      return overdueResult[0];
+    }
+    
+    // Otherwise, get the next upcoming activity
+    const upcomingResult = await db.select()
+      .from(activities)
+      .where(
+        and(
+          eq(activities.userId, userId),
+          // Activity is due in the future
+          gt(activities.nextDue, now)
+        )
+      )
+      .orderBy(activities.nextDue) // Order by date ascending so we get the soonest one
+      .limit(1);
+    
+    return upcomingResult[0];
   }
   
   async skipActivity(id: number): Promise<Activity | undefined> {
