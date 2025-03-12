@@ -100,6 +100,21 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
     }));
   };
   
+  const selectAllActivities = () => {
+    const routineActivities = activities.filter(activity => activity.frequency > 0);
+    const newSelection = { ...selectedActivities };
+    
+    routineActivities.forEach(activity => {
+      newSelection[activity.id] = true;
+    });
+    
+    setSelectedActivities(newSelection);
+  };
+  
+  const deselectAllActivities = () => {
+    setSelectedActivities({});
+  };
+  
   const getSelectedActivityIds = (): number[] => {
     return Object.entries(selectedActivities)
       .filter(([_, isSelected]) => isSelected)
@@ -216,13 +231,42 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
         <div className="lg:col-span-2">
           <div className="bg-white shadow rounded-lg p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-medium text-gray-900">Your Activities</h2>
+              <div className="flex items-center">
+                <h2 className="text-lg font-medium text-gray-900">Your Activities</h2>
+                {isBulkDeleteMode && (
+                  <>
+                    <div className="ml-3 px-2 py-1 bg-gray-100 rounded-md text-sm font-medium text-gray-600">
+                      {getSelectedActivityIds().length} selected
+                    </div>
+                    <div className="ml-3 flex space-x-2">
+                      <button 
+                        onClick={selectAllActivities}
+                        className="text-xs text-primary-600 hover:text-primary-900 font-medium"
+                      >
+                        Select All
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button 
+                        onClick={deselectAllActivities}
+                        className="text-xs text-gray-600 hover:text-gray-900 font-medium"
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <div className="flex space-x-2">
                 {isBulkDeleteMode ? (
                   <>
                     <button 
                       onClick={handleBulkDelete} 
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      className={`inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                        getSelectedActivityIds().length > 0 
+                          ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
+                          : 'bg-gray-400 cursor-not-allowed'
+                      } focus:outline-none focus:ring-2 focus:ring-offset-2`}
+                      disabled={getSelectedActivityIds().length === 0}
                     >
                       <Trash className="h-5 w-5 mr-1" />
                       Delete Selected
@@ -262,11 +306,25 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
                 activities
                   .filter(activity => activity.frequency > 0) // Only show activities in routine (with frequency)
                   .map((activity, index) => (
-                  <div key={index} className="relative bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200">
+                  <div key={index} className={`relative bg-white border ${selectedActivities[activity.id] ? 'border-primary-500 ring-2 ring-primary-500' : 'border-gray-200'} rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200`}>
                     <div className={`h-2 bg-${activity.color}-500`}></div>
+                    {isBulkDeleteMode && (
+                      <div className="absolute top-3 left-3 z-10">
+                        <div 
+                          onClick={() => toggleActivitySelection(activity)}
+                          className={`h-6 w-6 rounded-md border-2 flex items-center justify-center cursor-pointer ${
+                            selectedActivities[activity.id] 
+                              ? 'bg-primary-500 border-primary-600 text-white' 
+                              : 'border-gray-300 bg-white'
+                          }`}
+                        >
+                          {selectedActivities[activity.id] && <Check className="h-4 w-4" />}
+                        </div>
+                      </div>
+                    )}
                     <div className="p-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-medium text-gray-900">{activity.name}</h3>
+                        <h3 className={`text-lg font-medium text-gray-900 ${isBulkDeleteMode ? 'ml-6' : ''}`}>{activity.name}</h3>
                         <span className="text-xs font-medium text-gray-500">{activity.category}</span>
                       </div>
                       
@@ -304,20 +362,42 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
                       </div>
                       
                       <div className="mt-4 flex justify-end space-x-2">
-                        <button 
-                          onClick={() => editActivity(index)} 
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
-                        </button>
-                        <button 
-                          onClick={() => handleRemoveActivity(index)} 
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </button>
+                        {isBulkDeleteMode ? (
+                          <button 
+                            onClick={() => toggleActivitySelection(activity)}
+                            className={`inline-flex items-center px-3 py-1.5 border shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                              selectedActivities[activity.id] 
+                                ? 'border-primary-500 text-primary-700 bg-primary-50 hover:bg-primary-100 focus:ring-primary-500' 
+                                : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-gray-500'
+                            }`}
+                          >
+                            {selectedActivities[activity.id] ? (
+                              <>
+                                <Check className="h-4 w-4 mr-1" />
+                                Selected
+                              </>
+                            ) : (
+                              'Select'
+                            )}
+                          </button>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => editActivity(index)} 
+                              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleRemoveActivity(index)} 
+                              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
