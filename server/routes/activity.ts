@@ -45,6 +45,27 @@ activityRouter.get('/', async (req, res) => {
   res.json(activities);
 });
 
+// Get all activities with associated images for the logged-in user
+activityRouter.get('/with-images', async (req, res) => {
+  try {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    // @ts-ignore - user will always exist due to isAuthenticated check
+    const userId = req.user.id;
+    const activitiesWithImages = await storage.getActivitiesWithImages(userId);
+    res.json(activitiesWithImages);
+  } catch (err: unknown) {
+    console.error("Error fetching activities with images:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to fetch activities with images",
+      details: errorMessage
+    });
+  }
+});
+
 // Get next activity suggestion
 activityRouter.get('/next', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req)) {
