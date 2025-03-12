@@ -436,7 +436,8 @@ export default function AdminLLMPage() {
   };
 
   // Process and save all files
-  const saveAll = async () => {
+  const saveAll = async (skipDuplicates?: boolean) => {
+    const skipDups = skipDuplicates === true;
     // First handle the files that are already successfully processed
     const successfulFiles = files.filter(f => 
       f.status === 'success' && f.activity && 
@@ -477,13 +478,15 @@ export default function AdminLLMPage() {
             // Create a copy of the activity to ensure TypeScript recognizes it as the correct type
             const activity = {...file.activity} as ActivityInsert;
             
-            // Check for potential duplicates before saving
-            const potentialDuplicates = checkForDuplicates(activity.name);
-            
-            if (potentialDuplicates.length > 0) {
-              console.log(`Potential duplicate found for "${activity.name}":`, potentialDuplicates);
-              duplicatesSkipped.push(file.originalFilename);
-              continue;
+            // Check for potential duplicates before saving (only if not skipping duplicates)
+            if (!skipDups) {
+              const potentialDuplicates = checkForDuplicates(activity.name);
+              
+              if (potentialDuplicates.length > 0) {
+                console.log(`Potential duplicate found for "${activity.name}":`, potentialDuplicates);
+                duplicatesSkipped.push(file.originalFilename);
+                continue;
+              }
             }
             
             const imageData = {
@@ -908,7 +911,7 @@ export default function AdminLLMPage() {
                       
                       <div className="flex space-x-2 ml-auto">
                         <Button 
-                          onClick={saveAll} 
+                          onClick={() => saveAll()} 
                           disabled={isProcessing || files.length === 0 || !files.some(f => f.status === 'success')}
                           variant="secondary"
                         >
@@ -921,6 +924,27 @@ export default function AdminLLMPage() {
                             <>
                               <Save className="mr-2 h-4 w-4" />
                               Save All
+                            </>
+                          )}
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => {
+                            const skipDuplicatesOption = true;
+                            saveAll(skipDuplicatesOption);
+                          }} 
+                          disabled={isProcessing || files.length === 0 || !files.some(f => f.status === 'success')}
+                          variant="default"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing All
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Save All - Skip Duplicates
                             </>
                           )}
                         </Button>
@@ -995,7 +1019,7 @@ export default function AdminLLMPage() {
                                 <Button 
                                   size="sm" 
                                   variant="outline"
-                                  onClick={saveAll}
+                                  onClick={() => saveAll()}
                                   disabled={isProcessing}
                                   className="ml-auto"
                                 >
