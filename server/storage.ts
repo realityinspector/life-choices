@@ -29,6 +29,7 @@ export interface IStorage {
   deleteAllActivities(userId?: number): Promise<void>;
   getNextActivity(userId: number): Promise<Activity | undefined>;
   completeActivity(id: number): Promise<Activity | undefined>;
+  getActivitiesWithImages(userId?: number): Promise<(Activity & { images: ActivityImage[] })[]>;
   
   // Activity image methods
   getActivityImages(activityId?: number): Promise<ActivityImage[]>;
@@ -238,6 +239,31 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return result[0];
+  }
+  
+  async getActivitiesWithImages(userId?: number): Promise<(Activity & { images: ActivityImage[] })[]> {
+    // First, get all the activities (filtered by userId if provided)
+    const allActivities = await this.getActivities(userId);
+    
+    // Get all activity images
+    const allImages = await this.getActivityImages();
+    
+    // Create a map of activity IDs to their associated images
+    const imagesByActivityId = allImages.reduce((map: Record<number, ActivityImage[]>, image) => {
+      if (image.activityId) {
+        if (!map[image.activityId]) {
+          map[image.activityId] = [];
+        }
+        map[image.activityId].push(image);
+      }
+      return map;
+    }, {});
+    
+    // Combine activities with their associated images
+    return allActivities.map(activity => ({
+      ...activity,
+      images: imagesByActivityId[activity.id] || []
+    }));
   }
   
   // Activity cluster methods
