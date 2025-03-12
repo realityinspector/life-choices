@@ -274,22 +274,29 @@ activityRouter.post('/', async (req: AuthenticatedRequest, res) => {
     const userId = req.user.id;
     const parsed = activitySchema.parse(req.body);
     
-    // Set nextDue to the current time when an activity is initially created
-    // This ensures newly added activities show up immediately in the "What's Next" view
-    const nextDue = new Date();
+    // IMPORTANT: Set nextDue to a timestamp in the past to ensure it shows up immediately
+    // This makes the activity appear as "overdue" so it shows up right away in "What's Next"
+    // We subtract 1 day to ensure it's in the past
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const nextDue = yesterday;
     
     // If the request specifically asks for the activity to be scheduled in the future
     // via a query parameter, then calculate the future date
     if (req.query.scheduleForLater === 'true') {
+      // Set nextDue to the current time first
+      const futureDate = new Date();
       if (parsed.frequencyUnit === 'day') {
-        nextDue.setDate(nextDue.getDate() + parsed.frequency);
+        futureDate.setDate(futureDate.getDate() + parsed.frequency);
       } else if (parsed.frequencyUnit === 'week') {
-        nextDue.setDate(nextDue.getDate() + (parsed.frequency * 7));
+        futureDate.setDate(futureDate.getDate() + (parsed.frequency * 7));
       } else if (parsed.frequencyUnit === 'month') {
-        nextDue.setMonth(nextDue.getMonth() + parsed.frequency);
+        futureDate.setMonth(futureDate.getMonth() + parsed.frequency);
       } else if (parsed.frequencyUnit === 'year') {
-        nextDue.setFullYear(nextDue.getFullYear() + parsed.frequency);
+        futureDate.setFullYear(futureDate.getFullYear() + parsed.frequency);
       }
+      // Override the default past date with the future date if scheduled later
+      nextDue.setTime(futureDate.getTime());
     }
     
     const typedActivity = ensureActivityTypes(parsed);
@@ -440,21 +447,27 @@ activityRouter.post('/share', async (req: AuthenticatedRequest, res) => {
     // First, create the activity
     const parsed = activitySchema.parse(activity);
     
-    // Set nextDue to the current time for shared activities too
-    // This ensures shared activities show up immediately in the "What's Next" view for the recipient
-    const nextDue = new Date();
+    // IMPORTANT: Set nextDue to a timestamp in the past for shared activities too
+    // This makes the activity appear as "overdue" so it shows up right away in "What's Next"
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const nextDue = yesterday;
     
     // If the request specifically asks to schedule for later
     if (req.query.scheduleForLater === 'true') {
+      // Set nextDue to the current time first
+      const futureDate = new Date();
       if (parsed.frequencyUnit === 'day') {
-        nextDue.setDate(nextDue.getDate() + parsed.frequency);
+        futureDate.setDate(futureDate.getDate() + parsed.frequency);
       } else if (parsed.frequencyUnit === 'week') {
-        nextDue.setDate(nextDue.getDate() + (parsed.frequency * 7));
+        futureDate.setDate(futureDate.getDate() + (parsed.frequency * 7));
       } else if (parsed.frequencyUnit === 'month') {
-        nextDue.setMonth(nextDue.getMonth() + parsed.frequency);
+        futureDate.setMonth(futureDate.getMonth() + parsed.frequency);
       } else if (parsed.frequencyUnit === 'year') {
-        nextDue.setFullYear(nextDue.getFullYear() + parsed.frequency);
+        futureDate.setFullYear(futureDate.getFullYear() + parsed.frequency);
       }
+      // Override the default past date with the future date if scheduled later
+      nextDue.setTime(futureDate.getTime());
     }
     
     const typedActivity = ensureActivityTypes(parsed);

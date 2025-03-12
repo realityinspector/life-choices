@@ -392,8 +392,10 @@ export class DatabaseStorage implements IStorage {
     const originalActivity = await this.getActivity(invitation.activityId);
     if (!originalActivity) return false;
     
-    // Set nextDue to right now so it appears immediately in What's Next
-    const nextDue = new Date();
+    // Set nextDue to a date in the past so it appears immediately in What's Next
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const nextDue = yesterday;
     
     // Create a copy of the activity for the new user with immediate due date
     const activityCopy: ActivityInsert & { userId: number, nextDue: Date } = {
