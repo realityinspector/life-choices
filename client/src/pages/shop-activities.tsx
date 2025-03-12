@@ -543,15 +543,15 @@ export default function ShopActivitiesPage() {
     MORE_SAMPLE_ACTIVITIES.map(a => ({ ...a, description: "", completed: false }))
   );
   
-  // Fetch all activities from database
+  // Fetch all activities from database for the shop (no user filtering)
   const { data: databaseActivities = [] } = useQuery<Activity[]>({
-    queryKey: ['/api/activities'],
+    queryKey: ['/api/activities/shop'],
     queryFn: async ({ signal }) => {
       try {
-        const res = await apiRequest('/api/activities', { signal });
+        const res = await apiRequest('/api/activities/shop', { signal });
         return res.json();
       } catch (error) {
-        console.error('Error fetching activities:', error);
+        console.error('Error fetching shop activities:', error);
         return [];
       }
     }
