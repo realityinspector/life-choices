@@ -94,6 +94,23 @@ const ActivityCard = ({
   
   // Find the activity in user's activities if it exists
   const existingActivity = userActivities.find(a => a.name === activity.name);
+  
+  // Helper function to convert Activity to ActivityInsert safely
+  const toActivityInsert = (act: any): ActivityInsert => {
+    return {
+      name: act.name,
+      category: act.category,
+      frequency: act.frequency,
+      frequencyUnit: act.frequencyUnit as "day" | "week" | "month" | "year",
+      duration: act.duration,
+      durationUnit: act.durationUnit as "minute" | "hour",
+      lifeImpact: act.lifeImpact,
+      color: act.color,
+      priority: act.priority,
+      exportToCalendar: act.exportToCalendar,
+      emoji: act.emoji
+    };
+  };
 
   const handleExportToCalendar = () => {
     if (!existingActivity) return;
@@ -217,7 +234,7 @@ const ActivityCard = ({
                 <Button 
                   className="flex-1 text-xs h-8" 
                   size="sm"
-                  onClick={() => onAddToCart(activity)}
+                  onClick={() => onAddToCart(toActivityInsert(activity))}
                   disabled={activityExists}
                 >
                   <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
@@ -227,7 +244,7 @@ const ActivityCard = ({
                   className="flex-1 text-xs h-8" 
                   size="sm"
                   variant="outline"
-                  onClick={() => onAddNow(activity)}
+                  onClick={() => onAddNow(toActivityInsert(activity))}
                   disabled={activityExists}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
