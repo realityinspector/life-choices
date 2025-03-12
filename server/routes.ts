@@ -8,6 +8,7 @@ import { setupAuth } from "./auth";
 import { activityRouter } from "./routes/activity";
 import { clusterRouter } from "./routes/cluster";
 import { adminRouter } from "./routes/admin";
+import { adminLLMRouter } from "./routes/admin-llm";
 
 // Type guard to check if user is authenticated
 function isAuthenticated(req: Request): boolean {
@@ -51,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/activities', activityRouter);
   app.use('/api/clusters', clusterRouter);
   app.use('/api/admin', requireAdmin, adminRouter);
-
+  app.use('/api/admin-llm', requireAdmin, adminLLMRouter);
 
 
   // User routes - protected

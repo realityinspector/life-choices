@@ -16,6 +16,7 @@ import ProfilePage from "@/pages/profile";
 import TasksPage from "@/pages/tasks";
 import CalendarPage from "@/pages/calendar";
 import AdminImagesPage from "@/pages/admin-images";
+import AdminLLMPage from "@/pages/admin-llm";
 
 // Set the document title
 document.title = "Life Choices | Do what matters, one choice at a time";
