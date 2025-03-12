@@ -199,8 +199,12 @@ function ActivitySearch({
                       }
                       
                       // Dispatch a custom event to create a new activity
+                      // Get the current file index from the parent component's context
+                      const fileIndexElem = document.getElementById('current-file-index');
+                      const fileIndex = fileIndexElem ? parseInt(fileIndexElem.getAttribute('data-index') || '-1') : undefined;
+                      
                       const event = new CustomEvent('createNewActivity', { 
-                        detail: { activityName } 
+                        detail: { activityName, fileIndex } 
                       });
                       document.dispatchEvent(event);
                       setOpen(false);
@@ -437,7 +441,7 @@ export default function AdminImagesPage() {
   // Setup event listener for creating new activities
   useEffect(() => {
     const handleCreateActivity = async (e: any) => {
-      const { activityName } = e.detail;
+      const { activityName, fileIndex } = e.detail;
       if (!activityName) return;
       
       try {
@@ -446,7 +450,7 @@ export default function AdminImagesPage() {
         
         // Use the new activity
         if (newActivity?.id) {
-          // If we're editing an image, associate it
+          // If we're editing an existing image, associate it
           if (editingImageId !== null) {
             const image = activityImages.find(img => img.id === editingImageId);
             if (image) {
@@ -458,7 +462,20 @@ export default function AdminImagesPage() {
                 mimeType: image.mimeType
               });
               setEditingImageId(null);
+              setIsEditDialogOpen(false);
             }
+          } 
+          // If we're adding an association to a newly uploaded file
+          else if (fileIndex !== undefined) {
+            // Update the file in the state with the new activity
+            setFiles(prev => prev.map((f, idx) => 
+              idx === fileIndex ? { 
+                ...f, 
+                activityId: newActivity.id,
+                suggestedActivity: newActivity,
+                status: 'matched'
+              } : f
+            ));
           }
           
           toast({
@@ -817,7 +834,7 @@ export default function AdminImagesPage() {
       idx === fileIndex ? { 
         ...f, 
         activityId: activity?.id || null,
-        suggestedActivity: activity 
+        suggestedActivity: activity || undefined 
       } : f
     ));
   };
@@ -1051,6 +1068,8 @@ export default function AdminImagesPage() {
                       <TableBody>
                         {filteredFiles.map((file, index) => (
                           <TableRow key={index} className={file.status === 'failed' ? 'bg-red-50' : ''}>
+                            {/* Hidden element to store the current file index */}
+                            <div id="current-file-index" data-index={index} hidden></div>
                             <TableCell className="font-medium truncate max-w-[200px]">
                               {file.file.name}
                             </TableCell>
@@ -1106,7 +1125,7 @@ export default function AdminImagesPage() {
                                         if (activityName?.trim()) {
                                           // Dispatch event to create new activity
                                           const event = new CustomEvent('createNewActivity', { 
-                                            detail: { activityName: activityName.trim() } 
+                                            detail: { activityName: activityName.trim(), fileIndex: index } 
                                           });
                                           document.dispatchEvent(event);
                                         }
@@ -1316,7 +1335,7 @@ export default function AdminImagesPage() {
                       if (activityName?.trim()) {
                         // Dispatch event to create new activity
                         const event = new CustomEvent('createNewActivity', { 
-                          detail: { activityName: activityName.trim() } 
+                          detail: { activityName: activityName.trim(), fileIndex: undefined } 
                         });
                         document.dispatchEvent(event);
                       }
