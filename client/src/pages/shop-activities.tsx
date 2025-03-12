@@ -549,6 +549,9 @@ export default function ShopActivitiesPage() {
     const descriptionMatch = activity.description?.toLowerCase().includes(query) ?? false;
     const categoryMatch = activity.category.toLowerCase().includes(query);
     
+    // Check emoji field for keywords (we store search keywords here)
+    const emojiMatch = activity.emoji?.toLowerCase().includes(query) ?? false;
+    
     // Check for specific matches in name parts (e.g., "raft" in "Rafting Adventure")
     let namePartMatch = false;
     if (query.length >= 3) { // Only check for meaningful parts (3+ characters)
@@ -556,7 +559,13 @@ export default function ShopActivitiesPage() {
       namePartMatch = nameParts.some(part => part.startsWith(query) || part.includes(query));
     }
     
-    const matchesSearch = searchQuery === "" || nameMatch || descriptionMatch || categoryMatch || namePartMatch;
+    const matchesSearch = searchQuery === "" || 
+                          nameMatch || 
+                          descriptionMatch || 
+                          categoryMatch || 
+                          namePartMatch || 
+                          emojiMatch;
+                          
     const matchesCategory = selectedCategory === null || activity.category === selectedCategory;
     
     return matchesSearch && matchesCategory;

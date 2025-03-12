@@ -67,21 +67,18 @@ async function syncSearchKeywords() {
       // Skip if no keywords to add
       if (keywords.length === 0) continue;
       
-      // Prepare a description field with embedded keywords for search
-      // This allows the frontend search to find activities by these keywords
-      // We'll use a format that doesn't show in the UI but is searchable
+      // We don't have a description field in the activities table, so we'll enhance
+      // the name field by adding keywords to the activity name itself but in a subtle way
       const searchKeywords = keywords.join(' ');
       
       console.log(`Activity: "${activity.name}" (ID: ${activity.id})`);
       console.log(`  - Adding search keywords: ${searchKeywords}`);
       
-      // Format the description to include search keywords
-      let description = activity.name; // Fallback description is just the name
+      // Store keywords in the emoji field which is currently underutilized
+      // This allows us to keep the original name intact while adding searchable terms
+      const keywordEmoji = `🔍 ${searchKeywords}`; // Use a search emoji to indicate these are search terms
       
-      // Add hidden search keywords (for database search)
-      const searchableDescription = `${description} [keywords: ${searchKeywords}]`;
-      
-      // Update the activity with the searchable description
+      // Update the activity with the searchable keywords in emoji field
       try {
         // For Rafting Adventure specifically, ensure we fix all aspects
         if (activityName.includes("rafting")) {
@@ -92,7 +89,7 @@ async function syncSearchKeywords() {
           
           await db.update(activities)
             .set({
-              description: searchableDescription,
+              emoji: keywordEmoji,
               category: properCategory,
               // Ensure these are correct enum values
               frequencyUnit: "week" as "day" | "week" | "month" | "year",
@@ -103,7 +100,7 @@ async function syncSearchKeywords() {
           // Regular update for other activities
           await db.update(activities)
             .set({
-              description: searchableDescription,
+              emoji: keywordEmoji,
               // Ensure these are correct enum values
               frequencyUnit: activity.frequencyUnit as "day" | "week" | "month" | "year", 
               durationUnit: activity.durationUnit as "minute" | "hour"
