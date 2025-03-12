@@ -364,16 +364,23 @@ export default function AdminLLMPage() {
     }
   };
 
-  // Process all files including those already processed
+  // Process and save all files
   const saveAll = async () => {
-    const allFilesToProcess = files.filter(f => 
-      (f.status === 'uploaded' || f.status === 'success' || f.status === 'failed') && 
+    // First handle the files that are already successfully processed
+    const successfulFiles = files.filter(f => 
+      f.status === 'success' && f.activity && 
       f.filename && f.originalFilename && f.path && f.mimeType
     );
     
-    if (allFilesToProcess.length === 0) {
+    // Then get files that need processing
+    const filesToProcess = files.filter(f => 
+      (f.status === 'uploaded' || f.status === 'failed') && 
+      f.filename && f.originalFilename && f.path && f.mimeType
+    );
+    
+    if (successfulFiles.length === 0 && filesToProcess.length === 0) {
       toast({
-        title: 'No Files to Process',
+        title: 'No Files to Process or Save',
         description: 'Please upload files first.',
       });
       return;
@@ -382,35 +389,92 @@ export default function AdminLLMPage() {
     setIsProcessing(true);
     setProcessingProgress(0);
     
-    const progressStep = 100 / allFilesToProcess.length;
+    const totalFiles = successfulFiles.length + filesToProcess.length;
+    const progressStep = 100 / totalFiles;
+    let currentProgress = 0;
     
     try {
-      // Prepare image data for batch processing
-      const images = allFilesToProcess.map(f => ({
-        filename: f.filename,
-        originalFilename: f.originalFilename,
-        path: f.path,
-        mimeType: f.mimeType
-      }));
+      // 1. First save all successful files
+      const savedSuccessfully = [];
+      const savedErrors = [];
       
-      // Update status to processing for all files
-      setFiles(prev => 
-        prev.map(f => 
-          (f.status === 'uploaded' || f.status === 'success' || f.status === 'failed') ? 
-          { ...f, status: 'processing' } : f
-        )
-      );
-  
-      // Process in batches
-      const result = await batchProcessMutation.mutateAsync({
-        images,
-        batchSize
-      });
+      for (let i = 0; i < successfulFiles.length; i++) {
+        const file = successfulFiles[i];
+        try {
+          if (file.activity) {
+            const imageData = {
+              filename: file.filename,
+              originalFilename: file.originalFilename,
+              path: file.path,
+              mimeType: file.mimeType
+            };
+            
+            await createActivityMutation.mutateAsync({
+              activity: file.activity,
+              imageData
+            });
+            
+            savedSuccessfully.push(file.originalFilename);
+          }
+        } catch (error) {
+          console.error(`Error saving activity for ${file.originalFilename}:`, error);
+          savedErrors.push(file.originalFilename);
+        }
+        
+        // Update progress
+        currentProgress += progressStep;
+        setProcessingProgress(Math.min(currentProgress, 90)); // Cap at 90% until fully complete
+      }
       
-      // Update files with results
-      handleBatchResults(result);
+      // Remove successfully saved files
+      setFiles(prev => prev.filter(f => !savedSuccessfully.includes(f.originalFilename)));
+      
+      // 2. Process files that need processing
+      if (filesToProcess.length > 0) {
+        // Prepare image data for batch processing
+        const images = filesToProcess.map(f => ({
+          filename: f.filename,
+          originalFilename: f.originalFilename,
+          path: f.path,
+          mimeType: f.mimeType
+        }));
+        
+        // Update status to processing for these files
+        setFiles(prev => 
+          prev.map(f => 
+            (f.status === 'uploaded' || f.status === 'failed') && 
+            images.some(img => img.originalFilename === f.originalFilename) ? 
+            { ...f, status: 'processing' } : f
+          )
+        );
+    
+        // Process in batches
+        const result = await batchProcessMutation.mutateAsync({
+          images,
+          batchSize
+        });
+        
+        // Update files with results
+        handleBatchResults(result);
+      }
+      
+      // Show toast with summary
+      if (savedSuccessfully.length > 0 || filesToProcess.length > 0) {
+        toast({
+          title: 'Save All Complete',
+          description: 
+            `${savedSuccessfully.length} activities saved successfully. ` +
+            `${filesToProcess.length} files were processed. ` +
+            (savedErrors.length > 0 ? `${savedErrors.length} failed to save.` : ''),
+        });
+      }
     } catch (error) {
-      handleBatchError(error);
+      console.error("Error in Save All operation:", error);
+      toast({
+        title: 'Save All Error',
+        description: 'An error occurred during the Save All operation.',
+        variant: 'destructive',
+      });
     } finally {
       setIsProcessing(false);
       setProcessingProgress(100);
@@ -641,7 +705,7 @@ export default function AdminLLMPage() {
                   </div>
                 )}
                 
-                {files.some(f => f.status === 'uploaded') && (
+                {files.length > 0 && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
@@ -662,7 +726,7 @@ export default function AdminLLMPage() {
                       <div className="flex space-x-2 ml-auto">
                         <Button 
                           onClick={saveAll} 
-                          disabled={isProcessing || files.length === 0}
+                          disabled={isProcessing || files.length === 0 || !files.some(f => f.status === 'success')}
                           variant="secondary"
                         >
                           {isProcessing ? (
@@ -741,7 +805,23 @@ export default function AdminLLMPage() {
                           <TableHead>Filename</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Activity</TableHead>
-                          <TableHead>Actions</TableHead>
+                          <TableHead className="text-right">
+                            <div className="flex justify-between items-center">
+                              <span>Actions</span>
+                              {files.some(f => f.status === 'success') && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={saveAll}
+                                  disabled={isProcessing}
+                                  className="ml-auto"
+                                >
+                                  <Save className="mr-2 h-3 w-3" />
+                                  Save All
+                                </Button>
+                              )}
+                            </div>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
