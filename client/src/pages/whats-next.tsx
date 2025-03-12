@@ -10,6 +10,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { SAMPLE_ACTIVITIES, MORE_SAMPLE_ACTIVITIES } from '@shared/sample-activities';
 
+// Add a declaration to extend Window interface for our recently seen activities
+declare global {
+  interface Window {
+    recentlySeenActivities?: string[];
+  }
+}
+
 export default function WhatsNextPage() {
   const { activities, getNextActivity, completeActivity, skipActivity, addActivitiesToCart, getCartActivities, addActivity } = useUser();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
@@ -45,8 +52,25 @@ export default function WhatsNextPage() {
   const loadNextActivity = async (skipNames: string[] = []) => {
     setLoading(true);
     try {
-      // Call the improved getNextActivity with skipNames parameter
-      const activity = await getNextActivity(skipNames);
+      // Maintain an internal list of activity names we've seen recently
+      const recentlySeenActivities = [...(window.recentlySeenActivities || []), ...skipNames];
+      
+      // Limit the list to the last 10 activities for performance
+      if (recentlySeenActivities.length > 10) {
+        recentlySeenActivities.splice(0, recentlySeenActivities.length - 10);
+      }
+      
+      // Store this list in window object for persistence between renders
+      window.recentlySeenActivities = recentlySeenActivities;
+      
+      // Call getNextActivity with our expanded list of activity names to skip
+      const activity = await getNextActivity(recentlySeenActivities, true);
+      
+      // If we found an activity, add it to our recently seen list
+      if (activity) {
+        window.recentlySeenActivities.push(activity.name);
+      }
+      
       setCurrentActivity(activity || null);
       
       // If there's no next activity, load a suggested one

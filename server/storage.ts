@@ -204,8 +204,11 @@ export class DatabaseStorage implements IStorage {
         )
       );
       
-    // Get all overdue activities
-    const overdueResults = await query.orderBy(activities.priority, activities.nextDue);
+    // Get all overdue activities, ordered by priority (higher priority first) and then by nextDue date (oldest first)
+    const overdueResults = await query.orderBy(
+      desc(activities.priority), // Higher priority first
+      activities.nextDue // Oldest due date first
+    );
     
     // Filter out activities with names in the skipActivityNames list
     // This helps prevent cycling through duplicates
@@ -229,7 +232,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
       
-    // Get all upcoming activities
+    // Get all upcoming activities, ordered by nextDue (earliest first)
     const upcomingResults = await upcomingQuery.orderBy(activities.nextDue);
     
     // Filter out activities with names in the skipActivityNames list
@@ -242,10 +245,38 @@ export class DatabaseStorage implements IStorage {
       return filteredUpcomingResults[0];
     }
     
-    // If filtering excluded all activities, and we really need to return something,
-    // return the first activity regardless of name (fallback)
-    if (skipActivityNames.length > 0 && overdueResults.length > 0) {
-      return overdueResults[0];
+    // If we've filtered out all activities and still need something, 
+    // find activities that were not recently completed
+    // (meaning nextDue is set to a future date)
+    if (skipActivityNames.length > 0) {
+      // If we've skipped specific activities by name and found nothing,
+      // look for any activity due in the future (even if filtered by name)
+      // This avoids showing activities that were just completed and
+      // ensures we respect their scheduling
+      const futureActivities = await db.select()
+        .from(activities)
+        .where(
+          and(
+            eq(activities.userId, userId),
+            gt(activities.nextDue, now) // Only activities due in the future
+          )
+        )
+        .orderBy(activities.nextDue); // Get the soonest upcoming one
+        
+      if (futureActivities.length > 0) {
+        return futureActivities[0];
+      }
+    }
+    
+    // As a last resort, if absolutely no other activities are found,
+    // and the user has activities, return any activity
+    const anyActivity = await db.select()
+      .from(activities)
+      .where(eq(activities.userId, userId))
+      .limit(1);
+      
+    if (anyActivity.length > 0) {
+      return anyActivity[0];
     }
     
     // No activities found at all
