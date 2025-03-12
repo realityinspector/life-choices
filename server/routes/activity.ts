@@ -70,7 +70,45 @@ activityRouter.get('/shop', async (req, res) => {
     
     // Fetch all activities without filtering by user
     const allActivities = await storage.getActivities();
-    res.json(allActivities);
+    
+    // Get query parameters for additional filtering
+    const { category, impact, duration } = req.query;
+    
+    // Apply server-side filtering if requested
+    let filteredActivities = [...allActivities];
+    
+    // Filter by category if specified
+    if (category && typeof category === 'string') {
+      filteredActivities = filteredActivities.filter(
+        activity => activity.category.toLowerCase() === category.toLowerCase()
+      );
+    }
+    
+    // Filter by minimum impact if specified
+    if (impact && typeof impact === 'string') {
+      const minImpact = parseInt(impact, 10);
+      if (!isNaN(minImpact)) {
+        filteredActivities = filteredActivities.filter(
+          activity => (activity.lifeImpact || 0) >= minImpact
+        );
+      }
+    }
+    
+    // Filter by maximum duration if specified (in minutes)
+    if (duration && typeof duration === 'string') {
+      const maxDuration = parseInt(duration, 10);
+      if (!isNaN(maxDuration)) {
+        filteredActivities = filteredActivities.filter(activity => {
+          // Convert to minutes for comparison
+          const durationInMinutes = activity.durationUnit === 'hour' 
+            ? activity.duration * 60 
+            : activity.duration;
+          return durationInMinutes <= maxDuration;
+        });
+      }
+    }
+    
+    res.json(filteredActivities);
   } catch (err: unknown) {
     console.error("Error fetching shop activities:", err);
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -90,7 +128,45 @@ activityRouter.get('/shop/with-images', async (req, res) => {
     
     // Pass undefined as userId to fetch all activities with images without filtering
     const activitiesWithImages = await storage.getActivitiesWithImages();
-    res.json(activitiesWithImages);
+    
+    // Get query parameters for additional filtering
+    const { category, impact, duration } = req.query;
+    
+    // Apply server-side filtering if requested
+    let filteredActivities = [...activitiesWithImages];
+    
+    // Filter by category if specified
+    if (category && typeof category === 'string') {
+      filteredActivities = filteredActivities.filter(
+        activity => activity.category.toLowerCase() === category.toLowerCase()
+      );
+    }
+    
+    // Filter by minimum impact if specified
+    if (impact && typeof impact === 'string') {
+      const minImpact = parseInt(impact, 10);
+      if (!isNaN(minImpact)) {
+        filteredActivities = filteredActivities.filter(
+          activity => (activity.lifeImpact || 0) >= minImpact
+        );
+      }
+    }
+    
+    // Filter by maximum duration if specified (in minutes)
+    if (duration && typeof duration === 'string') {
+      const maxDuration = parseInt(duration, 10);
+      if (!isNaN(maxDuration)) {
+        filteredActivities = filteredActivities.filter(activity => {
+          // Convert to minutes for comparison
+          const durationInMinutes = activity.durationUnit === 'hour' 
+            ? activity.duration * 60 
+            : activity.duration;
+          return durationInMinutes <= maxDuration;
+        });
+      }
+    }
+    
+    res.json(filteredActivities);
   } catch (err: unknown) {
     console.error("Error fetching shop activities with images:", err);
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';

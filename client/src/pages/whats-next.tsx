@@ -30,23 +30,73 @@ export default function WhatsNextPage() {
     setCartCount(getCartActivities().length);
   }, []);
 
-  const getRandomSuggestedActivity = (): ActivityInsert | null => {
-    // Combine sample activities from both sources
-    const allSampleActivities = [...SAMPLE_ACTIVITIES, ...MORE_SAMPLE_ACTIVITIES];
-    
-    // Filter out activities that are already in the user's activities
-    const availableActivities = allSampleActivities.filter(
-      sample => !activities.some(userActivity => 
-        userActivity.name.toLowerCase() === sample.name.toLowerCase()
-      )
-    );
-    
-    // No available activities left
-    if (availableActivities.length === 0) return null;
-    
-    // Shuffle and pick one
-    const shuffled = [...availableActivities].sort(() => Math.random() - 0.5);
-    return shuffled[0];
+  const getRandomSuggestedActivity = async (): Promise<ActivityInsert | null> => {
+    try {
+      // Try to fetch shop activities first (includes both DB activities and sample activities)
+      const response = await fetch('/api/activities/shop');
+      if (!response.ok) {
+        throw new Error('Failed to fetch shop activities');
+      }
+      
+      // Get activities from shop
+      const shopActivities = await response.json();
+      
+      // Combine with sample activities for fallback
+      const allPossibleActivities = [
+        ...shopActivities,
+        ...SAMPLE_ACTIVITIES,
+        ...MORE_SAMPLE_ACTIVITIES
+      ];
+      
+      // Filter out activities that are already in the user's activities
+      const availableActivities = allPossibleActivities.filter(
+        sample => !activities.some(userActivity => 
+          userActivity.name.toLowerCase() === sample.name.toLowerCase()
+        )
+      );
+      
+      // No available activities left
+      if (availableActivities.length === 0) return null;
+      
+      // Shuffle and pick one
+      const shuffled = [...availableActivities].sort(() => Math.random() - 0.5);
+      
+      // Convert to ActivityInsert if needed
+      const selectedActivity = shuffled[0];
+      return {
+        name: selectedActivity.name,
+        category: selectedActivity.category,
+        frequency: selectedActivity.frequency,
+        frequencyUnit: selectedActivity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
+        duration: selectedActivity.duration,
+        durationUnit: selectedActivity.durationUnit as 'minute' | 'hour',
+        lifeImpact: selectedActivity.lifeImpact ?? 0,
+        color: selectedActivity.color ?? '#4f46e5',
+        priority: selectedActivity.priority ?? 3,
+        exportToCalendar: selectedActivity.exportToCalendar ?? false,
+        emoji: selectedActivity.emoji ?? null,
+        clusterId: selectedActivity.clusterId ?? null
+      };
+    } catch (error) {
+      console.error('Error fetching suggestions from shop:', error);
+      
+      // Fallback to sample activities if fetch fails
+      const allSampleActivities = [...SAMPLE_ACTIVITIES, ...MORE_SAMPLE_ACTIVITIES];
+      
+      // Filter out activities that are already in the user's activities
+      const availableActivities = allSampleActivities.filter(
+        sample => !activities.some(userActivity => 
+          userActivity.name.toLowerCase() === sample.name.toLowerCase()
+        )
+      );
+      
+      // No available activities left
+      if (availableActivities.length === 0) return null;
+      
+      // Shuffle and pick one
+      const shuffled = [...availableActivities].sort(() => Math.random() - 0.5);
+      return shuffled[0];
+    }
   };
 
   const loadNextActivity = async (skipNames: string[] = []) => {
@@ -83,13 +133,17 @@ export default function WhatsNextPage() {
         } else {
           // If there's no next activity, load a suggested one
           setCurrentActivity(null);
-          setCurrentSuggestedActivity(getRandomSuggestedActivity());
+          getRandomSuggestedActivity().then(suggestedActivity => {
+            setCurrentSuggestedActivity(suggestedActivity);
+          });
         }
       } catch (apiError) {
         console.error('API Error loading next activity:', apiError);
         // Show a suggested activity since we couldn't load from API
         setCurrentActivity(null);
-        setCurrentSuggestedActivity(getRandomSuggestedActivity());
+        getRandomSuggestedActivity().then(suggestedActivity => {
+          setCurrentSuggestedActivity(suggestedActivity);
+        });
       }
       
       setLoading(false);
@@ -98,7 +152,14 @@ export default function WhatsNextPage() {
       setLoading(false);
       // If there's an error, fallback to a suggestion
       setCurrentActivity(null);
-      setCurrentSuggestedActivity(getRandomSuggestedActivity());
+      getRandomSuggestedActivity()
+        .then(suggestedActivity => {
+          setCurrentSuggestedActivity(suggestedActivity);
+        })
+        .catch(fallbackError => {
+          console.error('Error getting fallback suggestion:', fallbackError);
+          setCurrentSuggestedActivity(null);
+        });
     }
   };
 
@@ -208,7 +269,25 @@ export default function WhatsNextPage() {
     setLoading(true);
     
     // Check for actual planned activities first before showing another suggestion
-    loadNextActivity([]);
+    // But also keep track of the previously seen suggestion to avoid repeats
+    if (currentSuggestedActivity) {
+      const skipNames = [...(window.recentlySeenActivities || []), currentSuggestedActivity.name];
+      window.recentlySeenActivities = skipNames;
+      
+      // Try to load a new suggestion directly to avoid loading planned activities again
+      // since we already know there are none from the previous check
+      getRandomSuggestedActivity().then(suggestedActivity => {
+        setCurrentSuggestedActivity(suggestedActivity);
+        setLoading(false);
+      }).catch(error => {
+        console.error('Error getting next suggestion:', error);
+        setCurrentSuggestedActivity(null);
+        setLoading(false);
+      });
+    } else {
+      // Fallback to standard loading if there's no current suggestion
+      loadNextActivity([]);
+    }
   };
 
   return (
