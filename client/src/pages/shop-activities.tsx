@@ -223,8 +223,58 @@ const ActivityCard = ({
           )}
         </CardContent>
         <CardFooter className="flex flex-col space-y-1.5 pt-2">
-          {/* For the /whats-next view, show Complete/Skip buttons */}
-          {activityExists && window.location.pathname === '/whats-next' ? (
+          {/* SHOP-ACTIVITIES VIEW: Show Add to Cart and Add Now buttons only for non-existing activities */}
+          {window.location.pathname === '/shop-activities' && (
+            <>
+              {/* Show the action buttons only if the activity doesn't exist yet */}
+              {activityExists ? (
+                <div className="flex w-full space-x-2">
+                  <Button 
+                    className="flex-1 text-xs h-8" 
+                    size="sm"
+                    disabled={true}
+                  >
+                    <Check className="h-3.5 w-3.5 mr-1.5" />
+                    Already in Tasks
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex w-full space-x-2">
+                    <Button 
+                      className="flex-1 text-xs h-8" 
+                      size="sm"
+                      onClick={() => onAddToCart(toActivityInsert(activity))}
+                    >
+                      <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+                      Add to Cart
+                    </Button>
+                    <Button 
+                      className="flex-1 text-xs h-8" 
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onAddNow(toActivityInsert(activity))}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      Add to Tasks
+                    </Button>
+                  </div>
+                  <Button 
+                    className="w-full text-xs h-8" 
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowShareModal(true)}
+                  >
+                    <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                    Share Activity
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+          
+          {/* WHATS-NEXT VIEW: Show Complete/Skip buttons for existing activities */}
+          {window.location.pathname === '/whats-next' && activityExists && (
             <>
               <div className="flex w-full space-x-2">
                 <Button 
@@ -255,41 +305,6 @@ const ActivityCard = ({
                 <Calendar className="h-3.5 w-3.5 mr-1.5" />
                 Add to Calendar
               </Button>
-            </>
-          ) : (
-            <>
-              <div className="flex w-full space-x-2">
-                <Button 
-                  className="flex-1 text-xs h-8" 
-                  size="sm"
-                  onClick={() => onAddToCart(toActivityInsert(activity))}
-                  disabled={activityExists}
-                >
-                  <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                  {activityExists ? "Already in Tasks" : "Add to Cart"}
-                </Button>
-                <Button 
-                  className="flex-1 text-xs h-8" 
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onAddNow(toActivityInsert(activity))}
-                  disabled={activityExists}
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  {activityExists ? "Already in Tasks" : "Add to Tasks"}
-                </Button>
-              </div>
-              {!activityExists && (
-                <Button 
-                  className="w-full text-xs h-8" 
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowShareModal(true)}
-                >
-                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                  Share Activity
-                </Button>
-              )}
             </>
           )}
         </CardFooter>
