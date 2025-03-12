@@ -334,3 +334,32 @@ activityRouter.post('/accept/:token', async (req: AuthenticatedRequest, res) => 
     res.status(500).json({ message: "Failed to accept invitation" });
   }
 });
+
+// Skip an activity (reschedule without completing)
+activityRouter.post('/:id/skip', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req) || !req.user) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  
+  const { id } = req.params;
+  const userId = req.user.id;
+  
+  try {
+    const activityId = parseInt(id);
+    const activity = await storage.getActivity(activityId);
+    
+    if (!activity) {
+      return res.status(404).json({ message: "Activity not found" });
+    }
+    
+    if (activity.userId !== userId) {
+      return res.status(403).json({ message: "Not authorized to skip this activity" });
+    }
+    
+    const updatedActivity = await storage.skipActivity(activityId);
+    res.json(updatedActivity);
+  } catch (error) {
+    console.error('Error skipping activity:', error);
+    res.status(500).json({ message: "Failed to skip activity" });
+  }
+});

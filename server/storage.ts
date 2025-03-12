@@ -29,6 +29,7 @@ export interface IStorage {
   deleteAllActivities(userId?: number): Promise<void>;
   getNextActivity(userId: number): Promise<Activity | undefined>;
   completeActivity(id: number): Promise<Activity | undefined>;
+  skipActivity(id: number): Promise<Activity | undefined>;
   getActivitiesWithImages(userId?: number): Promise<(Activity & { images: ActivityImage[] })[]>;
   
   // Activity image methods
@@ -207,6 +208,38 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     return result[0];
+  }
+  
+  async skipActivity(id: number): Promise<Activity | undefined> {
+    // When a user skips an activity, update the nextDue date to the future
+    // using the same logic as completeActivity
+    const activity = await this.getActivity(id);
+    if (!activity) return undefined;
+    
+    const now = new Date();
+    
+    // Calculate when the activity will be due next based on frequency
+    let nextDue: Date = new Date(now);
+    
+    if (activity.frequencyUnit === 'day') {
+      nextDue.setDate(nextDue.getDate() + activity.frequency);
+    } else if (activity.frequencyUnit === 'week') {
+      nextDue.setDate(nextDue.getDate() + (activity.frequency * 7));
+    } else if (activity.frequencyUnit === 'month') {
+      nextDue.setMonth(nextDue.getMonth() + activity.frequency);
+    } else if (activity.frequencyUnit === 'year') {
+      nextDue.setFullYear(nextDue.getFullYear() + activity.frequency);
+    }
+    
+    // Update the activity
+    const updatedActivity = await db.update(activities)
+      .set({
+        nextDue: nextDue
+      })
+      .where(eq(activities.id, id))
+      .returning();
+    
+    return updatedActivity[0];
   }
   
   async completeActivity(id: number): Promise<Activity | undefined> {
