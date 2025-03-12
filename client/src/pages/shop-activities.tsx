@@ -18,7 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 // Activity Card component for consistency across tabs
 interface ActivityCardProps {
-  activity: Required<ActivityInsert>;
+  activity: Required<ActivityInsert> | (Activity & { description?: string; completed?: boolean });
   onAddToCart: (activity: ActivityInsert) => void;
   onAddNow: (activity: ActivityInsert) => void;
   onComplete?: (activity: Activity) => void;
@@ -419,13 +419,16 @@ const getRecommendationReason = (
     return `Low-frequency activity for your busy schedule`;
   }
   
-  // Based on user's age
-  if (userData.age < 30 && activity.category === "Learning & Growth") {
-    return `Great for skill development in your ${userData.age}s`;
-  } else if (userData.age >= 30 && userData.age < 50 && activity.category === "Career & Finance") {
-    return `Important for career advancement at your age`;
-  } else if (userData.age >= 50 && (activity.category === "Health & Fitness" || activity.category === "Spirituality & Mindfulness")) {
-    return `Beneficial for wellbeing at your life stage`;
+  // Based on user's age - handle potential null values
+  if (userData.age !== null && userData.age !== undefined) {
+    const age = userData.age;
+    if (age < 30 && activity.category === "Learning & Growth") {
+      return `Great for skill development in your ${age}s`;
+    } else if (age >= 30 && age < 50 && activity.category === "Career & Finance") {
+      return `Important for career advancement at your age`;
+    } else if (age >= 50 && (activity.category === "Health & Fitness" || activity.category === "Spirituality & Mindfulness")) {
+      return `Beneficial for wellbeing at your life stage`;
+    }
   }
   
   // Fallback
@@ -501,11 +504,29 @@ export default function ShopActivitiesPage() {
   });
   
   // Process database activities to match the expected format
-  const enhancedDatabaseActivities = databaseActivities.map(activity => ({
-    ...activity,
-    description: "", // Add description field if it doesn't exist
-    completed: false // Add completed field if it doesn't exist
-  }));
+  const enhancedDatabaseActivities = databaseActivities.map(activity => {
+    // Ensure frequency unit is the correct type
+    const frequencyUnit = (activity.frequencyUnit === "day" || 
+                           activity.frequencyUnit === "week" || 
+                           activity.frequencyUnit === "month" || 
+                           activity.frequencyUnit === "year") 
+      ? activity.frequencyUnit 
+      : "week"; // Default to week if invalid
+    
+    // Ensure duration unit is the correct type
+    const durationUnit = (activity.durationUnit === "minute" || 
+                          activity.durationUnit === "hour") 
+      ? activity.durationUnit 
+      : "minute"; // Default to minute if invalid
+    
+    return {
+      ...activity,
+      frequencyUnit,
+      durationUnit,
+      description: "", // Add description field if it doesn't exist
+      completed: false // Add completed field if it doesn't exist
+    };
+  });
   
   // Combine all activities from different sources, prioritizing database entries
   const allActivities = [

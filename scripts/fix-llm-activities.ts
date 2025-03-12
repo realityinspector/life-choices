@@ -2,8 +2,8 @@
  * Main script to fix and integrate LLM-generated activities with the shop-activities page
  */
 
-import syncLLMActivities from './sync-llm-activities';
-import normalizeActivities from './normalize-llm-activities';
+import { default as syncLLMActivities } from './sync-llm-activities.js';
+import { default as normalizeActivities } from './normalize-llm-activities.js';
 
 async function fixLLMActivities() {
   console.log('========================================');
@@ -36,15 +36,12 @@ async function fixLLMActivities() {
   }
 }
 
-// Run the function if this file is executed directly
-if (require.main === module) {
-  fixLLMActivities().then(() => {
-    console.log('Script execution completed');
-    process.exit(0);
-  }).catch(err => {
-    console.error('Script execution failed:', err);
-    process.exit(1);
-  });
-}
+// Run the function when file is executed directly
+fixLLMActivities().then(() => {
+  console.log('Script execution completed');
+}).catch(err => {
+  console.error('Script execution failed:', err);
+  process.exit(1);
+});
 
 export default fixLLMActivities;
