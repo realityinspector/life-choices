@@ -411,8 +411,26 @@ Ensure that each activity in the array corresponds to the filename at the same p
   }
   
   /**
-   * Generate an image for an activity using Stability AI's SDXL model
+   * Fetch image from URL and convert to base64
    */
+  private async fetchImageAsBase64(url: string): Promise<string> {
+    try {
+      const fetch = (await import('node-fetch')).default;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      return buffer.toString('base64');
+    } catch (error) {
+      console.error('Error fetching image:', error);
+      throw error;
+    }
+  }
+
   async generateImageForActivity(activity: ActivityInsert): Promise<ImageGenerationResponse | null> {
     try {
       console.log(`Generating image for activity: ${activity.name}`);
@@ -433,26 +451,44 @@ Ensure that each activity in the array corresponds to the filename at the same p
       console.log('Image generation response structure:', JSON.stringify({
         hasData: !!response.data,
         dataLength: response.data ? response.data.length : 0,
-        hasB64: response.data && response.data.length > 0 ? !!response.data[0].b64_json : false,
         responseKeys: Object.keys(response)
       }));
       
-      // Check if we have a valid response
-      if (!response.data || response.data.length === 0 || !response.data[0].b64_json) {
-        console.error('No image data in response');
-        if (response.data && response.data.length > 0) {
-          console.log('Response data first item keys:', Object.keys(response.data[0]));
-        }
+      // Check if we have a valid response with a URL
+      if (!response.data || response.data.length === 0) {
+        console.error('No data in response');
         return null;
       }
       
-      // Save the image to the filesystem
-      const imageData = await this.saveBase64Image(
-        response.data[0].b64_json, 
-        activity.name
-      );
+      if (response.data && response.data.length > 0) {
+        console.log('Response data first item keys:', Object.keys(response.data[0]));
+      }
       
-      return imageData;
+      // Check for URL in the response
+      if (response.data[0].url) {
+        console.log('Found image URL in response, fetching image...');
+        const imageUrl = response.data[0].url;
+        
+        // Fetch the image from the URL and convert to base64
+        const base64Image = await this.fetchImageAsBase64(imageUrl);
+        
+        // Save the image to the filesystem
+        const imageData = await this.saveBase64Image(base64Image, activity.name);
+        return imageData;
+      } 
+      // Fallback to b64_json if it exists
+      else if (response.data[0].b64_json) {
+        console.log('Found b64_json in response');
+        const imageData = await this.saveBase64Image(
+          response.data[0].b64_json, 
+          activity.name
+        );
+        return imageData;
+      }
+      else {
+        console.error('No image URL or base64 data in response');
+        return null;
+      }
     } catch (error) {
       console.error('Error generating image for activity:', error);
       if (error instanceof Error) {
