@@ -66,16 +66,74 @@ export default function WhatsNextPage() {
   };
 
   const handleComplete = (activity: Activity) => {
+    // Store activity ID and name before completing
+    const completedActivityId = activity.id;
+    const completedActivityName = activity.name;
+    
+    // Complete the activity and show the toast
     completeActivity(activity.id);
     toast({
       title: 'Activity Completed',
       description: `Great job completing "${activity.name}"!`,
       variant: 'default',
     });
-    loadNextActivity();
+    
+    // Set temporary loading state
+    setLoading(true);
+    
+    // Add a brief delay before loading the next activity to prevent cycling
+    setTimeout(() => {
+      // Use an async function to load the next activity
+      (async () => {
+        try {
+          const nextActivity = await getNextActivity();
+          
+          // If the next activity has the same name as the one we just completed,
+          // it's probably a duplicate, so skip it too
+          if (nextActivity && 
+              nextActivity.name === completedActivityName && 
+              nextActivity.id !== completedActivityId) {
+            // Skip this duplicate activity
+            const skippedActivity = await skipActivity(nextActivity.id);
+            
+            // Now try to get the next activity again
+            const newNextActivity = await getNextActivity();
+            setCurrentActivity(newNextActivity || null);
+            
+            // If there's no next activity after skipping, load a suggested one
+            if (!newNextActivity) {
+              setCurrentSuggestedActivity(getRandomSuggestedActivity());
+            } else {
+              setCurrentSuggestedActivity(null);
+            }
+          } else {
+            // No duplicate, just set the next activity normally
+            setCurrentActivity(nextActivity || null);
+            
+            // If there's no next activity, load a suggested one
+            if (!nextActivity) {
+              setCurrentSuggestedActivity(getRandomSuggestedActivity());
+            } else {
+              setCurrentSuggestedActivity(null);
+            }
+          }
+          
+          setLoading(false);
+        } catch (error) {
+          console.error('Error loading next activity after completion:', error);
+          setLoading(false);
+          // If there's an error, try to load a suggestion
+          setCurrentSuggestedActivity(getRandomSuggestedActivity());
+        }
+      })();
+    }, 500); // 500ms delay to ensure the backend has time to update
   };
 
   const handleSkip = (activity: Activity) => {
+    // Store activity ID and name before skipping
+    const skippedActivityId = activity.id;
+    const skippedActivityName = activity.name;
+    
     // Skip the current activity and update its nextDue date
     skipActivity(activity.id).then(() => {
       toast({
@@ -83,11 +141,65 @@ export default function WhatsNextPage() {
         description: `"${activity.name}" has been rescheduled for later.`,
         variant: 'default',
       });
-      loadNextActivity();
+      
+      // Set temporary loading state
+      setLoading(true);
+      
+      // Add a brief delay before loading the next activity to prevent cycling
+      setTimeout(() => {
+        // Use an async function to load the next activity
+        (async () => {
+          try {
+            const nextActivity = await getNextActivity();
+            
+            // If the next activity has the same name as the one we just skipped,
+            // it's probably a duplicate, so skip it too
+            if (nextActivity && 
+                nextActivity.name === skippedActivityName && 
+                nextActivity.id !== skippedActivityId) {
+              // Skip this duplicate activity
+              const skippedDuplicate = await skipActivity(nextActivity.id);
+              
+              // Now try to get the next activity again
+              const newNextActivity = await getNextActivity();
+              setCurrentActivity(newNextActivity || null);
+              
+              // If there's no next activity after skipping, load a suggested one
+              if (!newNextActivity) {
+                setCurrentSuggestedActivity(getRandomSuggestedActivity());
+              } else {
+                setCurrentSuggestedActivity(null);
+              }
+            } else {
+              // No duplicate, just set the next activity normally
+              setCurrentActivity(nextActivity || null);
+              
+              // If there's no next activity, load a suggested one
+              if (!nextActivity) {
+                setCurrentSuggestedActivity(getRandomSuggestedActivity());
+              } else {
+                setCurrentSuggestedActivity(null);
+              }
+            }
+            
+            setLoading(false);
+          } catch (error) {
+            console.error('Error loading next activity after skipping:', error);
+            setLoading(false);
+            // If there's an error, try to load a suggestion
+            setCurrentSuggestedActivity(getRandomSuggestedActivity());
+          }
+        })();
+      }, 500); // 500ms delay to ensure the backend has time to update
     });
   };
 
   const handleAddToCart = (activity: Activity) => {
+    // Store activity ID and name before adding to cart
+    const addedActivityId = activity.id;
+    const addedActivityName = activity.name;
+    
+    // Add to cart
     addActivitiesToCart([{
       name: activity.name,
       category: activity.category,
@@ -111,7 +223,55 @@ export default function WhatsNextPage() {
       variant: 'default',
     });
     
-    loadNextActivity();
+    // Set temporary loading state
+    setLoading(true);
+    
+    // Add a brief delay before loading the next activity to prevent cycling
+    setTimeout(() => {
+      // Use an async function to load the next activity
+      (async () => {
+        try {
+          const nextActivity = await getNextActivity();
+          
+          // If the next activity has the same name as the one we just added to cart,
+          // it's probably a duplicate, so skip it
+          if (nextActivity && 
+              nextActivity.name === addedActivityName && 
+              nextActivity.id !== addedActivityId) {
+            // Skip this duplicate activity
+            const skippedDuplicate = await skipActivity(nextActivity.id);
+            
+            // Now try to get the next activity again
+            const newNextActivity = await getNextActivity();
+            setCurrentActivity(newNextActivity || null);
+            
+            // If there's no next activity after skipping, load a suggested one
+            if (!newNextActivity) {
+              setCurrentSuggestedActivity(getRandomSuggestedActivity());
+            } else {
+              setCurrentSuggestedActivity(null);
+            }
+          } else {
+            // No duplicate, just set the next activity normally
+            setCurrentActivity(nextActivity || null);
+            
+            // If there's no next activity, load a suggested one
+            if (!nextActivity) {
+              setCurrentSuggestedActivity(getRandomSuggestedActivity());
+            } else {
+              setCurrentSuggestedActivity(null);
+            }
+          }
+          
+          setLoading(false);
+        } catch (error) {
+          console.error('Error loading next activity after adding to cart:', error);
+          setLoading(false);
+          // If there's an error, try to load a suggestion
+          setCurrentSuggestedActivity(getRandomSuggestedActivity());
+        }
+      })();
+    }, 500); // 500ms delay to ensure the backend has time to update
   };
   
   const handleAddSuggestedActivity = (activity: ActivityInsert) => {
