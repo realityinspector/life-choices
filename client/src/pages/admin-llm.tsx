@@ -58,6 +58,17 @@ export default function AdminLLMPage() {
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  
+  // Effect to cleanup any dangling queries when component unmounts
+  useEffect(() => {
+    return () => {
+      // Cancel any in-progress queries to prevent "signal aborted" errors
+      queryClient.cancelQueries({ queryKey: ['/api/activities'] });
+      queryClient.cancelQueries({ queryKey: ['/api/admin-llm/images'] });
+      
+      console.log('AdminLLM component unmounted - cleaned up pending queries');
+    };
+  }, [queryClient]);
   const [isUploading, setIsUploading] = useState(false);
   const [showBatchSettings, setShowBatchSettings] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -78,13 +89,26 @@ export default function AdminLLMPage() {
     queryKey: ['/api/activities'],
     queryFn: async ({ signal }) => {
       try {
+        // Check if signal is already aborted before making the request
+        if (signal?.aborted) {
+          return [];
+        }
+        
         const res = await apiRequest('/api/activities', { signal });
         return res.json();
       } catch (error) {
+        // Check if error is due to aborted signal
+        if (error instanceof Error && error.name === 'AbortError') {
+          return [];
+        }
         console.error('Error fetching activities:', error);
         return [];
       }
-    }
+    },
+    // Add retry: false to prevent additional requests when a request fails
+    retry: false,
+    // Use staleTime to prevent unnecessary refetches
+    staleTime: 30000 // 30 seconds
   });
 
   // Fetch existing activity images
@@ -92,13 +116,26 @@ export default function AdminLLMPage() {
     queryKey: ['/api/admin-llm/images'],
     queryFn: async ({ signal }) => {
       try {
+        // Check if signal is already aborted before making the request
+        if (signal?.aborted) {
+          return [];
+        }
+        
         const res = await apiRequest('/api/admin-llm/images', { signal });
         return res.json();
       } catch (error) {
+        // Check if error is due to aborted signal
+        if (error instanceof Error && error.name === 'AbortError') {
+          return [];
+        }
         console.error('Error fetching activity images:', error);
         return [];
       }
-    }
+    },
+    // Add retry: false to prevent additional requests when a request fails
+    retry: false,
+    // Use staleTime to prevent unnecessary refetches
+    staleTime: 30000 // 30 seconds
   });
 
   // Upload files mutation
@@ -277,9 +314,20 @@ export default function AdminLLMPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin-llm/images'] });
-    }
+      // Use cancellation-safe invalidation with refetchType: 'none' 
+      // to prevent unnecessary refetches while processing batches
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/activities'],
+        refetchType: 'none' 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/admin-llm/images'],
+        refetchType: 'none' 
+      });
+    },
+    // Use these retry settings to improve stability during batch operations
+    retry: false,
+    retryDelay: 1000
   });
 
   // Batch process mutation
@@ -294,9 +342,20 @@ export default function AdminLLMPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin-llm/images'] });
-    }
+      // Use cancellation-safe invalidation with refetchType: 'none'
+      // to prevent unnecessary refetches while processing batches
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/activities'],
+        refetchType: 'none' 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/admin-llm/images'],
+        refetchType: 'none' 
+      });
+    },
+    // Use these retry settings to improve stability during batch operations
+    retry: false,
+    retryDelay: 1000
   });
 
   // Handle file selection
@@ -790,65 +849,85 @@ export default function AdminLLMPage() {
   };
 
   // Handle batch processing results
+  // Handle batch processing results more safely
   const handleBatchResults = (result: any, currentChunk?: FileUploadState[]) => {
-    if (result.results && Array.isArray(result.results)) {
-      setFiles(prev => {
-        const updatedFiles = [...prev];
-        
-        result.results.forEach((res: ActivityResponse) => {
-          // First try to find a match in the current chunk (if provided) for better performance
-          let fileIndex = -1;
+    if (!result || !result.results || !Array.isArray(result.results)) {
+      console.warn("Received invalid batch results:", result);
+      return;
+    }
+    
+    // Process result in a more controlled way to avoid state update issues
+    try {
+      // Use a timeout to allow any pending state updates to complete
+      setTimeout(() => {
+        // Update file states based on batch results
+        setFiles(prev => {
+          const updatedFiles = [...prev];
+          let updateCount = 0;
           
-          if (currentChunk) {
-            // Find the index in the currentChunk first for efficiency
-            const chunkIndex = currentChunk.findIndex(f => 
-              f.originalFilename === res.originalFilename && f.status === 'processing'
-            );
+          result.results.forEach((res: ActivityResponse) => {
+            if (!res || !res.originalFilename) {
+              return; // Skip invalid results
+            }
             
-            if (chunkIndex !== -1) {
-              // Get the corresponding index in the overall files array
+            // First try to find a match in the current chunk (if provided) for better performance
+            let fileIndex = -1;
+            
+            if (currentChunk) {
+              // Find the index in the currentChunk first for efficiency
+              const chunkIndex = currentChunk.findIndex(f => 
+                f.originalFilename === res.originalFilename
+              );
+              
+              if (chunkIndex !== -1) {
+                // Get the corresponding index in the overall files array
+                fileIndex = updatedFiles.findIndex(f => 
+                  f.originalFilename === currentChunk[chunkIndex].originalFilename
+                );
+              }
+            }
+            
+            // If not found in chunk (or no chunk provided), do a full search
+            if (fileIndex === -1) {
               fileIndex = updatedFiles.findIndex(f => 
-                f.originalFilename === currentChunk[chunkIndex].originalFilename && 
-                f.status === 'processing'
+                f.originalFilename === res.originalFilename
               );
             }
-          }
-          
-          // If not found in chunk (or no chunk provided), do a full search
-          if (fileIndex === -1) {
-            fileIndex = updatedFiles.findIndex(f => 
-              f.originalFilename === res.originalFilename && f.status === 'processing'
-            );
-          }
-          
-          if (fileIndex !== -1) {
-            if (res.status === 'success' && res.activity) {
-              updatedFiles[fileIndex] = {
-                ...updatedFiles[fileIndex],
-                status: 'success',
-                activity: res.activity
-              };
-            } else {
-              updatedFiles[fileIndex] = {
-                ...updatedFiles[fileIndex],
-                status: 'failed',
-                errorMessage: res.error || 'Processing failed'
-              };
+            
+            if (fileIndex !== -1) {
+              updateCount++;
+              
+              if (res.status === 'success' && res.activity) {
+                updatedFiles[fileIndex] = {
+                  ...updatedFiles[fileIndex],
+                  status: 'success',
+                  activity: res.activity
+                };
+              } else {
+                updatedFiles[fileIndex] = {
+                  ...updatedFiles[fileIndex],
+                  status: 'failed',
+                  errorMessage: res.error || 'Processing failed'
+                };
+              }
             }
-          }
+          });
+          
+          console.log(`Updated ${updateCount} files with batch results`);
+          return updatedFiles;
         });
         
-        return updatedFiles;
-      });
-      
-      // Only show the completion toast when not processing multiple chunks
-      if (!currentChunk) {
-        const successCount = result.results.filter((r: any) => r.status === 'success').length;
-        toast({
-          title: 'Batch Processing Complete',
-          description: `Processed ${result.results.length} images. ${successCount} successful.`,
-        });
-      }
+        // Only show the completion toast when not processing multiple chunks
+        if (!currentChunk) {
+          const successCount = result.results.filter((r: any) => r.status === 'success').length;
+          toast({
+            title: 'Batch Processing Complete',
+            description: `Processed ${result.results.length} images. ${successCount} successful.`,
+          });
+        }
+      }, 0);
+    } catch (error) {
+      console.error("Error handling batch results:", error);
     }
   };
   
