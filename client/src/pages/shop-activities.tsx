@@ -178,7 +178,8 @@ const ActivityCard = ({
           )}
         </CardContent>
         <CardFooter className="flex flex-col space-y-1.5 pt-2">
-          {activityExists ? (
+          {/* For the /whats-next view, show Complete/Skip buttons */}
+          {activityExists && window.location.pathname === '/whats-next' ? (
             <>
               <div className="flex w-full space-x-2">
                 <Button 
@@ -217,29 +218,43 @@ const ActivityCard = ({
                   className="flex-1 text-xs h-8" 
                   size="sm"
                   onClick={() => onAddToCart(activity)}
+                  disabled={activityExists}
                 >
                   <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                  Add to Cart
+                  {activityExists ? "Already Added" : "Add to Cart"}
                 </Button>
                 <Button 
                   className="flex-1 text-xs h-8" 
                   size="sm"
                   variant="outline"
                   onClick={() => onAddNow(activity)}
+                  disabled={activityExists}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Add Now
+                  {activityExists ? "Already Added" : "Add Now"}
                 </Button>
               </div>
-              <Button 
-                className="w-full text-xs h-8" 
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowShareModal(true)}
-              >
-                <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                Share Activity
-              </Button>
+              {activityExists ? (
+                <Button 
+                  className="w-full text-xs h-8" 
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleExportToCalendar}
+                >
+                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                  Add to Calendar
+                </Button>
+              ) : (
+                <Button 
+                  className="w-full text-xs h-8" 
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowShareModal(true)}
+                >
+                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                  Share Activity
+                </Button>
+              )}
             </>
           )}
         </CardFooter>
