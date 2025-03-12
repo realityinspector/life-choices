@@ -841,8 +841,9 @@ export default function AdminImagesPage() {
   
   const handleSaveAssociations = async () => {
     // Get all files that have an activity assigned but haven't been saved yet
+    // Include both 'uploaded' and 'matched' files as long as they have an activityId
     const fileAssociations = files
-      .filter(f => f.status === 'uploaded' && f.activityId)
+      .filter(f => (f.status === 'uploaded' || f.status === 'matched') && f.activityId)
       .map(f => ({
         activityId: f.activityId as number,
         filename: f.filename as string,
@@ -865,7 +866,7 @@ export default function AdminImagesPage() {
       await batchAssociateMutation.mutateAsync(fileAssociations);
       
       // Clear any files that were just saved
-      setFiles(prev => prev.filter(f => !(f.status === 'uploaded' && f.activityId)));
+      setFiles(prev => prev.filter(f => !((f.status === 'uploaded' || f.status === 'matched') && f.activityId)));
       
       setIsSaving(false);
     } catch (error) {
@@ -1035,7 +1036,7 @@ export default function AdminImagesPage() {
                   
                   <Button
                     onClick={handleSaveAssociations}
-                    disabled={isSaving || files.filter(f => f.status === 'uploaded' && f.activityId).length === 0}
+                    disabled={isSaving || files.filter(f => (f.status === 'uploaded' || f.status === 'matched') && f.activityId).length === 0}
                     variant="default"
                     className="flex gap-2 items-center"
                   >
@@ -1068,9 +1069,7 @@ export default function AdminImagesPage() {
                       <TableBody>
                         {filteredFiles.map((file, index) => (
                           <TableRow key={index} className={file.status === 'failed' ? 'bg-red-50' : ''}>
-                            {/* Hidden element to store the current file index */}
-                            <div id="current-file-index" data-index={index} hidden></div>
-                            <TableCell className="font-medium truncate max-w-[200px]">
+                            <TableCell className="font-medium truncate max-w-[200px]" data-fileindex={index}>
                               {file.file.name}
                             </TableCell>
                             <TableCell>
