@@ -17,6 +17,7 @@ import TasksPage from "@/pages/tasks";
 import CalendarPage from "@/pages/calendar";
 import AdminImagesPage from "@/pages/admin-images";
 import AdminLLMPage from "@/pages/admin-llm";
+import BottomNavigation from "@/components/bottom-navigation";
 
 // Set the document title
 document.title = "Life Choices | Do what matters, one choice at a time";
@@ -110,12 +111,32 @@ function Router() {
   );
 }
 
+function AppContent() {
+  const { isUserSetup } = useUser();
+  const [location] = useLocation();
+  
+  // Admin routes - don't show bottom nav
+  const adminRoutes = ["/admin/images", "/admin/llm"];
+  const isAdminRoute = adminRoutes.some(route => location.startsWith(route));
+  
+  // Login/landing routes - don't show bottom nav
+  const noNavRoutes = ["/login", "/shared-activity"];
+  const shouldShowNav = isUserSetup && !isAdminRoute && !noNavRoutes.includes(location);
+  
+  return (
+    <div className="pb-16"> {/* Add padding at the bottom for the navigation bar */}
+      <Router />
+      {shouldShowNav && <BottomNavigation />}
+      <Toaster />
+    </div>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider>
-        <Router />
-        <Toaster />
+        <AppContent />
       </UserProvider>
     </QueryClientProvider>
   );
