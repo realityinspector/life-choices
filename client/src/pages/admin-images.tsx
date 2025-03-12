@@ -257,57 +257,6 @@ export default function AdminImagesPage() {
   const [searchActive, setSearchActive] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Setup event listener for creating new activities
-  useEffect(() => {
-    const handleCreateActivity = async (e: any) => {
-      const { activityName } = e.detail;
-      if (!activityName) return;
-      
-      try {
-        // Create the new activity
-        const newActivity = await createActivityMutation.mutateAsync(activityName);
-        
-        // Use the new activity
-        if (newActivity?.id) {
-          // If we're editing an image, associate it
-          if (editingImageId !== null) {
-            const image = activityImages.find(img => img.id === editingImageId);
-            if (image) {
-              await associateImageMutation.mutateAsync({
-                activityId: newActivity.id,
-                filename: image.filename,
-                originalFilename: image.originalFilename,
-                path: image.path,
-                mimeType: image.mimeType
-              });
-              setEditingImageId(null);
-            }
-          }
-          
-          toast({
-            title: 'Activity Created',
-            description: `New activity "${activityName}" created and ready to use.`,
-          });
-        }
-      } catch (error) {
-        console.error('Error creating activity from event:', error);
-        toast({
-          title: 'Creation Error',
-          description: 'Failed to create a new activity.',
-          variant: 'destructive',
-        });
-      }
-    };
-    
-    // Listen for the custom event
-    document.addEventListener('createNewActivity', handleCreateActivity);
-    
-    // Clean up
-    return () => {
-      document.removeEventListener('createNewActivity', handleCreateActivity);
-    };
-  }, [activityImages, editingImageId, createActivityMutation, associateImageMutation, toast]);
-  
   // Fetch activities for dropdown selection (including both database activities and shop catalog)
   const { data: activities = [] } = useQuery<Activity[]>({
     queryKey: ['/api/admin/activities'],
@@ -484,6 +433,57 @@ export default function AdminImagesPage() {
       });
     }
   });
+  
+  // Setup event listener for creating new activities
+  useEffect(() => {
+    const handleCreateActivity = async (e: any) => {
+      const { activityName } = e.detail;
+      if (!activityName) return;
+      
+      try {
+        // Create the new activity
+        const newActivity = await createActivityMutation.mutateAsync(activityName);
+        
+        // Use the new activity
+        if (newActivity?.id) {
+          // If we're editing an image, associate it
+          if (editingImageId !== null) {
+            const image = activityImages.find(img => img.id === editingImageId);
+            if (image) {
+              await associateImageMutation.mutateAsync({
+                activityId: newActivity.id,
+                filename: image.filename,
+                originalFilename: image.originalFilename,
+                path: image.path,
+                mimeType: image.mimeType
+              });
+              setEditingImageId(null);
+            }
+          }
+          
+          toast({
+            title: 'Activity Created',
+            description: `New activity "${activityName}" created and ready to use.`,
+          });
+        }
+      } catch (error) {
+        console.error('Error creating activity from event:', error);
+        toast({
+          title: 'Creation Error',
+          description: 'Failed to create a new activity.',
+          variant: 'destructive',
+        });
+      }
+    };
+    
+    // Listen for the custom event
+    document.addEventListener('createNewActivity', handleCreateActivity);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('createNewActivity', handleCreateActivity);
+    };
+  }, [editingImageId, createActivityMutation, associateImageMutation, toast, activityImages]);
   
   // Batch associate mutation
   const batchAssociateMutation = useMutation({
@@ -741,7 +741,6 @@ export default function AdminImagesPage() {
     // Process files in smaller batches
     for (let batchIndex = 0; batchIndex < Math.ceil(totalFiles / CONCURRENT_BATCH_SIZE); batchIndex++) {
       const batchPromises: Promise<void>[] = [];
-      const currentBatchMatchedFiles: AssociationRequest[] = [];
       
       // Calculate which files to process in this batch
       const uploadedFiles = files.filter(f => f.status === 'uploaded');
@@ -804,336 +803,305 @@ export default function AdminImagesPage() {
     if (autoSaveAfterMatch && nonMatchedIndices.length > 0) {
       setShowOnlyNonMatches(true);
       toast({
-        title: 'Non-Matched Files',
-        description: `Now showing only the ${nonMatchedIndices.length} files that need manual matching.`,
+        title: 'Manual Association Needed',
+        description: `${nonMatchedIndices.length} files need manual activity association.`,
         duration: 5000,
       });
     }
     
     setIsMatching(false);
   };
-  
+
   const handleActivityChange = (fileIndex: number, activity: Activity | null) => {
     setFiles(prev => prev.map((f, idx) => 
       idx === fileIndex ? { 
         ...f, 
-        activityId: activity?.id ?? null,
-        suggestedActivity: activity ?? undefined,
-        status: activity ? 'matched' : 'uploaded'  
+        activityId: activity?.id || null,
+        suggestedActivity: activity 
       } : f
     ));
   };
   
-  const saveAssociations = async () => {
-    // First make sure we have valid files to associate
-    const validAssociations = files
-      .filter(f => f.status === 'matched' && f.activityId && f.filename && f.path)
+  const handleSaveAssociations = async () => {
+    // Get all files that have an activity assigned but haven't been saved yet
+    const fileAssociations = files
+      .filter(f => f.status === 'uploaded' && f.activityId)
       .map(f => ({
-        activityId: f.activityId!,
-        filename: f.filename!,
+        activityId: f.activityId as number,
+        filename: f.filename as string,
         originalFilename: f.file.name,
-        path: f.path!,
+        path: f.path as string,
         mimeType: f.file.type
       }));
     
-    if (validAssociations.length === 0) {
+    if (fileAssociations.length === 0) {
       toast({
-        title: 'No associations to save',
-        description: 'Please match files with activities first.'
+        title: 'No Associations',
+        description: 'No new activity associations to save.'
       });
       return;
     }
     
-    // Set a reasonable batch size for database operations
-    const BATCH_SIZE = 50;
-    const totalBatches = Math.ceil(validAssociations.length / BATCH_SIZE);
+    setIsSaving(true);
     
     try {
-      // Show processing toast
-      toast({
-        title: 'Processing',
-        description: `Saving ${validAssociations.length} image associations...`
-      });
+      await batchAssociateMutation.mutateAsync(fileAssociations);
       
-      let savedCount = 0;
+      // Clear any files that were just saved
+      setFiles(prev => prev.filter(f => !(f.status === 'uploaded' && f.activityId)));
       
-      // Process in batches
-      for (let i = 0; i < totalBatches; i++) {
-        const start = i * BATCH_SIZE;
-        const end = Math.min(start + BATCH_SIZE, validAssociations.length);
-        const batch = validAssociations.slice(start, end);
-        
-        // Save this batch
-        const result = await batchAssociateMutation.mutateAsync(batch);
-        savedCount += result.results?.length || 0;
-        
-        // Small delay between batches
-        if (i < totalBatches - 1) {
-          await new Promise(r => setTimeout(r, 300));
-        }
-      }
-      
-      // Show success message
-      toast({
-        title: 'Save Complete',
-        description: `Successfully saved ${savedCount} image associations.`,
-        duration: 5000,
-      });
-      
-      // Clear processed files
-      setFiles([]);
-      
-      // Update to the "manage" tab to see the results
-      setActiveTab('manage');
-      
+      setIsSaving(false);
     } catch (error) {
       console.error('Error saving associations:', error);
-      toast({
-        title: 'Save Error',
-        description: 'Failed to save some associations. You can try again with smaller batches.',
-        variant: 'destructive',
-      });
+      setIsSaving(false);
     }
   };
   
-  const handleDeleteImage = async (id: number) => {
-    if (confirm('Are you sure you want to delete this image association?')) {
-      await deleteImageMutation.mutateAsync(id);
+  const handleImageEdit = (image: ActivityImage) => {
+    setEditingImageId(image.id);
+    // Find current activity
+    const currentActivity = activities.find(a => a.id === image.activityId) || null;
+    setSelectedActivity(currentActivity);
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleSaveImageEdit = async () => {
+    if (!editingImageId || !selectedActivity) {
+      toast({
+        title: 'Selection Required',
+        description: 'Please select an activity for this image.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    const image = activityImages.find(img => img.id === editingImageId);
+    if (!image) return;
+    
+    try {
+      await associateImageMutation.mutateAsync({
+        activityId: selectedActivity.id,
+        filename: image.filename,
+        originalFilename: image.originalFilename,
+        path: image.path,
+        mimeType: image.mimeType
+      });
+      
+      setIsEditDialogOpen(false);
+      setEditingImageId(null);
+      setSelectedActivity(null);
+    } catch (error) {
+      console.error('Error updating image:', error);
     }
   };
+  
+  const handleDeleteImage = (id: number) => {
+    deleteImageMutation.mutate(id);
+  };
+  
+  const handleImportActivities = () => {
+    importActivitiesMutation.mutate();
+  };
+  
+  const toggleSearchFocus = (active: boolean) => {
+    setSearchActive(active);
+    if (active && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+  
+  const filteredImages = activityImages.filter(image => {
+    // Text search
+    const matchesSearch = searchQuery.trim() === '' || 
+      image.originalFilename.toLowerCase().includes(searchQuery.toLowerCase());
+      
+    // Activity filter
+    const matchesActivity = !activitySearchQuery || 
+      activities.find(a => a.id === image.activityId)?.name.toLowerCase().includes(activitySearchQuery.toLowerCase());
+    
+    return matchesSearch && matchesActivity;
+  });
+  
+  const filteredFiles = files.filter(file => {
+    if (showOnlyNonMatches) {
+      return file.status === 'failed' || (file.status === 'uploaded' && !file.activityId);
+    }
+    return true;
+  });
+  
+  // Group images by activity
+  const imagesByActivity = filteredImages.reduce((acc: Record<string, ActivityImage[]>, image) => {
+    const activity = activities.find(a => a.id === image.activityId);
+    const key = activity ? activity.name : 'Unassigned';
+    
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    
+    acc[key].push(image);
+    return acc;
+  }, {});
   
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">Activity Image Management</h1>
+      <h1 className="text-3xl font-bold mb-6">Admin: Image Management</h1>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="upload">Upload & Match</TabsTrigger>
           <TabsTrigger value="manage">Manage Images</TabsTrigger>
-          <TabsTrigger value="import">Import Activities</TabsTrigger>
+          <TabsTrigger value="actions">Admin Actions</TabsTrigger>
         </TabsList>
         
         <TabsContent value="upload" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Upload Images</CardTitle>
+              <CardTitle>Upload New Activity Images</CardTitle>
               <CardDescription>
-                Upload image files and match them with activities.
+                Select image files to upload and automatically match with activities
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileChange}
-                    disabled={isUploading || isMatching}
-                    className="flex-1"
+              <div className="flex flex-col gap-4">
+                <Label htmlFor="fileUpload">Select Files (JPEG, PNG, GIF)</Label>
+                <Input 
+                  id="fileUpload" 
+                  type="file" 
+                  accept="image/*" 
+                  multiple 
+                  onChange={handleFileChange} 
+                  disabled={isUploading || isMatching}
+                />
+                
+                <div className="flex items-center gap-2 my-2">
+                  <input
+                    type="checkbox"
+                    id="autoSaveOption"
+                    checked={autoSaveAfterMatch}
+                    onChange={(e) => setAutoSaveAfterMatch(e.target.checked)}
+                    className="rounded border-gray-300"
                   />
-                  <Button 
-                    onClick={handleUploadFiles} 
-                    disabled={files.length === 0 || isUploading || isMatching}
+                  <Label htmlFor="autoSaveOption" className="cursor-pointer">
+                    Automatically save matched images (recommended)
+                  </Label>
+                </div>
+                
+                {isUploading && (
+                  <div className="w-full space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Uploading...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="h-2" />
+                  </div>
+                )}
+                
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={handleUploadFiles}
+                    disabled={isUploading || files.length === 0 || files.every(f => f.status === 'uploaded')}
+                    className="flex gap-2 items-center"
                   >
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload
-                      </>
-                    )}
+                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    Upload Files
+                  </Button>
+                  
+                  <Button
+                    onClick={matchFilesWithActivities}
+                    disabled={isMatching || isUploading || files.length === 0 || files.some(f => f.status !== 'uploaded')}
+                    variant="secondary"
+                    className="flex gap-2 items-center"
+                  >
+                    {isMatching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    Match with Activities
+                  </Button>
+                  
+                  <Button
+                    onClick={handleSaveAssociations}
+                    disabled={isSaving || files.filter(f => f.status === 'uploaded' && f.activityId).length === 0}
+                    variant="default"
+                    className="flex gap-2 items-center"
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Save Associations
+                  </Button>
+                  
+                  <Button
+                    onClick={() => setShowOnlyNonMatches(!showOnlyNonMatches)}
+                    variant="outline"
+                    className="flex gap-2 items-center"
+                  >
+                    <Filter className="h-4 w-4" />
+                    {showOnlyNonMatches ? "Show All Files" : "Show Only Non-Matches"}
                   </Button>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="auto-save"
-                      className="h-4 w-4 rounded border-gray-300"
-                      checked={autoSaveAfterMatch}
-                      onChange={(e) => setAutoSaveAfterMatch(e.target.checked)}
-                    />
-                    <label htmlFor="auto-save" className="flex items-center gap-1">
-                      <Save className="h-4 w-4" />
-                      Auto-save successful matches
-                    </label>
-                  </div>
-                  
-                  {files.some(f => f.status === 'failed') && (
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="show-non-matches"
-                        className="h-4 w-4 rounded border-gray-300"
-                        checked={showOnlyNonMatches}
-                        onChange={(e) => setShowOnlyNonMatches(e.target.checked)}
-                      />
-                      <label htmlFor="show-non-matches" className="flex items-center gap-1">
-                        <Filter className="h-4 w-4" />
-                        Show only non-matches
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {isUploading && (
-                <div className="space-y-2">
-                  <Progress value={uploadProgress} className="w-full" />
-                  <p className="text-sm text-center">{uploadProgress}% uploaded</p>
-                </div>
-              )}
-              
-              {files.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <h3 className="text-lg font-medium">Files ({files.length})</h3>
-                    <div className="space-x-2">
-                      <Button 
-                        variant="outline" 
-                        onClick={matchFilesWithActivities}
-                        disabled={files.some(f => f.status !== 'uploaded') || isMatching || isUploading}
-                      >
-                        {isMatching ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Matching...
-                          </>
-                        ) : (
-                          'Match with Activities'
-                        )}
-                      </Button>
-                      <Button 
-                        onClick={saveAssociations}
-                        disabled={files.every(f => f.status !== 'matched') || isMatching || isUploading}
-                      >
-                        Save Associations
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>File Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Suggested Match</TableHead>
-                        <TableHead>Activity</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell colSpan={4} className="p-2">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Input
-                              type="text"
-                              placeholder="Search activities..."
-                              className="flex-1"
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              ref={searchInputRef}
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSearchActive(!!searchQuery);
-                                if (searchInputRef.current) searchInputRef.current.focus();
-                              }}
-                            >
-                              <Search className="h-4 w-4 mr-2" />
-                              Search
-                            </Button>
-                            {searchActive && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSearchQuery('');
-                                  setSearchActive(false);
-                                }}
-                              >
-                                <X className="h-4 w-4 mr-2" />
-                                Clear
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      
-                      {files
-                        .filter(fileState => {
-                          // Apply filters based on user settings
-                          if (showOnlyNonMatches && fileState.status !== 'failed') {
-                            return false;
-                          }
-                          return true;
-                        })
-                        .map((fileState, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{fileState.file.name}</TableCell>
-                          <TableCell>
-                            {fileState.loading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : fileState.status === 'idle' ? (
-                              'Ready to upload'
-                            ) : fileState.status === 'uploaded' ? (
-                              <span className="flex items-center">
-                                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2" />
-                                Uploaded
-                              </span>
-                            ) : fileState.status === 'matching' ? (
-                              'Matching...'
-                            ) : fileState.status === 'matched' ? (
-                              <span className="flex items-center">
-                                <CheckCircle2 className="h-4 w-4 text-green-500 mr-2" />
-                                Matched
-                              </span>
-                            ) : (
-                              <span className="flex items-center">
-                                <XCircle className="h-4 w-4 text-red-500 mr-2" />
-                                No match found
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {fileState.suggestedMatch === 'No match' ? (
-                              <span className="text-red-500">No match found</span>
-                            ) : fileState.suggestedMatch || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {fileState.status === 'uploaded' || fileState.status === 'matched' || fileState.status === 'failed' ? 
-                              <ActivitySearch
-                                activities={activities}
-                                selectedActivity={fileState.suggestedActivity || null}
-                                onSelect={(activity) => handleActivityChange(index, activity)}
-                                placeholder="Select an activity..."
-                                showCategories={true}
-                              />
-                             : '-'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      
-                      {files.filter(f => !showOnlyNonMatches || f.status === 'failed').length === 0 && (
+                {filteredFiles.length > 0 && (
+                  <div className="max-h-96 overflow-y-auto border rounded-md">
+                    <Table>
+                      <TableCaption>Uploaded Files</TableCaption>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-4">
-                            {showOnlyNonMatches ? 
-                              'No non-matched files to display.' : 
-                              'No files to display. Upload some files first.'}
-                          </TableCell>
+                          <TableHead>File</TableHead>
+                          <TableHead>Suggested Match</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Activity</TableHead>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+                      </TableHeader>
+                      <TableBody>
+                        {filteredFiles.map((file, index) => (
+                          <TableRow key={index} className={file.status === 'failed' ? 'bg-red-50' : ''}>
+                            <TableCell className="font-medium truncate max-w-[200px]">
+                              {file.file.name}
+                            </TableCell>
+                            <TableCell>
+                              {file.suggestedMatch ? file.suggestedMatch : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {file.loading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : file.status === 'idle' ? (
+                                <span className="text-gray-500">Not uploaded</span>
+                              ) : file.status === 'uploaded' ? (
+                                <span className="text-blue-500">Uploaded</span>
+                              ) : file.status === 'matching' ? (
+                                <span className="text-yellow-500">Matching...</span>
+                              ) : file.status === 'matched' ? (
+                                <span className="text-green-500 flex items-center gap-1">
+                                  <CheckCircle2 className="h-4 w-4" /> 
+                                  Matched
+                                </span>
+                              ) : (
+                                <span className="text-red-500 flex items-center gap-1">
+                                  <XCircle className="h-4 w-4" /> 
+                                  No Match
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {file.status === 'uploaded' || file.status === 'matched' || file.status === 'failed' ? (
+                                <ActivitySearch
+                                  activities={activities}
+                                  selectedActivity={file.suggestedActivity || null}
+                                  onSelect={(activity) => handleActivityChange(index, activity)}
+                                />
+                              ) : (
+                                '-'
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+                
+                {files.length === 0 && (
+                  <div className="text-center py-10 text-gray-500">
+                    No files selected. Please choose files to upload.
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1141,461 +1109,167 @@ export default function AdminImagesPage() {
         <TabsContent value="manage">
           <Card>
             <CardHeader>
-              <CardTitle>Manage Activity Images</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Manage Activity Images</span>
+                <div className="flex items-center space-x-2">
+                  <div className={`relative transition-all duration-300 ${searchActive ? 'w-64' : 'w-9'}`}>
+                    <Input 
+                      ref={searchInputRef}
+                      type="text" 
+                      placeholder="Search by filename..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className={`pl-8 pr-2 transition-all duration-300 ${searchActive ? 'opacity-100' : 'opacity-0'}`}
+                      onBlur={() => searchQuery === '' && toggleSearchFocus(false)}
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute left-0 top-0 h-9 w-9"
+                      onClick={() => toggleSearchFocus(!searchActive)}
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardTitle>
               <CardDescription>
-                View, edit, and manage all image associations.
+                View and edit existing image associations with activities
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {activityImages.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">
-                  No activity images found. Upload and associate images first.
-                </p>
+              {filteredImages.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">
+                  No images found. Upload some images first.
+                </div>
               ) : (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        type="text"
-                        placeholder="Search filenames or activities..."
-                        className="w-64"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                      {searchQuery && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSearchQuery('')}
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          // Toggle bulk edit mode
-                          setIsEditDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Bulk Edit
-                      </Button>
-                    </div>
-                  </div>
-                
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Image</TableHead>
-                        <TableHead>Original Filename</TableHead>
-                        <TableHead>Activity</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {activityImages
-                        .filter(image => {
-                          if (!searchQuery) return true;
-                          
-                          const activity = activities.find(a => a.id === image.activityId);
-                          const lowerQuery = searchQuery.toLowerCase();
-                          
-                          return (
-                            image.originalFilename.toLowerCase().includes(lowerQuery) ||
-                            (activity && activity.name.toLowerCase().includes(lowerQuery))
-                          );
-                        })
-                        .map(image => {
+                <div className="space-y-6">
+                  {Object.entries(imagesByActivity).map(([activityName, images]) => (
+                    <div key={activityName} className="space-y-2">
+                      <h3 className="text-lg font-semibold">{activityName} ({images.length})</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {images.map((image) => {
                           const activity = activities.find(a => a.id === image.activityId);
                           return (
-                            <TableRow key={image.id}>
-                              <TableCell>
-                                <div className="w-16 h-16 relative">
-                                  <FileImage className="absolute inset-0 w-full h-full text-gray-300" />
-                                  <img 
-                                    src={image.path} 
-                                    alt={image.originalFilename}
-                                    className="absolute inset-0 w-full h-full object-cover rounded-md"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                    }}
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-medium">
+                            <div key={image.id} className="relative group border rounded-md overflow-hidden">
+                              <div className="aspect-square overflow-hidden bg-gray-100">
+                                <img 
+                                  src={image.path} 
+                                  alt={image.originalFilename} 
+                                  className="w-full h-full object-cover object-center"
+                                />
+                              </div>
+                              <div className="p-2 text-xs truncate">
                                 {image.originalFilename}
-                              </TableCell>
-                              <TableCell>
-                                {editingImageId === image.id ? (
-                                  <div className="space-y-2">
-                                    <ActivitySearch
-                                      activities={activities}
-                                      selectedActivity={activities.find(a => a.id === image.activityId) || null}
-                                      onSelect={async (selectedActivity) => {
-                                        if (selectedActivity) {
-                                          try {
-                                            await associateImageMutation.mutateAsync({
-                                              activityId: selectedActivity.id,
-                                              filename: image.filename,
-                                              originalFilename: image.originalFilename,
-                                              path: image.path,
-                                              mimeType: image.mimeType
-                                            });
-                                            setEditingImageId(null);
-                                          } catch (error) {
-                                            console.error('Error updating image:', error);
-                                            toast({
-                                              title: 'Update Error',
-                                              description: 'Failed to update image association.',
-                                              variant: 'destructive',
-                                            });
-                                          }
-                                        }
-                                      }}
-                                      placeholder="Search for activities..."
-                                      showCategories={true}
-                                    />
-                                    
-                                    <div className="flex flex-col space-y-2">
-                                      <div className="flex items-center space-x-2">
-                                        <div className="text-sm font-medium">Or create a new activity:</div>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <Input 
-                                          type="text" 
-                                          placeholder="Enter new activity name" 
-                                          className="flex-1"
-                                          id={`new-activity-${image.id}`}
-                                        />
-                                        <Button
-                                          size="sm"
-                                          onClick={async () => {
-                                            const input = document.getElementById(`new-activity-${image.id}`) as HTMLInputElement;
-                                            const activityName = input?.value?.trim();
-                                            
-                                            if (!activityName) {
-                                              toast({
-                                                title: 'Name Required',
-                                                description: 'Please enter a name for the new activity.',
-                                                variant: 'destructive',
-                                              });
-                                              return;
-                                            }
-                                            
-                                            try {
-                                              // First create the new activity
-                                              const newActivity = await createActivityMutation.mutateAsync(activityName);
-                                              
-                                              // Then associate the image with it
-                                              if (newActivity?.id) {
-                                                await associateImageMutation.mutateAsync({
-                                                  activityId: newActivity.id,
-                                                  filename: image.filename,
-                                                  originalFilename: image.originalFilename,
-                                                  path: image.path,
-                                                  mimeType: image.mimeType
-                                                });
-                                                setEditingImageId(null);
-                                              }
-                                            } catch (error) {
-                                              console.error('Error creating activity:', error);
-                                              toast({
-                                                title: 'Creation Error',
-                                                description: 'Failed to create new activity.',
-                                                variant: 'destructive',
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          Create & Map
-                                        </Button>
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="flex justify-between mt-4">
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => {
-                                          setEditingImageId(null);
-                                        }}
-                                      >
-                                        Cancel
-                                      </Button>
-                                      
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="text-gray-500"
-                                        onClick={async () => {
-                                          // Just mark as not associated
-                                          try {
-                                            await associateImageMutation.mutateAsync({
-                                              activityId: 0, // Use 0 to indicate "no association"
-                                              filename: image.filename,
-                                              originalFilename: image.originalFilename,
-                                              path: image.path,
-                                              mimeType: image.mimeType
-                                            });
-                                            setEditingImageId(null);
-                                          } catch (error) {
-                                            console.error('Error removing association:', error);
-                                            toast({
-                                              title: 'Update Error',
-                                              description: 'Failed to remove image association.',
-                                              variant: 'destructive',
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        Ignore/Skip
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center justify-between">
-                                    <span>{activity ? activity.name : 'Unknown activity'}</span>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => setEditingImageId(image.id)}
-                                      className="ml-2"
-                                    >
-                                      <Edit className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Button 
-                                  variant="destructive" 
-                                  size="sm"
-                                  onClick={() => handleDeleteImage(image.id)}
+                              </div>
+                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  size="icon"
+                                  variant="secondary"
+                                  className="h-7 w-7 rounded-full"
+                                  onClick={() => handleImageEdit(image)}
                                 >
-                                  <Unlink className="h-4 w-4 mr-1" />
-                                  Delete
+                                  <Edit className="h-3 w-3" />
                                 </Button>
-                              </TableCell>
-                            </TableRow>
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex justify-between items-center">
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-7 px-2 text-white hover:text-white hover:bg-red-600"
+                                    onClick={() => handleDeleteImage(image.id)}
+                                  >
+                                    Delete
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-7 px-2 text-white hover:text-white hover:bg-blue-600"
+                                    onClick={() => handleImageEdit(image)}
+                                  >
+                                    Edit
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
                           );
                         })}
-                        
-                      {activityImages.filter(image => {
-                        if (!searchQuery) return true;
-                        
-                        const activity = activities.find(a => a.id === image.activityId);
-                        const lowerQuery = searchQuery.toLowerCase();
-                        
-                        return (
-                          image.originalFilename.toLowerCase().includes(lowerQuery) ||
-                          (activity && activity.name.toLowerCase().includes(lowerQuery))
-                        );
-                      }).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-4">
-                            No matching images found.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
-          
-          {/* Bulk Edit Dialog */}
-          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Bulk Edit Image Associations</DialogTitle>
-                <DialogDescription>
-                  Search for activities and update multiple image associations at once.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4 pt-4">
-                <div className="flex flex-col space-y-2">
-                  <label>Select an activity for bulk assignment</label>
-                  <ActivitySearch
-                    activities={activities}
-                    selectedActivity={selectedActivity}
-                    onSelect={setSelectedActivity}
-                    placeholder="Select an activity..."
-                    showCategories={true}
-                  />
-                </div>
-                
-                {selectedActivity && (
-                  <div className="flex items-center p-2 border rounded-md">
-                    <div className="flex items-center flex-1">
-                      <span className="font-semibold">Selected:</span>
-                      <span className="ml-2 flex items-center">
-                        {selectedActivity.emoji && <span className="mr-1">{selectedActivity.emoji}</span>}
-                        {selectedActivity.name}
-                      </span>
-                    </div>
-                    <Badge variant="outline" className="ml-2 text-xs">
-                      {selectedActivity.id >= 1000 ? 'Shop Item' : 'Database'}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-              
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    if (!selectedActivity) {
-                      toast({
-                        title: 'No Activity Selected',
-                        description: 'Please select an activity first.',
-                        variant: 'destructive',
-                      });
-                      return;
-                    }
-                    
-                    // Apply the selected activity to all visible/filtered images
-                    const imagesToUpdate = activityImages.filter(image => {
-                      if (!searchQuery) return true;
-                      
-                      const activity = activities.find(a => a.id === image.activityId);
-                      const lowerQuery = searchQuery.toLowerCase();
-                      
-                      return (
-                        image.originalFilename.toLowerCase().includes(lowerQuery) ||
-                        (activity && activity.name.toLowerCase().includes(lowerQuery))
-                      );
-                    });
-                    
-                    if (imagesToUpdate.length === 0) {
-                      toast({
-                        title: 'No Images to Update',
-                        description: 'No images match your current filter.',
-                        variant: 'destructive',
-                      });
-                      return;
-                    }
-                    
-                    setIsSaving(true);
-                    let successCount = 0;
-                    
-                    // Update each image one by one
-                    for (const image of imagesToUpdate) {
-                      try {
-                        await associateImageMutation.mutateAsync({
-                          activityId: selectedActivity.id,
-                          filename: image.filename,
-                          originalFilename: image.originalFilename,
-                          path: image.path,
-                          mimeType: image.mimeType
-                        });
-                        successCount++;
-                      } catch (error) {
-                        console.error('Error updating image:', error);
-                      }
-                    }
-                    
-                    // Refresh data
-                    await refetchImages();
-                    
-                    setIsSaving(false);
-                    setIsEditDialogOpen(false);
-                    setSelectedActivity(null);
-                    
-                    toast({
-                      title: 'Bulk Update Complete',
-                      description: `Successfully updated ${successCount} of ${imagesToUpdate.length} images.`,
-                    });
-                  }}
-                  disabled={!selectedActivity || isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    'Update All'
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </TabsContent>
         
-        <TabsContent value="import">
+        <TabsContent value="actions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Import Activities from CSV</CardTitle>
-              <CardDescription>
-                Import activities from the data.csv file in the shared directory.
-              </CardDescription>
+              <CardTitle>Admin Actions</CardTitle>
+              <CardDescription>Special administrative actions for managing activities</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-amber-50 border border-amber-200 p-4 rounded-md">
-                <h3 className="text-amber-800 font-medium flex items-center mb-2">
-                  <AlertCircle className="h-5 w-5 mr-2" />
-                  Important Information
-                </h3>
-                <p className="text-amber-700 text-sm">
-                  This will import activities from the <code>shared/data.csv</code> file into the database for your user.
-                  The process will map CSV fields to our activity schema and create new activities. This cannot be undone.
+              <div className="space-y-2">
+                <h3 className="font-medium">Import Default Activities</h3>
+                <p className="text-sm text-gray-500">
+                  Import the default set of activities from the CSV file. This will add all standard activities to the database.
                 </p>
-              </div>
-              
-              <div className="flex items-center justify-center p-6">
                 <Button 
-                  size="lg"
-                  onClick={() => importActivitiesMutation.mutate()}
+                  onClick={handleImportActivities}
                   disabled={importActivitiesMutation.isPending}
+                  className="flex gap-2"
                 >
-                  {importActivitiesMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Importing Activities...
-                    </>
-                  ) : (
-                    'Import Activities from CSV'
-                  )}
+                  {importActivitiesMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Import Activities from CSV
                 </Button>
               </div>
-              
-              {importActivitiesMutation.isSuccess && (
-                <div className="bg-green-50 border border-green-200 p-4 rounded-md">
-                  <h3 className="text-green-800 font-medium flex items-center mb-2">
-                    <CheckCircle2 className="h-5 w-5 mr-2" />
-                    Import Successful
-                  </h3>
-                  <p className="text-green-700">
-                    Successfully imported {importActivitiesMutation.data?.count} activities from CSV.
-                  </p>
-                </div>
-              )}
-              
-              {importActivitiesMutation.isError && (
-                <div className="bg-red-50 border border-red-200 p-4 rounded-md">
-                  <h3 className="text-red-800 font-medium flex items-center mb-2">
-                    <AlertCircle className="h-5 w-5 mr-2" />
-                    Import Failed
-                  </h3>
-                  <p className="text-red-700">
-                    An error occurred while importing activities. Please try again or check the server logs for more details.
-                  </p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Image Association</DialogTitle>
+            <DialogDescription>
+              Change which activity this image is associated with.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingImageId && (
+            <div className="space-y-4">
+              <div className="aspect-video overflow-hidden bg-gray-100 rounded-md">
+                <img 
+                  src={activityImages.find(img => img.id === editingImageId)?.path} 
+                  alt="Activity image" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Select Activity</Label>
+                <ActivitySearch
+                  activities={activities}
+                  selectedActivity={selectedActivity}
+                  onSelect={setSelectedActivity}
+                  placeholder="Choose an activity for this image..."
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button onClick={handleSaveImageEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
