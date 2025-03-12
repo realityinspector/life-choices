@@ -62,6 +62,14 @@ export default function AdminLLMPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState<{ [key: string]: boolean }>({});
+  const [showDuplicatesDialog, setShowDuplicatesDialog] = useState(false);
+  const [duplicatesInfo, setDuplicatesInfo] = useState<{
+    newActivity: string;
+    duplicates: Activity[];
+    index?: number;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch existing activities to verify we don't create duplicates
@@ -334,6 +342,29 @@ export default function AdminLLMPage() {
     }
     
     try {
+      // Check for potential duplicates before saving
+      const potentialDuplicates = checkForDuplicates(file.activity.name);
+      
+      if (potentialDuplicates.length > 0) {
+        // Show duplicate warning dialog with options to continue or cancel
+        const duplicateNames = potentialDuplicates.map(a => a.name).join(', ');
+        
+        const confirmSave = window.confirm(
+          `Potential duplicate activity found!\n\n` +
+          `Your new activity: "${file.activity.name}"\n` +
+          `Similar existing activities: ${duplicateNames}\n\n` +
+          `Do you still want to save this activity?`
+        );
+        
+        if (!confirmSave) {
+          toast({
+            title: 'Save Cancelled',
+            description: 'Activity was not saved to avoid creating a duplicate.',
+          });
+          return;
+        }
+      }
+      
       const imageData = {
         filename: file.filename,
         originalFilename: file.originalFilename,
@@ -395,13 +426,23 @@ export default function AdminLLMPage() {
     
     try {
       // 1. First save all successful files
-      const savedSuccessfully = [];
-      const savedErrors = [];
+      const savedSuccessfully: string[] = [];
+      const savedErrors: string[] = [];
+      const duplicatesSkipped: string[] = [];
       
       for (let i = 0; i < successfulFiles.length; i++) {
         const file = successfulFiles[i];
         try {
           if (file.activity) {
+            // Check for potential duplicates before saving
+            const potentialDuplicates = checkForDuplicates(file.activity.name);
+            
+            if (potentialDuplicates.length > 0) {
+              console.log(`Potential duplicate found for "${file.activity.name}":`, potentialDuplicates);
+              duplicatesSkipped.push(file.originalFilename);
+              continue;
+            }
+            
             const imageData = {
               filename: file.filename,
               originalFilename: file.originalFilename,
@@ -460,12 +501,27 @@ export default function AdminLLMPage() {
       
       // Show toast with summary
       if (savedSuccessfully.length > 0 || filesToProcess.length > 0) {
+        let description = '';
+        
+        if (savedSuccessfully.length > 0) {
+          description += `${savedSuccessfully.length} activities saved successfully. `;
+        }
+        
+        if (filesToProcess.length > 0) {
+          description += `${filesToProcess.length} files were processed. `;
+        }
+        
+        if (duplicatesSkipped.length > 0) {
+          description += `${duplicatesSkipped.length} potential duplicates skipped. `;
+        }
+        
+        if (savedErrors.length > 0) {
+          description += `${savedErrors.length} failed to save.`;
+        }
+        
         toast({
           title: 'Save All Complete',
-          description: 
-            `${savedSuccessfully.length} activities saved successfully. ` +
-            `${filesToProcess.length} files were processed. ` +
-            (savedErrors.length > 0 ? `${savedErrors.length} failed to save.` : ''),
+          description
         });
       }
     } catch (error) {
@@ -625,6 +681,36 @@ export default function AdminLLMPage() {
       return `1 ${unit}`;
     }
     return `${duration} ${unit}s`;
+  };
+  
+  // Check if an activity might be a duplicate based on name similarity
+  const checkForDuplicates = (name: string): Activity[] => {
+    // Filter existing activities to find potential duplicates
+    // We use lowercase comparison for more accurate matching
+    const nameLower = name.toLowerCase().trim();
+    return activities.filter(activity => {
+      const activityNameLower = activity.name.toLowerCase().trim();
+      
+      // Exact match
+      if (activityNameLower === nameLower) return true;
+      
+      // Check for high similarity (e.g., one is contained in the other)
+      if (activityNameLower.includes(nameLower) || nameLower.includes(activityNameLower)) return true;
+      
+      // Check for high similarity using Levenshtein distance (only for short names)
+      // This helps catch typos and minor variations
+      if (nameLower.length < 20 && activityNameLower.length < 20) {
+        // Simple similarity check - if names are very close
+        const nameWords = nameLower.split(' ');
+        const activityNameWords = activityNameLower.split(' ');
+        const commonWords = nameWords.filter(word => activityNameWords.includes(word));
+        if (commonWords.length > 0 && commonWords.length >= Math.min(nameWords.length, activityNameWords.length) * 0.7) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
   };
 
   return (
