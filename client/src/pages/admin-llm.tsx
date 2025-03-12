@@ -109,20 +109,43 @@ export default function AdminLLMPage() {
         formData.append('images', file);
       });
       
-      const res = await apiRequest('/api/admin-llm/upload', {
-        method: 'POST',
-        body: formData,
+      // Using XMLHttpRequest instead of fetch to avoid abort signal issues
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.open('POST', '/api/admin-llm/upload', true);
+        
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100);
+            setUploadProgress(percentComplete);
+          }
+        };
+        
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } else {
+            reject(new Error(`HTTP error: ${xhr.status}`));
+          }
+        };
+        
+        xhr.onerror = function() {
+          reject(new Error('Network error during upload'));
+        };
+        
+        xhr.send(formData);
       });
-      
-      return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       // Update files with upload info
       setFiles(prev => 
         prev.map(fileState => {
-          const uploadedFile = data.files.find(
-            (f: any) => f.originalFilename === fileState.file.name
-          );
+          const uploadedFile = data.files && Array.isArray(data.files) ? 
+            data.files.find(
+              (f: any) => f.originalFilename === fileState.file.name
+            ) : null;
           
           if (uploadedFile) {
             return {
@@ -137,9 +160,11 @@ export default function AdminLLMPage() {
         })
       );
       
+      const filesCount = data.files && Array.isArray(data.files) ? data.files.length : 0;
+      
       toast({
         title: 'Upload Complete',
-        description: `Successfully uploaded ${data.files.length} files.`,
+        description: `Successfully uploaded ${filesCount} files.`,
       });
       
       setIsUploading(false);
@@ -230,23 +255,38 @@ export default function AdminLLMPage() {
       .filter(f => f.status === 'idle')
       .map(f => f.file);
     
+    // Set uploading status for all files being uploaded
+    setFiles(prev => 
+      prev.map(f => 
+        f.status === 'idle' ? { ...f, status: 'uploading' } : f
+      )
+    );
+    
     setIsUploading(true);
     setUploadProgress(0);
     
-    const uploadProgressInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        const newProgress = prev + Math.random() * 10;
-        return newProgress > 90 ? 90 : newProgress;
-      });
-    }, 300);
-    
     try {
+      // The progress tracking is now handled in the XMLHttpRequest
       await uploadMutation.mutateAsync(filesToUpload);
-      clearInterval(uploadProgressInterval);
-      setUploadProgress(100);
+      // Progress 100% will be set in the mutation's onSuccess handler
     } catch (error) {
-      clearInterval(uploadProgressInterval);
+      console.error("Upload error:", error);
+      
+      // Reset all uploading files back to idle state
+      setFiles(prev => 
+        prev.map(f => 
+          f.status === 'uploading' ? { ...f, status: 'idle', errorMessage: 'Upload failed' } : f
+        )
+      );
+      
       setUploadProgress(0);
+      setIsUploading(false);
+      
+      toast({
+        title: 'Upload Failed',
+        description: error instanceof Error ? error.message : 'Unknown upload error',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -1150,9 +1190,9 @@ export default function AdminLLMPage() {
                         <div 
                           className="aspect-video bg-cover bg-center cursor-pointer"
                           style={{ 
-                            backgroundImage: `url(${image.path.replace('/home/runner/workspace', '')})` 
+                            backgroundImage: `url(${image.path})` 
                           }}
-                          onClick={() => setSelectedImage(image.path.replace('/home/runner/workspace', ''))}
+                          onClick={() => setSelectedImage(image.path)}
                         />
                       </CardContent>
                       <CardFooter className="p-2 flex flex-col items-start">
