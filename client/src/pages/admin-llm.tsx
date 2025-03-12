@@ -8,6 +8,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { 
   Table, 
   TableBody, 
@@ -22,14 +31,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { Info, CheckCircle, XCircle, Loader2, UploadCloud, Trash, Database, RefreshCw, Save } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 interface FileUploadState {
   file: File;
@@ -346,25 +347,66 @@ export default function AdminLLMPage() {
       const potentialDuplicates = checkForDuplicates(file.activity.name);
       
       if (potentialDuplicates.length > 0) {
-        // Show duplicate warning dialog with options to continue or cancel
-        const duplicateNames = potentialDuplicates.map(a => a.name).join(', ');
+        // Show the duplicate dialog with the potential duplicates
+        setDuplicatesInfo({
+          newActivity: file.activity.name,
+          duplicates: potentialDuplicates,
+          index: index,
+          onConfirm: async () => {
+            // User confirmed to save despite duplicates
+            setShowDuplicatesDialog(false);
+            
+            try {
+              // At this point we've already validated that file.activity exists
+              if (!file.activity) {
+                throw new Error("Activity data is missing");
+              }
+              
+              const imageData = {
+                filename: file.filename,
+                originalFilename: file.originalFilename,
+                path: file.path,
+                mimeType: file.mimeType
+              };
+              
+              await createActivityMutation.mutateAsync({
+                activity: file.activity,
+                imageData
+              });
+              
+              // Remove the file from the list
+              setFiles(prev => prev.filter((_, i) => i !== index));
+              
+              toast({
+                title: 'Activity Saved',
+                description: `Successfully saved activity "${file.activity.name}" with image.`,
+              });
+            } catch (error) {
+              console.error(`Error saving activity at index ${index}:`, error);
+              
+              toast({
+                title: 'Save Error',
+                description: 'Failed to save activity with image.',
+                variant: 'destructive',
+              });
+            }
+          },
+          onCancel: () => {
+            // User cancelled the save operation
+            setShowDuplicatesDialog(false);
+            
+            toast({
+              title: 'Save Cancelled',
+              description: 'Activity was not saved to avoid creating a duplicate.',
+            });
+          }
+        });
         
-        const confirmSave = window.confirm(
-          `Potential duplicate activity found!\n\n` +
-          `Your new activity: "${file.activity.name}"\n` +
-          `Similar existing activities: ${duplicateNames}\n\n` +
-          `Do you still want to save this activity?`
-        );
-        
-        if (!confirmSave) {
-          toast({
-            title: 'Save Cancelled',
-            description: 'Activity was not saved to avoid creating a duplicate.',
-          });
-          return;
-        }
+        setShowDuplicatesDialog(true);
+        return;
       }
       
+      // No duplicates, proceed with save
       const imageData = {
         filename: file.filename,
         originalFilename: file.originalFilename,
@@ -716,6 +758,60 @@ export default function AdminLLMPage() {
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-3xl font-bold mb-6">Activity Generation with AI</h1>
+      
+      {/* Duplicate detection dialog */}
+      <Dialog open={showDuplicatesDialog} onOpenChange={setShowDuplicatesDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Potential Duplicate Activity</DialogTitle>
+            <DialogDescription>
+              We found existing activities that are similar to the one you're trying to save.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {duplicatesInfo && (
+            <div className="py-4 space-y-4">
+              <div>
+                <h3 className="font-medium">New Activity:</h3>
+                <p className="text-sm p-2 bg-gray-100 rounded">{duplicatesInfo.newActivity}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-medium">Similar Existing Activities:</h3>
+                <ul className="mt-2 space-y-2">
+                  {duplicatesInfo.duplicates.map((activity, idx) => (
+                    <li key={idx} className="text-sm p-2 bg-gray-100 rounded">
+                      {activity.name} <span className="text-xs text-gray-500">({activity.category})</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <Alert className="bg-yellow-50">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Warning</AlertTitle>
+                <AlertDescription>
+                  Creating duplicate activities may lead to redundant entries in your activity list.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+          
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => duplicatesInfo?.onCancel()}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => duplicatesInfo?.onConfirm()}
+            >
+              Save Anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
