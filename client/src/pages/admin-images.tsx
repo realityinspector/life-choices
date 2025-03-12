@@ -1192,7 +1192,7 @@ export default function AdminImagesPage() {
                                     onSelect={(activity) => handleActivityChange(index, activity)}
                                   />
                                   
-                                  {/* Re-map and Skip buttons for files that are already matched or uploaded */}
+                                  {/* Re-map, Create New Activity, and Skip buttons for files that are already matched or uploaded */}
                                   {(file.status === 'matched' || file.status === 'uploaded') && file.filename && (
                                     <div className="flex gap-1">
                                       <Button
@@ -1205,6 +1205,29 @@ export default function AdminImagesPage() {
                                         <span className="flex items-center gap-1">
                                           <Search className="h-3 w-3" />
                                           Re-map
+                                        </span>
+                                      </Button>
+                                      
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => {
+                                          // Open a dialog to create a new activity
+                                          const activityName = prompt("Enter name for the new activity:");
+                                          if (activityName) {
+                                            // Dispatch event to create new activity
+                                            const event = new CustomEvent('createNewActivity', { 
+                                              detail: { activityName: activityName.trim(), fileIndex: index } 
+                                            });
+                                            document.dispatchEvent(event);
+                                          }
+                                        }}
+                                        className="whitespace-nowrap"
+                                        title="Create a new activity for this image"
+                                      >
+                                        <span className="flex items-center gap-1">
+                                          <FileImage className="h-3 w-3" />
+                                          Create New
                                         </span>
                                       </Button>
                                       
