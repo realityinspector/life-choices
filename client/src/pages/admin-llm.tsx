@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, ActivityImage, ActivityInsert } from "../../shared/schema";
+import { Activity, ActivityImage, ActivityInsert } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ interface FileUploadState {
 interface ActivityResponse {
   originalFilename: string;
   status: 'success' | 'failed';
-  activity?: Activity;
+  activity?: ActivityInsert;
   error?: string;
 }
 

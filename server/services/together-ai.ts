@@ -183,10 +183,19 @@ Respond with a valid JSON object containing all the required properties.`;
         const result = await this.generateActivityFromFilename(batch[0]);
         results.push(result);
       } else {
-        // Batch mode processing (future implementation)
-        // Here we would create a single prompt with multiple filenames
-        // and parse multiple JSON objects from the response
-        throw new Error("Batch processing not yet implemented");
+        // Batch mode processing
+        // Process each filename individually but in parallel for now
+        // This could be optimized further in the future to create a single prompt with multiple filenames
+        try {
+          console.log(`Processing ${batch.length} files in parallel batch`);
+          const batchPromises = batch.map(filename => this.generateActivityFromFilename(filename));
+          const batchResults = await Promise.all(batchPromises);
+          results.push(...batchResults);
+        } catch (error) {
+          console.error("Error in batch processing:", error);
+          // If the batch fails, add null results for each item in this batch
+          batch.forEach(() => results.push(null));
+        }
       }
     }
     

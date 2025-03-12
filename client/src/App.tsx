@@ -29,7 +29,7 @@ function Router() {
   const freeRoutes = ["/", "/login", "/shared-activity"];
   
   // Admin routes - these bypass normal user authentication
-  const adminRoutes = ["/admin/images"];
+  const adminRoutes = ["/admin/images", "/admin/llm"];
   const isAdminRoute = adminRoutes.some(route => location.startsWith(route));
 
   // Check if we're on a free route
@@ -103,6 +103,7 @@ function Router() {
       
       {/* Admin routes - accessible with or without normal user setup */}
       <Route path="/admin/images" component={AdminImagesPage} />
+      <Route path="/admin/llm" component={AdminLLMPage} />
       
       <Route component={NotFound} />
     </Switch>
