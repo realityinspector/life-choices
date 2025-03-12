@@ -9,6 +9,8 @@ import { activityRouter } from "./routes/activity";
 import { clusterRouter } from "./routes/cluster";
 import { adminRouter } from "./routes/admin";
 import { adminLLMRouter } from "./routes/admin-llm";
+import path from "path";
+import express from "express";
 
 // Type guard to check if user is authenticated
 function isAuthenticated(req: Request): boolean {
@@ -18,6 +20,10 @@ function isAuthenticated(req: Request): boolean {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
+
+  // Serve uploaded images from the uploads directory
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  app.use('/uploads', express.static(uploadsDir));
 
   // Protected route middleware
   const requireAuth = (req: Request, res: any, next: any) => {
