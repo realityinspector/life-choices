@@ -95,34 +95,40 @@ const ActivityCard = ({
   // Important: In the shop interface, we want to identify which activities the user has personally
   // added to their tasks vs. which activities are system-provided and available for selection.
   
-  // Get the current user data from the context
-  const { userData: currentUser } = useUser();
+  // Get the current user data from the context 
+  const { userData: currentUser, activities: userSelectedActivities = [] } = useUser();
   
-  // CRITICAL FIX: The way to tell if an activity is user-selected is to check if:
-  // 1. It appears in the "Already in your activities" text at the top of the card
-  // 2. The text indicates the user has already selected this activity
+  // CRITICAL FIX: We need to fix the root cause of the issue.
+  // The problem is with how we're determining which activities are already added by the user.
   
-  // Skip DOM query approach as it's not reliable - we'll use a more direct approach
-  // Just a placeholder for now
-  const isAlreadyInUserActivities = false;
+  // In the shop interface, we should only show "Already in Tasks" for activities
+  // that were specifically added by the current user, not all system activities.
   
-  // For debugging only
+  // First, let's create a proper debug log to understand what we're working with
   useEffect(() => {
     if (window.location.pathname === '/shop-activities' && DEBUG_MODE) {
-      console.debug('Activity detection fix:', { 
+      console.debug('Shop activity check:', { 
         activityId: 'id' in activity ? activity.id : 'none',
         activityName: activity.name,
-        inActivitiesByText: isAlreadyInUserActivities,
-        totalUserActivities: userActivities.length
+        currentUserId: currentUser?.id,
+        userSelectedActivitiesCount: userSelectedActivities.length
       });
     }
-  }, [activity, userActivities, isAlreadyInUserActivities]);
+  }, [activity, currentUser, userSelectedActivities]);
   
-  // ** TEMPORARY SOLUTION: Force the activityExists flag to false since we see that for some reason
-  // all activities are incorrectly showing as already added **
-  
-  // This is the most direct way to fix the interface instantly
-  const activityExists = false; // Override - in shop view, always enable "Add" buttons
+  // Check if the activity already exists in the user's selected activities
+  // but ONLY if we're in the shop view
+  const activityExists = window.location.pathname === '/shop-activities' 
+    ? userSelectedActivities.some(a => {
+        // First try ID comparison for database activities
+        if ('id' in activity && 'id' in a && activity.id !== undefined && a.id !== undefined) {
+          return activity.id === a.id;
+        }
+        
+        // Otherwise fall back to name comparison for sample activities
+        return activity.name.toLowerCase() === a.name.toLowerCase();
+      })
+    : true; // Default to true for other views to maintain existing behavior
   
   // Keep a placeholder for the existing activity lookup in case we need it in other parts of the code
   const existingActivity = userActivities.find(a => {
