@@ -379,11 +379,11 @@ export default function AdminLLMPage() {
       
       // Refetch manually to ensure we have the latest data
       try {
-        refetchImages().catch(err => {
-          console.log("Refetch silently failed, likely due to component unmounting");
+        refetchImages().catch(() => {
+          // Silently handle any error while refetching
         });
       } catch (e) {
-        console.log("Refetch error handling:", e);
+        console.log("Error during refetch:", e);
       }
     },
     onError: (error) => {
