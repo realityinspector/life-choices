@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '@/context/user-context';
 import { SwipeCard } from '@/components/ui/swipe-card';
 import { Activity, ActivityInsert } from '@shared/schema';
-import { ShoppingBag, CheckCircle, Calendar, Plus, List, ListChecks, User, Search } from 'lucide-react';
+import { ShoppingBag, CheckCircle, Calendar, Plus, List, ListChecks, User, Search, Clock, Zap } from 'lucide-react';
 import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -192,7 +192,7 @@ export default function WhatsNextPage() {
                         </div>
                         <div className="flex items-center">
                           <Zap className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                          <span>Impact: {activity.lifeImpact > 0 ? '+' : ''}{activity.lifeImpact}</span>
+                          <span>Impact: {(activity.lifeImpact ?? 0) > 0 ? '+' : ''}{activity.lifeImpact ?? 0}</span>
                         </div>
                       </div>
                     </CardContent>
