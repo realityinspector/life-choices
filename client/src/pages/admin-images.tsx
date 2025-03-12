@@ -339,7 +339,63 @@ export default function AdminImagesPage() {
       return res.json();
     },
     onSuccess: () => {
+      toast({
+        title: 'Image Updated',
+        description: 'Successfully updated image association.',
+      });
       refetchImages();
+    },
+    onError: (error) => {
+      console.error('Error associating image:', error);
+      toast({
+        title: 'Association Error',
+        description: 'Failed to update image association.',
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Create a new activity mutation
+  const createActivityMutation = useMutation({
+    mutationFn: async (activityName: string) => {
+      // Create a basic activity with just a name
+      const res = await apiRequest('/api/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: activityName,
+          category: 'Other',
+          frequency: 1,
+          frequencyUnit: 'week',
+          duration: 30,
+          durationUnit: 'minute',
+          lifeImpact: 0,
+          color: '#' + Math.floor(Math.random()*16777215).toString(16),
+          priority: 0,
+          emoji: null,
+          exportToCalendar: false,
+          nextDue: new Date().toISOString(),
+        }),
+      });
+      
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Activity Created',
+        description: 'Successfully created a new activity.',
+      });
+      // Refresh the activities list
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/activities'] });
+      return data;
+    },
+    onError: (error) => {
+      console.error('Error creating activity:', error);
+      toast({
+        title: 'Creation Error',
+        description: 'Failed to create a new activity.',
+        variant: 'destructive',
+      });
     }
   });
   
@@ -1120,7 +1176,63 @@ export default function AdminImagesPage() {
                                       showCategories={true}
                                     />
                                     
-                                    <div className="flex justify-end">
+                                    <div className="flex flex-col space-y-2">
+                                      <div className="flex items-center space-x-2">
+                                        <div className="text-sm font-medium">Or create a new activity:</div>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Input 
+                                          type="text" 
+                                          placeholder="Enter new activity name" 
+                                          className="flex-1"
+                                          id={`new-activity-${image.id}`}
+                                        />
+                                        <Button
+                                          size="sm"
+                                          onClick={async () => {
+                                            const input = document.getElementById(`new-activity-${image.id}`) as HTMLInputElement;
+                                            const activityName = input?.value?.trim();
+                                            
+                                            if (!activityName) {
+                                              toast({
+                                                title: 'Name Required',
+                                                description: 'Please enter a name for the new activity.',
+                                                variant: 'destructive',
+                                              });
+                                              return;
+                                            }
+                                            
+                                            try {
+                                              // First create the new activity
+                                              const newActivity = await createActivityMutation.mutateAsync(activityName);
+                                              
+                                              // Then associate the image with it
+                                              if (newActivity?.id) {
+                                                await associateImageMutation.mutateAsync({
+                                                  activityId: newActivity.id,
+                                                  filename: image.filename,
+                                                  originalFilename: image.originalFilename,
+                                                  path: image.path,
+                                                  mimeType: image.mimeType
+                                                });
+                                                setEditingImageId(null);
+                                              }
+                                            } catch (error) {
+                                              console.error('Error creating activity:', error);
+                                              toast({
+                                                title: 'Creation Error',
+                                                description: 'Failed to create new activity.',
+                                                variant: 'destructive',
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          Create & Map
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex justify-between mt-4">
                                       <Button 
                                         size="sm" 
                                         variant="outline"
@@ -1129,6 +1241,34 @@ export default function AdminImagesPage() {
                                         }}
                                       >
                                         Cancel
+                                      </Button>
+                                      
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-gray-500"
+                                        onClick={async () => {
+                                          // Just mark as not associated
+                                          try {
+                                            await associateImageMutation.mutateAsync({
+                                              activityId: 0, // Use 0 to indicate "no association"
+                                              filename: image.filename,
+                                              originalFilename: image.originalFilename,
+                                              path: image.path,
+                                              mimeType: image.mimeType
+                                            });
+                                            setEditingImageId(null);
+                                          } catch (error) {
+                                            console.error('Error removing association:', error);
+                                            toast({
+                                              title: 'Update Error',
+                                              description: 'Failed to remove image association.',
+                                              variant: 'destructive',
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        Ignore/Skip
                                       </Button>
                                     </div>
                                   </div>
