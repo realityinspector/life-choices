@@ -13,7 +13,9 @@ interface UserContextType {
   addActivity: (activity: ActivityInsert) => void;
   updateActivity: (index: number, activity: ActivityInsert) => void;
   removeActivity: (index: number) => void;
+  removeMultipleActivities: (activityIds: number[]) => Promise<boolean>;
   completeActivity: (id: number) => void;
+  skipActivity: (id: number) => Promise<Activity | undefined>;
   getNextActivity: () => Promise<Activity | undefined>;
   createSharedActivity: (activity: ActivityInsert, recipientEmail: string) => Promise<string>;
   addActivitiesToCart: (activities: ActivityInsert[]) => void;
@@ -223,6 +225,28 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
     }
   };
+  
+  const removeMultipleActivities = async (activityIds: number[]) => {
+    try {
+      // Delete each activity one by one
+      for (const id of activityIds) {
+        await apiRequest(`/api/activities/${id}`, {
+          method: 'DELETE'
+        });
+      }
+      // Update the local state - only remove user's activities
+      const updatedActivities = activities.filter(activity => !activityIds.includes(activity.id));
+      setActivities(updatedActivities);
+      return true;
+    } catch (error) {
+      console.error('Error removing multiple activities:', error);
+      // Fallback to localStorage if API fails
+      const updatedActivities = activities.filter(activity => !activityIds.includes(activity.id));
+      setActivities(updatedActivities);
+      localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
+      return false;
+    }
+  };
 
   const completeActivity = async (id: number) => {
     try {
@@ -265,6 +289,57 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         lastCompleted: now,
         nextDue,
         completionCount: (activity.completionCount || 0) + 1
+      };
+      
+      const updatedActivities = [...activities];
+      updatedActivities[activityIndex] = updatedActivity;
+      setActivities(updatedActivities);
+      localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
+      
+      return updatedActivity;
+    }
+  };
+  
+  const skipActivity = async (id: number) => {
+    try {
+      const response = await apiRequest(`/api/activities/${id}/skip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const updatedActivity = await response.json();
+      
+      // Update the activity in the local state
+      const updatedActivities = activities.map(activity => 
+        activity.id === id ? updatedActivity : activity
+      );
+      
+      setActivities(updatedActivities);
+      return updatedActivity;
+    } catch (error) {
+      // Fallback to local update
+      const activityIndex = activities.findIndex(a => a.id === id);
+      if (activityIndex === -1) return;
+      
+      const activity = activities[activityIndex];
+      const now = new Date();
+      
+      // Calculate when the activity will be due next based on frequency (same as complete, but no lastCompleted update)
+      let nextDue = new Date(now);
+      
+      if (activity.frequencyUnit === 'day') {
+        nextDue.setDate(nextDue.getDate() + activity.frequency);
+      } else if (activity.frequencyUnit === 'week') {
+        nextDue.setDate(nextDue.getDate() + (activity.frequency * 7));
+      } else if (activity.frequencyUnit === 'month') {
+        nextDue.setMonth(nextDue.getMonth() + activity.frequency);
+      } else if (activity.frequencyUnit === 'year') {
+        nextDue.setFullYear(nextDue.getFullYear() + activity.frequency);
+      }
+      
+      const updatedActivity = {
+        ...activity,
+        nextDue,
+        // Don't update lastCompleted or completionCount since we're just skipping
       };
       
       const updatedActivities = [...activities];
@@ -442,7 +517,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       addActivity,
       updateActivity,
       removeActivity,
+      removeMultipleActivities,
       completeActivity,
+      skipActivity,
       getNextActivity,
       createSharedActivity,
       addActivitiesToCart,

@@ -7,7 +7,7 @@ import {
   calculateAllocatedPercentage,
   calculateNetLifeImpact
 } from "@/lib/calculations";
-import { Edit, Trash2, Clock, Plus } from "lucide-react";
+import { Edit, Trash2, Clock, Plus, Check, Trash, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ActivitiesProps {
@@ -17,10 +17,12 @@ interface ActivitiesProps {
 const colorOptions = ['red', 'yellow', 'green', 'blue', 'indigo', 'purple', 'pink'];
 
 const Activities = ({ onViewChange }: ActivitiesProps) => {
-  const { userData, activities, addActivity, updateActivity, removeActivity } = useUser();
+  const { userData, activities, addActivity, updateActivity, removeActivity, removeMultipleActivities } = useUser();
   const { toast } = useToast();
   const [showAddActivityForm, setShowAddActivityForm] = useState(false);
   const [editingActivityIndex, setEditingActivityIndex] = useState<number | null>(null);
+  const [isBulkDeleteMode, setIsBulkDeleteMode] = useState(false);
+  const [selectedActivities, setSelectedActivities] = useState<{[id: number]: boolean}>({});
   const [currentActivity, setCurrentActivity] = useState<ActivityInsert>({
     name: '',
     category: 'Personal',
@@ -34,7 +36,12 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
 
   const editActivity = (index: number) => {
     setEditingActivityIndex(index);
-    setCurrentActivity({...activities[index]});
+    // Type cast to handle frequency/duration unit conversion
+    setCurrentActivity({
+      ...activities[index],
+      frequencyUnit: activities[index].frequencyUnit as "day" | "week" | "month" | "year",
+      durationUnit: activities[index].durationUnit as "minute" | "hour"
+    });
     setShowAddActivityForm(true);
   };
 
@@ -77,6 +84,58 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
         title: "Activity deleted",
         description: "The activity has been removed from your list.",
       });
+    }
+  };
+  
+  // Bulk delete helpers
+  const toggleBulkDeleteMode = () => {
+    setIsBulkDeleteMode(!isBulkDeleteMode);
+    setSelectedActivities({});
+  };
+  
+  const toggleActivitySelection = (activity: Activity) => {
+    setSelectedActivities(prev => ({
+      ...prev,
+      [activity.id]: !prev[activity.id]
+    }));
+  };
+  
+  const getSelectedActivityIds = (): number[] => {
+    return Object.entries(selectedActivities)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([id, _]) => parseInt(id));
+  };
+  
+  const handleBulkDelete = async () => {
+    const selectedIds = getSelectedActivityIds();
+    
+    if (selectedIds.length === 0) {
+      toast({
+        title: "No activities selected",
+        description: "Please select at least one activity to delete.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} activities?`)) {
+      const success = await removeMultipleActivities(selectedIds);
+      
+      if (success) {
+        toast({
+          title: "Activities deleted",
+          description: `${selectedIds.length} activities have been removed from your list.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "There was a problem deleting the activities. Please try again.",
+          variant: "destructive"
+        });
+      }
+      
+      // Exit bulk delete mode
+      toggleBulkDeleteMode();
     }
   };
 
@@ -158,19 +217,51 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
           <div className="bg-white shadow rounded-lg p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-medium text-gray-900">Your Activities</h2>
-              <button 
-                onClick={() => setShowAddActivityForm(true)} 
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <Plus className="h-5 w-5 mr-1" />
-                Add Activity
-              </button>
+              <div className="flex space-x-2">
+                {isBulkDeleteMode ? (
+                  <>
+                    <button 
+                      onClick={handleBulkDelete} 
+                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      <Trash className="h-5 w-5 mr-1" />
+                      Delete Selected
+                    </button>
+                    <button 
+                      onClick={toggleBulkDeleteMode} 
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    >
+                      <X className="h-5 w-5 mr-1" />
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={toggleBulkDeleteMode} 
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    >
+                      <Trash className="h-5 w-5 mr-1" />
+                      Bulk Delete
+                    </button>
+                    <button 
+                      onClick={() => setShowAddActivityForm(true)} 
+                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    >
+                      <Plus className="h-5 w-5 mr-1" />
+                      Add Activity
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
             
-            {/* Activity Cards */}
+            {/* Activity Cards - Only showing routine activities */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {activities.length > 0 ? (
-                activities.map((activity, index) => (
+                activities
+                  .filter(activity => activity.frequency > 0) // Only show activities in routine (with frequency)
+                  .map((activity, index) => (
                   <div key={index} className="relative bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200">
                     <div className={`h-2 bg-${activity.color}-500`}></div>
                     <div className="p-4">
@@ -259,24 +350,35 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
             <div className="space-y-4">
               {/* Total Activities */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Total Activities</h3>
-                <p className="mt-1 text-2xl font-semibold text-gray-900">{activities.length}</p>
+                <h3 className="text-sm font-medium text-gray-500">Routine Activities</h3>
+                <p className="mt-1 text-2xl font-semibold text-gray-900">
+                  {activities.filter(activity => activity.frequency > 0).length}
+                </p>
               </div>
               
               {/* Total Time Allocated */}
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Total Lifetime Hours</h3>
                 <p className="mt-1 text-2xl font-semibold text-gray-900">
-                  {calculateTotalLifetimeHours(userData, activities).toLocaleString()}
+                  {calculateTotalLifetimeHours(
+                    userData, 
+                    activities.filter(activity => activity.frequency > 0)
+                  ).toLocaleString()}
                 </p>
                 <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-primary-600 h-2 rounded-full" 
-                    style={{ width: `${calculateAllocatedPercentage(userData, activities)}%` }}
+                    style={{ width: `${calculateAllocatedPercentage(
+                      userData, 
+                      activities.filter(activity => activity.frequency > 0)
+                    )}%` }}
                   ></div>
                 </div>
                 <p className="mt-1 text-sm text-gray-500">
-                  {calculateAllocatedPercentage(userData, activities)}% of your remaining conscious hours
+                  {calculateAllocatedPercentage(
+                    userData, 
+                    activities.filter(activity => activity.frequency > 0)
+                  )}% of your remaining conscious hours
                 </p>
               </div>
               

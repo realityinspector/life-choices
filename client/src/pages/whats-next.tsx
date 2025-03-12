@@ -7,7 +7,7 @@ import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 
 export default function WhatsNextPage() {
-  const { activities, getNextActivity, completeActivity, addActivitiesToCart, getCartActivities } = useUser();
+  const { activities, getNextActivity, completeActivity, skipActivity, addActivitiesToCart, getCartActivities } = useUser();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
@@ -41,8 +41,15 @@ export default function WhatsNextPage() {
   };
 
   const handleSkip = (activity: Activity) => {
-    // Just load the next activity without completing
-    loadNextActivity();
+    // Skip the current activity and update its nextDue date
+    skipActivity(activity.id).then(() => {
+      toast({
+        title: 'Activity Skipped',
+        description: `"${activity.name}" has been rescheduled for later.`,
+        variant: 'default',
+      });
+      loadNextActivity();
+    });
   };
 
   const handleAddToCart = (activity: Activity) => {
