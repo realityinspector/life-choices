@@ -1,88 +1,155 @@
-import { useState } from "react";
-import { useUser } from "@/context/user-context";
-import { Activity, ActivityInsert } from "@shared/schema";
+import React, { useState } from 'react';
 import { 
-  calculateLifetimeHours, 
-  calculateTotalLifetimeHours, 
-  calculateAllocatedPercentage,
-  calculateNetLifeImpact
-} from "@/lib/calculations";
-import { Edit, Trash2, Clock, Plus, Check, Trash, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+  Clock, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Trash, 
+  X, 
+  Check, 
+  Maximize, 
+  Minimize 
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { calculateLifetimeHours } from '@/lib/calculations';
+import { ActivityInsert, Activity, UserData } from 'shared/schema';
+import { useUser } from '@/context/user-context';
 
 interface ActivitiesProps {
   onViewChange: (view: string) => void;
 }
 
-const colorOptions = ['red', 'yellow', 'green', 'blue', 'indigo', 'purple', 'pink'];
-
 const Activities = ({ onViewChange }: ActivitiesProps) => {
-  const { userData, activities, addActivity, updateActivity, removeActivity, removeMultipleActivities } = useUser();
   const { toast } = useToast();
+  const { 
+    userData, 
+    activities, 
+    addActivity, 
+    updateActivity, 
+    removeActivity,
+    removeMultipleActivities
+  } = useUser();
+
   const [showAddActivityForm, setShowAddActivityForm] = useState(false);
   const [editingActivityIndex, setEditingActivityIndex] = useState<number | null>(null);
-  const [isBulkDeleteMode, setIsBulkDeleteMode] = useState(false);
-  const [selectedActivities, setSelectedActivities] = useState<{[id: number]: boolean}>({});
-  const [currentActivity, setCurrentActivity] = useState<ActivityInsert>({
+  const [activityFormData, setActivityFormData] = useState<ActivityInsert>({
     name: '',
-    category: 'Personal',
+    category: '',
     frequency: 1,
     frequencyUnit: 'day',
     duration: 1,
     durationUnit: 'hour',
     lifeImpact: 0,
-    color: 'blue'
+    color: 'blue',
   });
+  const [isBulkDeleteMode, setIsBulkDeleteMode] = useState(false);
+  const [selectedActivities, setSelectedActivities] = useState<{[key: number]: boolean}>({});
 
-  const editActivity = (index: number) => {
-    setEditingActivityIndex(index);
-    // Type cast to handle frequency/duration unit conversion
-    setCurrentActivity({
-      ...activities[index],
-      frequencyUnit: activities[index].frequencyUnit as "day" | "week" | "month" | "year",
-      durationUnit: activities[index].durationUnit as "minute" | "hour"
-    });
-    setShowAddActivityForm(true);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    if (name === 'frequency' || name === 'duration' || name === 'lifeImpact') {
+      setActivityFormData({
+        ...activityFormData,
+        [name]: parseFloat(value),
+      });
+    } else {
+      setActivityFormData({
+        ...activityFormData,
+        [name]: value,
+      });
+    }
   };
 
-  const cancelActivityForm = () => {
-    setShowAddActivityForm(false);
-    setEditingActivityIndex(null);
-    setCurrentActivity({
+  const handleAddActivitySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!activityFormData.name || !activityFormData.category) {
+      toast({
+        title: "Missing information",
+        description: "Please provide a name and category for your activity.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addActivity(activityFormData);
+    setActivityFormData({
       name: '',
-      category: 'Personal',
+      category: '',
       frequency: 1,
       frequencyUnit: 'day',
       duration: 1,
       durationUnit: 'hour',
       lifeImpact: 0,
-      color: 'blue'
+      color: 'blue',
+    });
+    setShowAddActivityForm(false);
+    
+    toast({
+      title: "Activity added",
+      description: `${activityFormData.name} has been added to your activities.`,
     });
   };
 
-  const saveActivity = () => {
-    if (editingActivityIndex !== null) {
-      updateActivity(editingActivityIndex, currentActivity);
+  const editActivity = (index: number) => {
+    const activity = activities[index];
+    setActivityFormData({
+      name: activity.name,
+      category: activity.category,
+      frequency: activity.frequency,
+      frequencyUnit: activity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
+      duration: activity.duration,
+      durationUnit: activity.durationUnit as 'minute' | 'hour',
+      lifeImpact: activity.lifeImpact,
+      color: activity.color,
+    });
+    setEditingActivityIndex(index);
+    setShowAddActivityForm(true);
+  };
+
+  const handleUpdateActivitySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editingActivityIndex === null) return;
+    
+    if (!activityFormData.name || !activityFormData.category) {
       toast({
-        title: "Activity updated",
-        description: `${currentActivity.name} has been updated successfully.`,
+        title: "Missing information",
+        description: "Please provide a name and category for your activity.",
+        variant: "destructive"
       });
-    } else {
-      addActivity(currentActivity);
-      toast({
-        title: "Activity added",
-        description: `${currentActivity.name} has been added to your activities.`,
-      });
+      return;
     }
-    cancelActivityForm();
+    
+    updateActivity(editingActivityIndex, activityFormData);
+    setActivityFormData({
+      name: '',
+      category: '',
+      frequency: 1,
+      frequencyUnit: 'day',
+      duration: 1,
+      durationUnit: 'hour',
+      lifeImpact: 0,
+      color: 'blue',
+    });
+    setShowAddActivityForm(false);
+    setEditingActivityIndex(null);
+    
+    toast({
+      title: "Activity updated",
+      description: `${activityFormData.name} has been updated.`,
+    });
   };
 
   const handleRemoveActivity = (index: number) => {
     if (window.confirm('Are you sure you want to delete this activity?')) {
+      const activityName = activities[index].name;
       removeActivity(index);
+      
       toast({
         title: "Activity deleted",
-        description: "The activity has been removed from your list.",
+        description: `${activityName} has been removed from your activities.`,
       });
     }
   };
@@ -301,7 +368,7 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
             </div>
             
             {/* Activity Cards - Only showing routine activities */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {activities.length > 0 ? (
                 activities
                   .filter(activity => activity.frequency > 0) // Only show activities in routine (with frequency)
@@ -421,284 +488,191 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
             </div>
           </div>
         </div>
-        
-        {/* Activity Stats */}
-        <div className="lg:col-span-1">
-          <div className="bg-white shadow rounded-lg p-6 mb-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Activity Summary</h2>
-            
-            <div className="space-y-4">
-              {/* Total Activities */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Routine Activities</h3>
-                <p className="mt-1 text-2xl font-semibold text-gray-900">
-                  {activities.filter(activity => activity.frequency > 0).length}
-                </p>
-              </div>
-              
-              {/* Total Time Allocated */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Total Lifetime Hours</h3>
-                <p className="mt-1 text-2xl font-semibold text-gray-900">
-                  {calculateTotalLifetimeHours(
-                    userData, 
-                    activities.filter(activity => activity.frequency > 0)
-                  ).toLocaleString()}
-                </p>
-                <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-primary-600 h-2 rounded-full" 
-                    style={{ width: `${calculateAllocatedPercentage(
-                      userData, 
-                      activities.filter(activity => activity.frequency > 0)
-                    )}%` }}
-                  ></div>
-                </div>
-                <p className="mt-1 text-sm text-gray-500">
-                  {calculateAllocatedPercentage(
-                    userData, 
-                    activities.filter(activity => activity.frequency > 0)
-                  )}% of your remaining conscious hours
-                </p>
-              </div>
-              
-              {/* Net Life Impact */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Net Life Impact</h3>
-                <p className={`mt-1 text-2xl font-semibold ${
-                  calculateNetLifeImpact(activities) > 0 ? 'text-green-600' : 
-                  calculateNetLifeImpact(activities) < 0 ? 'text-red-600' : 
-                  'text-gray-900'
-                }`}>
-                  {calculateNetLifeImpact(activities) > 0 ? `+${calculateNetLifeImpact(activities)} years` : 
-                   calculateNetLifeImpact(activities) < 0 ? `${calculateNetLifeImpact(activities)} years` : 
-                   'Neutral'}
-                </p>
-                <p className="mt-1 text-sm text-gray-500">Impact on life expectancy</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Add Common Activities</h2>
-            
-            <div className="space-y-3">
-              <button 
-                onClick={() => addTemplateActivity('Work')} 
-                className="w-full flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <span>Work / Career</span>
-              </button>
-              
-              <button 
-                onClick={() => addTemplateActivity('Exercise')} 
-                className="w-full flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <div className="h-8 w-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <span>Exercise / Health</span>
-              </button>
-              
-              <button 
-                onClick={() => addTemplateActivity('Family')} 
-                className="w-full flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <div className="h-8 w-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                </div>
-                <span>Family Time</span>
-              </button>
-              
-              <button 
-                onClick={() => addTemplateActivity('Learning')} 
-                className="w-full flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <div className="h-8 w-8 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center mr-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                </div>
-                <span>Learning / Education</span>
-              </button>
-              
-              <button 
-                onClick={() => setShowAddActivityForm(true)} 
-                className="w-full flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                <span>Custom Activity</span>
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
       
-      {/* Add/Edit Activity Form Modal */}
-      {(showAddActivityForm || editingActivityIndex !== null) && (
-        <div className="fixed z-10 inset-0 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            {/* Background overlay */}
-            <div 
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
-              onClick={cancelActivityForm}
-            ></div>
-            
-            {/* Modal panel */}
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  {editingActivityIndex !== null ? 'Edit Activity' : 'Add New Activity'}
-                </h3>
-                
-                <form onSubmit={(e) => { e.preventDefault(); saveActivity(); }}>
-                  <div className="space-y-4">
-                    {/* Activity Name */}
-                    <div>
-                      <label htmlFor="activityName" className="block text-sm font-medium text-gray-700">Activity Name</label>
-                      <input 
-                        type="text" 
-                        id="activityName" 
-                        value={currentActivity.name}
-                        onChange={(e) => setCurrentActivity({...currentActivity, name: e.target.value})}
-                        className="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border" 
-                        required 
-                      />
-                    </div>
-                    
-                    {/* Category */}
-                    <div>
-                      <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category</label>
-                      <select 
-                        id="category" 
-                        value={currentActivity.category}
-                        onChange={(e) => setCurrentActivity({...currentActivity, category: e.target.value})}
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                      >
-                        <option value="Work">Work</option>
-                        <option value="Health">Health</option>
-                        <option value="Relationships">Relationships</option>
-                        <option value="Learning">Learning</option>
-                        <option value="Leisure">Leisure</option>
-                        <option value="Personal">Personal</option>
-                      </select>
-                    </div>
-                    
-                    {/* Frequency */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="frequency" className="block text-sm font-medium text-gray-700">Frequency</label>
-                        <input 
-                          type="number" 
-                          id="frequency" 
-                          value={currentActivity.frequency}
-                          onChange={(e) => setCurrentActivity({...currentActivity, frequency: parseInt(e.target.value)})}
-                          min="1" 
-                          className="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border" 
-                          required 
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="frequencyUnit" className="block text-sm font-medium text-gray-700">Unit</label>
-                        <select 
-                          id="frequencyUnit" 
-                          value={currentActivity.frequencyUnit}
-                          onChange={(e) => setCurrentActivity({...currentActivity, frequencyUnit: e.target.value as 'day' | 'week' | 'month' | 'year'})}
-                          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                        >
-                          <option value="day">Day</option>
-                          <option value="week">Week</option>
-                          <option value="month">Month</option>
-                          <option value="year">Year</option>
-                        </select>
-                      </div>
-                    </div>
-                    
-                    {/* Duration */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="duration" className="block text-sm font-medium text-gray-700">Duration</label>
-                        <input 
-                          type="number" 
-                          id="duration" 
-                          value={currentActivity.duration}
-                          onChange={(e) => setCurrentActivity({...currentActivity, duration: parseInt(e.target.value)})}
-                          min="1" 
-                          className="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border" 
-                          required 
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="durationUnit" className="block text-sm font-medium text-gray-700">Unit</label>
-                        <select 
-                          id="durationUnit" 
-                          value={currentActivity.durationUnit}
-                          onChange={(e) => setCurrentActivity({...currentActivity, durationUnit: e.target.value as 'minute' | 'hour'})}
-                          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                        >
-                          <option value="minute">Minute</option>
-                          <option value="hour">Hour</option>
-                        </select>
-                      </div>
-                    </div>
-                    
-                    {/* Life Impact */}
-                    <div>
-                      <label htmlFor="lifeImpact" className="block text-sm font-medium text-gray-700">Life Impact (years)</label>
-                      <input 
-                        type="number" 
-                        id="lifeImpact" 
-                        value={currentActivity.lifeImpact}
-                        onChange={(e) => setCurrentActivity({...currentActivity, lifeImpact: parseFloat(e.target.value)})}
-                        step="0.1" 
-                        className="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border" 
-                      />
-                      <p className="mt-1 text-xs text-gray-500">Estimated impact on life expectancy (positive extends, negative reduces)</p>
-                    </div>
-                    
-                    {/* Color */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Color</label>
-                      <div className="mt-1 grid grid-cols-7 gap-2">
-                        {colorOptions.map(color => (
-                          <button 
-                            key={color}
-                            type="button" 
-                            onClick={() => setCurrentActivity({...currentActivity, color})}
-                            className={`h-8 w-8 rounded-full bg-${color}-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${color}-500 ${currentActivity.color === color ? 'ring-2 ring-offset-2 ring-gray-500' : ''}`}
-                          ></button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 flex justify-end space-x-3">
-                    <button 
-                      type="button" 
-                      onClick={cancelActivityForm}
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      type="submit" 
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                      Save Activity
-                    </button>
-                  </div>
-                </form>
-              </div>
+      {/* Add/Edit Activity Form */}
+      {showAddActivityForm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl overflow-hidden w-full max-w-md">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">
+                {editingActivityIndex !== null ? 'Edit Activity' : 'Add New Activity'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowAddActivityForm(false);
+                  setEditingActivityIndex(null);
+                  setActivityFormData({
+                    name: '',
+                    category: '',
+                    frequency: 1,
+                    frequencyUnit: 'day',
+                    duration: 1,
+                    durationUnit: 'hour',
+                    lifeImpact: 0,
+                    color: 'blue',
+                  });
+                }} 
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
+            
+            <form onSubmit={editingActivityIndex !== null ? handleUpdateActivitySubmit : handleAddActivitySubmit} className="px-6 py-4 space-y-4">
+              {/* Activity Name */}
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">Activity Name</label>
+                <input 
+                  type="text" 
+                  id="name" 
+                  name="name" 
+                  value={activityFormData.name} 
+                  onChange={handleInputChange} 
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                />
+              </div>
+              
+              {/* Category */}
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category</label>
+                <input 
+                  type="text" 
+                  id="category" 
+                  name="category" 
+                  value={activityFormData.category} 
+                  onChange={handleInputChange} 
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                />
+              </div>
+              
+              {/* Frequency */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="frequency" className="block text-sm font-medium text-gray-700">Frequency</label>
+                  <input 
+                    type="number" 
+                    id="frequency" 
+                    name="frequency" 
+                    min="0"
+                    step="0.01"
+                    value={activityFormData.frequency} 
+                    onChange={handleInputChange} 
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="frequencyUnit" className="block text-sm font-medium text-gray-700">Frequency Unit</label>
+                  <select 
+                    id="frequencyUnit" 
+                    name="frequencyUnit" 
+                    value={activityFormData.frequencyUnit} 
+                    onChange={handleInputChange} 
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                  >
+                    <option value="day">day</option>
+                    <option value="week">week</option>
+                    <option value="month">month</option>
+                    <option value="year">year</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Duration */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="duration" className="block text-sm font-medium text-gray-700">Duration</label>
+                  <input 
+                    type="number" 
+                    id="duration" 
+                    name="duration" 
+                    min="0"
+                    step="0.01"
+                    value={activityFormData.duration} 
+                    onChange={handleInputChange} 
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="durationUnit" className="block text-sm font-medium text-gray-700">Duration Unit</label>
+                  <select 
+                    id="durationUnit" 
+                    name="durationUnit" 
+                    value={activityFormData.durationUnit} 
+                    onChange={handleInputChange} 
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                  >
+                    <option value="minute">minute</option>
+                    <option value="hour">hour</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Life Impact */}
+              <div>
+                <label htmlFor="lifeImpact" className="block text-sm font-medium text-gray-700">Life Impact (years)</label>
+                <input 
+                  type="number" 
+                  id="lifeImpact" 
+                  name="lifeImpact" 
+                  step="0.1"
+                  value={activityFormData.lifeImpact} 
+                  onChange={handleInputChange} 
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-500">Negative values reduce life expectancy, positive values increase it</p>
+              </div>
+              
+              {/* Color */}
+              <div>
+                <label htmlFor="color" className="block text-sm font-medium text-gray-700">Color</label>
+                <select 
+                  id="color" 
+                  name="color" 
+                  value={activityFormData.color} 
+                  onChange={handleInputChange} 
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                >
+                  <option value="blue">Blue</option>
+                  <option value="green">Green</option>
+                  <option value="red">Red</option>
+                  <option value="yellow">Yellow</option>
+                  <option value="purple">Purple</option>
+                  <option value="pink">Pink</option>
+                  <option value="indigo">Indigo</option>
+                  <option value="gray">Gray</option>
+                </select>
+              </div>
+              
+              <div className="pt-4 flex justify-end space-x-3 border-t border-gray-200">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowAddActivityForm(false);
+                    setEditingActivityIndex(null);
+                    setActivityFormData({
+                      name: '',
+                      category: '',
+                      frequency: 1,
+                      frequencyUnit: 'day',
+                      duration: 1,
+                      durationUnit: 'hour',
+                      lifeImpact: 0,
+                      color: 'blue',
+                    });
+                  }} 
+                  className="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  {editingActivityIndex !== null ? 'Update Activity' : 'Add Activity'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
