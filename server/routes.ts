@@ -412,24 +412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Check if user is admin
-  app.get('/api/user/admin-check', requireAuth, (req, res) => {
-    try {
-      // Get username from request user object
-      const username = req.user && typeof req.user === 'object' ? 
-                      (req.user as {username?: string}).username || '' : '';
-      
-      // List of admin usernames - must match the same list used in requireAdmin middleware
-      const adminUsers = ['realityinspector'];
-      
-      const isAdmin = adminUsers.includes(username);
-      
-      return res.json({ isAdmin });
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      return res.status(500).json({ message: "Error checking admin status" });
-    }
-  });
+  // Admin check route is already defined above
 
   const httpServer = createServer(app);
   return httpServer;

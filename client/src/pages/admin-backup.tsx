@@ -118,7 +118,15 @@ export default function AdminBackupPage() {
   
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Database Backup & Restore</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Database Backup & Restore</h1>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/admin" className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Admin Dashboard
+          </Link>
+        </Button>
+      </div>
       
       <Tabs defaultValue="backup" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
