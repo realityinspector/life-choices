@@ -21,7 +21,7 @@ interface UserContextType {
   addActivitiesToCart: (activities: ActivityInsert[]) => void;
   getCartActivities: () => ActivityInsert[];
   clearCart: () => void;
-  saveCartActivities: () => Promise<void>;
+  saveCartActivities: () => Promise<Activity[] | undefined>;
   resetData: () => void;
   logout: () => Promise<void>;
 }

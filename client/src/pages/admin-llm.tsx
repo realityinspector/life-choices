@@ -1535,9 +1535,16 @@ export default function AdminLLMPage() {
                           
                           // Refetch the images data
                           try {
-                            refetchImages().catch(() => {
-                              // Silently handle any error while refetching
-                            });
+                            // Use setTimeout to ensure refetch happens after component state updates
+                            setTimeout(() => {
+                              // Check if component is still mounted before refetching
+                              if (!generateMissingImagesMutation.isPending) {
+                                refetchImages().catch((err) => {
+                                  // Silently handle any error while refetching
+                                  console.log("Refetch error caught:", err);
+                                });
+                              }
+                            }, 100);
                           } catch (e) {
                             console.log("Error during refetch:", e);
                           }
@@ -1615,6 +1622,15 @@ export default function AdminLLMPage() {
                                               title: 'Image Generated',
                                               description: `Successfully generated image for "${activity.name}"`,
                                             });
+                                            
+                                            // Safely refetch images after generation
+                                            setTimeout(() => {
+                                              if (!generateImageMutation.isPending) {
+                                                refetchImages().catch(err => {
+                                                  console.log("Individual refetch error caught:", err);
+                                                });
+                                              }
+                                            }, 100);
                                           }
                                         });
                                       }}
