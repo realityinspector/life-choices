@@ -365,7 +365,7 @@ const ACTIVITY_CATEGORIES = [
 // Function to generate personalized recommendations based on user profile and current activities
 // Function to generate reasons for recommendations
 const getRecommendationReason = (
-  activity: Required<ActivityInsert>,
+  activity: Required<ActivityInsert> | (Activity & { description?: string; completed?: boolean }),
   userData: UserData,
   currentActivities: Activity[]
 ): string => {
@@ -541,11 +541,22 @@ export default function ShopActivitiesPage() {
   
   // Filter activities based on search and category
   const filteredActivities = allActivities.filter(activity => {
-    const nameMatch = activity.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const descriptionMatch = activity.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false;
-    const categoryMatch = activity.category.toLowerCase().includes(searchQuery.toLowerCase());
+    // Convert search query to lowercase for case-insensitive matching
+    const query = searchQuery.toLowerCase();
     
-    const matchesSearch = searchQuery === "" || nameMatch || descriptionMatch || categoryMatch;
+    // Check various fields for matches
+    const nameMatch = activity.name.toLowerCase().includes(query);
+    const descriptionMatch = activity.description?.toLowerCase().includes(query) ?? false;
+    const categoryMatch = activity.category.toLowerCase().includes(query);
+    
+    // Check for specific matches in name parts (e.g., "raft" in "Rafting Adventure")
+    let namePartMatch = false;
+    if (query.length >= 3) { // Only check for meaningful parts (3+ characters)
+      const nameParts = activity.name.toLowerCase().split(/\s+|[-_]/); // Split by spaces and common separators
+      namePartMatch = nameParts.some(part => part.startsWith(query) || part.includes(query));
+    }
+    
+    const matchesSearch = searchQuery === "" || nameMatch || descriptionMatch || categoryMatch || namePartMatch;
     const matchesCategory = selectedCategory === null || activity.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
