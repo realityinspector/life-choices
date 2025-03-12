@@ -221,6 +221,16 @@ export class DatabaseStorage implements IStorage {
       return filteredOverdueResults[0];
     }
     
+    // If no activities are currently due (overdue or unscheduled), return undefined
+    // This will trigger the client to show suggested activities instead
+    // This is critical for preventing cycling through activities that are scheduled for the future
+    
+    // The code below this comment will only run if we really want to show upcoming activities,
+    // but for now, we want a clean "nothing due" state to trigger recommendations
+    return undefined;
+    
+    /* Commented out the fallback logic that was causing cycling:
+    
     // If no valid overdue activities, get the next upcoming activity
     let upcomingQuery = db.select()
       .from(activities)
@@ -278,8 +288,9 @@ export class DatabaseStorage implements IStorage {
     if (anyActivity.length > 0) {
       return anyActivity[0];
     }
+    */
     
-    // No activities found at all
+    // No due activities found
     return undefined;
   }
   

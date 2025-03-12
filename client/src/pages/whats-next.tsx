@@ -105,11 +105,11 @@ export default function WhatsNextPage() {
     // Set temporary loading state
     setLoading(true);
     
-    // Add a brief delay before loading the next activity to prevent cycling
+    // Add a brief delay before loading the next activity to ensure backend has time to update
     setTimeout(() => {
-      // Use our updated loadNextActivity function with the name to skip
-      loadNextActivity([completedActivityName]);
-    }, 500); // 500ms delay to ensure the backend has time to update
+      // Try to get the next due activity or show recommendations if none are due
+      loadNextActivity([]);
+    }, 1000); // 1 second delay to ensure database updates are processed
   };
 
   const handleSkip = (activity: Activity) => {
@@ -127,11 +127,11 @@ export default function WhatsNextPage() {
       // Set temporary loading state
       setLoading(true);
       
-      // Add a brief delay before loading the next activity to prevent cycling
+      // Add a brief delay before loading the next activity
       setTimeout(() => {
-        // Use our updated loadNextActivity function with the name to skip
-        loadNextActivity([skippedActivityName]);
-      }, 500); // 500ms delay to ensure the backend has time to update
+        // Try to get the next due activity or show recommendations if none are due
+        loadNextActivity([]);
+      }, 1000); // 1 second delay to ensure database updates are processed
     });
   };
 
@@ -166,11 +166,11 @@ export default function WhatsNextPage() {
     // Set temporary loading state
     setLoading(true);
     
-    // Add a brief delay before loading the next activity to prevent cycling
+    // Add a brief delay before loading the next activity
     setTimeout(() => {
-      // Use our updated loadNextActivity function with the name to skip
-      loadNextActivity([addedActivityName]);
-    }, 500); // 500ms delay to ensure the backend has time to update
+      // Try to get the next due activity or show recommendations if none are due
+      loadNextActivity([]);
+    }, 1000); // 1 second delay to ensure database updates are processed
   };
   
   const handleAddSuggestedActivity = (activity: ActivityInsert) => {
