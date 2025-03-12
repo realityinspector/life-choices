@@ -1190,9 +1190,9 @@ export default function AdminLLMPage() {
                         <div 
                           className="aspect-video bg-cover bg-center cursor-pointer"
                           style={{ 
-                            backgroundImage: `url(${image.path})` 
+                            backgroundImage: `url(/uploads/${image.path.split('/').pop()})` 
                           }}
-                          onClick={() => setSelectedImage(image.path)}
+                          onClick={() => setSelectedImage(`/uploads/${image.path.split('/').pop()}`)}
                         />
                       </CardContent>
                       <CardFooter className="p-2 flex flex-col items-start">
