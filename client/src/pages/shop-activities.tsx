@@ -486,16 +486,45 @@ export default function ShopActivitiesPage() {
     MORE_SAMPLE_ACTIVITIES.map(a => ({ ...a, description: "", completed: false }))
   );
   
-  // Generate a set of all available activities
-  const allActivities = [...enhancedSampleActivities, ...enhancedMoreSampleActivities];
+  // Fetch all activities from database
+  const { data: databaseActivities = [] } = useQuery<Activity[]>({
+    queryKey: ['/api/activities'],
+    queryFn: async ({ signal }) => {
+      try {
+        const res = await apiRequest('/api/activities', { signal });
+        return res.json();
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+        return [];
+      }
+    }
+  });
+  
+  // Process database activities to match the expected format
+  const enhancedDatabaseActivities = databaseActivities.map(activity => ({
+    ...activity,
+    description: "", // Add description field if it doesn't exist
+    completed: false // Add completed field if it doesn't exist
+  }));
+  
+  // Combine all activities from different sources, prioritizing database entries
+  const allActivities = [
+    ...enhancedDatabaseActivities,
+    ...enhancedSampleActivities.filter(sample => 
+      !enhancedDatabaseActivities.some(db => db.name === sample.name)
+    ),
+    ...enhancedMoreSampleActivities.filter(sample => 
+      !enhancedDatabaseActivities.some(db => db.name === sample.name)
+    )
+  ];
   
   // Filter activities based on search and category
   const filteredActivities = allActivities.filter(activity => {
-    const matchesSearch = searchQuery === "" || 
-      activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (activity.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-      activity.category.toLowerCase().includes(searchQuery.toLowerCase());
+    const nameMatch = activity.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const descriptionMatch = activity.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false;
+    const categoryMatch = activity.category.toLowerCase().includes(searchQuery.toLowerCase());
     
+    const matchesSearch = searchQuery === "" || nameMatch || descriptionMatch || categoryMatch;
     const matchesCategory = selectedCategory === null || activity.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
