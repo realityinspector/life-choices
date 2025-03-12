@@ -160,23 +160,40 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const addActivity = async (activity: ActivityInsert) => {
     try {
+      console.log("Adding new activity:", activity.name);
+      
+      // Call the API without any scheduleForLater flag to ensure immediate display
       const response = await apiRequest('/api/activities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(activity)
       });
+      
       const newActivity = await response.json();
-      setActivities([...activities, newActivity]);
+      console.log("New activity created:", newActivity);
+      
+      // Update the local activities state with the newly added activity
+      setActivities(prevActivities => [...prevActivities, newActivity]);
+      
+      // Return the new activity for immediate use if needed
+      return newActivity;
     } catch (error) {
+      console.error("Error adding activity:", error);
+      
       // Generate a unique ID and fallback to localStorage
       const newActivity = {
         ...activity,
         id: activities.length > 0 ? Math.max(...activities.map(a => a.id || 0)) + 1 : 1,
-        userId: 1 // Placeholder for local storage
+        userId: 1, // Placeholder for local storage
+        nextDue: new Date() // Set nextDue to now for local storage fallback too
       } as Activity;
+      
       const updatedActivities = [...activities, newActivity];
       setActivities(updatedActivities);
       localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
+      
+      // Return the new activity for immediate use even in fallback mode
+      return newActivity;
     }
   };
 
@@ -473,11 +490,37 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const saveCartActivities = async () => {
-    // Add all activities in the cart to the user's activities
-    for (const activity of activityCart) {
-      await addActivity(activity);
+    // Store the number of activities to process
+    const activityCount = activityCart.length;
+    console.log(`Processing ${activityCount} activities from cart`);
+    
+    if (activityCount === 0) {
+      return; // No activities to process
     }
-    clearCart();
+    
+    try {
+      // Add all activities in the cart to the user's activities
+      const newActivities = [];
+      
+      // Process all activities in series to maintain order
+      for (const activity of activityCart) {
+        const newActivity = await addActivity(activity);
+        if (newActivity) {
+          newActivities.push(newActivity);
+        }
+      }
+      
+      console.log(`Successfully added ${newActivities.length} activities from cart`);
+      
+      // Clear the cart after successful processing
+      clearCart();
+      
+      // Return the new activities for immediate use if needed
+      return newActivities;
+    } catch (error) {
+      console.error("Error saving cart activities:", error);
+      // Don't clear the cart on error so the user can try again
+    }
   };
 
   const resetData = async () => {
