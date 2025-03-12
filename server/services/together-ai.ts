@@ -25,7 +25,9 @@ export class TogetherAIService {
     if (!apiKey) {
       console.error("TOGETHER_API_KEY not found in environment variables");
     }
-    this.client = new Together();
+    this.client = new Together({
+      apiKey: apiKey || ''
+    });
   }
 
   /**
@@ -168,34 +170,137 @@ Respond with a valid JSON object containing all the required properties.`;
   }
 
   /**
+   * Generate a batch prompt for multiple filenames
+   */
+  private generateBatchUserPrompt(filenames: string[]): string {
+    // Process each filename to make it more readable
+    const processedFilenames = filenames.map(filename => 
+      filename
+        .replace(/\.[^/.]+$/, "") // Remove extension
+        .replace(/([a-z])([A-Z])/g, "$1 $2") // Convert camelCase to spaces
+        .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2") // Convert PascalCase to spaces
+        .replace(/[_-]/g, " ") // Replace underscores and dashes with spaces
+    );
+
+    return `Generate activity details for the following image filenames:
+${processedFilenames.map((name, index) => `${index + 1}. "${name}"`).join('\n')}
+
+Respond with a valid JSON array containing one object for each filename. Each object should contain all the required properties.
+The response should be formatted as: [ { activity1 }, { activity2 }, ... ]
+
+Ensure that each activity in the array corresponds to the filename at the same position in the list.`;
+  }
+
+  /**
+   * Parse batch LLM response into structured activities
+   */
+  private parseBatchLLMResponse(response: string, count: number): (ActivityGenerationResponse | null)[] {
+    try {
+      // Find JSON array in the response
+      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      if (!jsonMatch || !jsonMatch[0]) {
+        console.error("No JSON array found in batch LLM response");
+        return Array(count).fill(null);
+      }
+
+      const jsonArray = JSON.parse(jsonMatch[0]);
+      if (!Array.isArray(jsonArray)) {
+        console.error("Parsed JSON is not an array");
+        return Array(count).fill(null);
+      }
+      
+      // Validate each item in the array
+      return jsonArray.map((item, index) => {
+        // Check required fields
+        const requiredFields = ['name', 'category', 'frequency', 'frequencyUnit', 'duration', 'durationUnit', 'lifeImpact'];
+        for (const field of requiredFields) {
+          if (item[field] === undefined) {
+            console.error(`Missing required field '${field}' in item ${index + 1}`);
+            return null;
+          }
+        }
+        return item as ActivityGenerationResponse;
+      });
+    } catch (error) {
+      console.error("Error parsing batch LLM response:", error);
+      return Array(count).fill(null);
+    }
+  }
+
+  /**
+   * Process a batch of filenames with a single LLM call
+   */
+  private async processBatchWithSingleCall(filenames: string[]): Promise<(ActivityInsert | null)[]> {
+    try {
+      console.log(`Processing ${filenames.length} files in a single LLM call`);
+      
+      const response = await this.client.chat.completions.create({
+        messages: [
+          { role: "system", content: this.generateSystemPrompt() },
+          { role: "user", content: this.generateBatchUserPrompt(filenames) }
+        ],
+        model: this.model,
+        temperature: 0.7,
+        max_tokens: 3000 // Increased for batch processing
+      });
+
+      const content = response.choices[0]?.message?.content || '';
+      if (!content) {
+        console.error("Empty response from LLM for batch processing");
+        return Array(filenames.length).fill(null);
+      }
+
+      console.log("Batch LLM Response:", content);
+      
+      const parsedResponses = this.parseBatchLLMResponse(content, filenames.length);
+      
+      // Convert each response to ActivityInsert
+      return parsedResponses.map(response => 
+        response ? this.toActivityInsert(response) : null
+      );
+    } catch (error) {
+      console.error("Error in batch processing with single call:", error);
+      return Array(filenames.length).fill(null);
+    }
+  }
+
+  /**
    * Generate multiple activities from filenames (batch processing)
    */
-  async generateActivitiesFromFilenames(filenames: string[], batchSize: number = 1): Promise<(ActivityInsert | null)[]> {
+  async generateActivitiesFromFilenames(filenames: string[], batchSize: number = 10): Promise<(ActivityInsert | null)[]> {
     const results: (ActivityInsert | null)[] = [];
     
-    // Process in batches to avoid rate limits
+    // Process in batches
     for (let i = 0; i < filenames.length; i += batchSize) {
       const batch = filenames.slice(i, i + batchSize);
-      console.log(`Processing batch ${i/batchSize + 1} of ${Math.ceil(filenames.length/batchSize)}: ${batch.length} items`);
+      console.log(`Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(filenames.length/batchSize)}: ${batch.length} items`);
       
-      if (batchSize === 1) {
-        // Single mode processing
-        const result = await this.generateActivityFromFilename(batch[0]);
-        results.push(result);
-      } else {
-        // Batch mode processing
-        // Process each filename individually but in parallel for now
-        // This could be optimized further in the future to create a single prompt with multiple filenames
-        try {
-          console.log(`Processing ${batch.length} files in parallel batch`);
+      try {
+        if (batch.length === 1) {
+          // Single item processing
+          const result = await this.generateActivityFromFilename(batch[0]);
+          results.push(result);
+        } else if (batch.length <= 10) {
+          // Use more efficient batch processing with a single LLM call
+          const batchResults = await this.processBatchWithSingleCall(batch);
+          results.push(...batchResults);
+        } else {
+          // Fallback to parallel processing for large batches (though this shouldn't happen with proper batching)
+          console.log(`Batch size ${batch.length} exceeds optimal size, processing in parallel`);
           const batchPromises = batch.map(filename => this.generateActivityFromFilename(filename));
           const batchResults = await Promise.all(batchPromises);
           results.push(...batchResults);
-        } catch (error) {
-          console.error("Error in batch processing:", error);
-          // If the batch fails, add null results for each item in this batch
-          batch.forEach(() => results.push(null));
         }
+      } catch (error) {
+        console.error(`Error processing batch starting at index ${i}:`, error);
+        // If the batch fails, add null results for each item in this batch
+        batch.forEach(() => results.push(null));
+      }
+      
+      // Add a small delay between batches to avoid rate limiting
+      if (i + batchSize < filenames.length) {
+        console.log("Pausing briefly between batches");
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
     

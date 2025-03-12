@@ -53,8 +53,14 @@ export const adminLLMRouter = Router();
 // Middleware to require authentication
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: any) => {
   if (isAuthenticated(req)) {
-    // Check if the user is an admin
-    if (req.user?.isAdmin) {
+    // Get username from request user object
+    const username = req.user && typeof req.user === 'object' ? 
+                    (req.user as {username?: string}).username || '' : '';
+    
+    // List of admin usernames - this should match the list in routes.ts
+    const adminUsers = ['realityinspector'];
+    
+    if (adminUsers.includes(username)) {
       return next();
     }
     return res.status(403).json({ message: "Admin access required" });
