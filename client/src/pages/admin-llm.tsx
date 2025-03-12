@@ -342,14 +342,17 @@ export default function AdminLLMPage() {
       return;
     }
     
+    // Now we know file.activity exists and is not undefined
+    const activity = {...file.activity} as ActivityInsert;
+    
     try {
       // Check for potential duplicates before saving
-      const potentialDuplicates = checkForDuplicates(file.activity.name);
+      const potentialDuplicates = checkForDuplicates(activity.name);
       
       if (potentialDuplicates.length > 0) {
         // Show the duplicate dialog with the potential duplicates
         setDuplicatesInfo({
-          newActivity: file.activity.name,
+          newActivity: activity.name,
           duplicates: potentialDuplicates,
           index: index,
           onConfirm: async () => {
@@ -357,20 +360,15 @@ export default function AdminLLMPage() {
             setShowDuplicatesDialog(false);
             
             try {
-              // At this point we've already validated that file.activity exists
-              if (!file.activity) {
-                throw new Error("Activity data is missing");
-              }
-              
               const imageData = {
-                filename: file.filename,
+                filename: file.filename!,
                 originalFilename: file.originalFilename,
-                path: file.path,
-                mimeType: file.mimeType
+                path: file.path!,
+                mimeType: file.mimeType!
               };
               
               await createActivityMutation.mutateAsync({
-                activity: file.activity,
+                activity: activity,
                 imageData
               });
               
@@ -379,7 +377,7 @@ export default function AdminLLMPage() {
               
               toast({
                 title: 'Activity Saved',
-                description: `Successfully saved activity "${file.activity.name}" with image.`,
+                description: `Successfully saved activity "${activity.name}" with image.`,
               });
             } catch (error) {
               console.error(`Error saving activity at index ${index}:`, error);
@@ -415,7 +413,7 @@ export default function AdminLLMPage() {
       };
       
       await createActivityMutation.mutateAsync({
-        activity: file.activity,
+        activity: activity,
         imageData
       });
       
@@ -424,7 +422,7 @@ export default function AdminLLMPage() {
       
       toast({
         title: 'Activity Saved',
-        description: `Successfully saved activity "${file.activity.name}" with image.`,
+        description: `Successfully saved activity "${activity.name}" with image.`,
       });
     } catch (error) {
       console.error(`Error saving activity at index ${index}:`, error);
@@ -476,24 +474,27 @@ export default function AdminLLMPage() {
         const file = successfulFiles[i];
         try {
           if (file.activity) {
+            // Create a copy of the activity to ensure TypeScript recognizes it as the correct type
+            const activity = {...file.activity} as ActivityInsert;
+            
             // Check for potential duplicates before saving
-            const potentialDuplicates = checkForDuplicates(file.activity.name);
+            const potentialDuplicates = checkForDuplicates(activity.name);
             
             if (potentialDuplicates.length > 0) {
-              console.log(`Potential duplicate found for "${file.activity.name}":`, potentialDuplicates);
+              console.log(`Potential duplicate found for "${activity.name}":`, potentialDuplicates);
               duplicatesSkipped.push(file.originalFilename);
               continue;
             }
             
             const imageData = {
-              filename: file.filename,
+              filename: file.filename!,
               originalFilename: file.originalFilename,
-              path: file.path,
-              mimeType: file.mimeType
+              path: file.path!,
+              mimeType: file.mimeType!
             };
             
             await createActivityMutation.mutateAsync({
-              activity: file.activity,
+              activity: activity,
               imageData
             });
             

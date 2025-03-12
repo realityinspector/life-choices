@@ -879,7 +879,9 @@ export default function AdminImagesPage() {
           ...f, 
           suggestedMatch: matchResult.suggestedMatch,
           activityId: matchResult.activityId,
-          suggestedActivity: matchedActivity,
+          // Only set suggestedActivity if it's an actual Activity object
+          // This avoids TypeScript errors with null or undefined
+          ...(matchedActivity ? { suggestedActivity: matchedActivity } : {}),
           status: matchResult.activityId ? 'matched' : 'uploaded',
           loading: false
         } : f
