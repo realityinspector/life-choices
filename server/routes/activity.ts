@@ -77,7 +77,42 @@ activityRouter.get('/next', async (req: AuthenticatedRequest, res) => {
     return res.status(401).json({ message: "Invalid user ID" });
   }
   
-  const nextActivity = await storage.getNextActivity(userId);
+  // Check for skipNames query parameter that allows clients
+  // to exclude activities with specific names
+  const skipNames = req.query.skipNames 
+    ? Array.isArray(req.query.skipNames) 
+      ? req.query.skipNames.map(name => String(name))
+      : [String(req.query.skipNames)] 
+    : [];
+    
+  // Also check for skipDuplicates flag - if true, we'll detect and skip activities with the same name
+  const skipDuplicates = req.query.skipDuplicates === 'true';
+  
+  // If we want to skip duplicates, get user's activities to check for duplicates
+  let namesToSkip = [...skipNames];
+  
+  if (skipDuplicates) {
+    // Get all activities for this user to check for duplicates
+    const allActivities = await storage.getActivities(userId);
+    
+    // Group activities by name to find duplicates
+    const activitiesByName: Record<string, number> = {};
+    
+    allActivities.forEach(activity => {
+      activitiesByName[activity.name] = (activitiesByName[activity.name] || 0) + 1;
+    });
+    
+    // Add names of duplicate activities to the skip list
+    for (const [name, count] of Object.entries(activitiesByName)) {
+      if (count > 1 && !namesToSkip.includes(name)) {
+        namesToSkip.push(name);
+      }
+    }
+  }
+  
+  // Get the next activity, passing the list of activity names to skip
+  const nextActivity = await storage.getNextActivity(userId, namesToSkip);
+  
   if (!nextActivity) {
     return res.status(404).json({ message: "No activities found" });
   }

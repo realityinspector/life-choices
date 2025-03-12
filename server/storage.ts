@@ -186,11 +186,11 @@ export class DatabaseStorage implements IStorage {
     await db.delete(activities).where(eq(activities.userId, userId));
   }
   
-  async getNextActivity(userId: number): Promise<Activity | undefined> {
+  async getNextActivity(userId: number, skipActivityNames: string[] = []): Promise<Activity | undefined> {
     const now = new Date();
     
     // First try to get activities that are due now or past due
-    const overdueResult = await db.select()
+    let query = db.select()
       .from(activities)
       .where(
         and(
@@ -202,17 +202,24 @@ export class DatabaseStorage implements IStorage {
             isNull(activities.nextDue)
           )
         )
-      )
-      .orderBy(activities.priority, activities.nextDue)
-      .limit(1);
+      );
+      
+    // Get all overdue activities
+    const overdueResults = await query.orderBy(activities.priority, activities.nextDue);
     
-    // If we have an overdue activity, return it
-    if (overdueResult.length > 0) {
-      return overdueResult[0];
+    // Filter out activities with names in the skipActivityNames list
+    // This helps prevent cycling through duplicates
+    const filteredOverdueResults = skipActivityNames.length > 0 
+      ? overdueResults.filter(activity => !skipActivityNames.includes(activity.name))
+      : overdueResults;
+    
+    // If we have an overdue activity after filtering, return it
+    if (filteredOverdueResults.length > 0) {
+      return filteredOverdueResults[0];
     }
     
-    // Otherwise, get the next upcoming activity
-    const upcomingResult = await db.select()
+    // If no valid overdue activities, get the next upcoming activity
+    let upcomingQuery = db.select()
       .from(activities)
       .where(
         and(
@@ -220,11 +227,29 @@ export class DatabaseStorage implements IStorage {
           // Activity is due in the future
           gt(activities.nextDue, now)
         )
-      )
-      .orderBy(activities.nextDue) // Order by date ascending so we get the soonest one
-      .limit(1);
+      );
+      
+    // Get all upcoming activities
+    const upcomingResults = await upcomingQuery.orderBy(activities.nextDue);
     
-    return upcomingResult[0];
+    // Filter out activities with names in the skipActivityNames list
+    const filteredUpcomingResults = skipActivityNames.length > 0
+      ? upcomingResults.filter(activity => !skipActivityNames.includes(activity.name))
+      : upcomingResults;
+    
+    // Return the first upcoming activity if we have one
+    if (filteredUpcomingResults.length > 0) {
+      return filteredUpcomingResults[0];
+    }
+    
+    // If filtering excluded all activities, and we really need to return something,
+    // return the first activity regardless of name (fallback)
+    if (skipActivityNames.length > 0 && overdueResults.length > 0) {
+      return overdueResults[0];
+    }
+    
+    // No activities found at all
+    return undefined;
   }
   
   async skipActivity(id: number): Promise<Activity | undefined> {
