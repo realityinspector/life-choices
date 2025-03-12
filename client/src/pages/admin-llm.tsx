@@ -414,11 +414,11 @@ export default function AdminLLMPage() {
       
       // Refetch manually to ensure we have the latest data
       try {
-        refetchImages().catch(err => {
-          console.log("Refetch silently failed, likely due to component unmounting");
+        refetchImages().catch(() => {
+          // Silently handle any error while refetching
         });
       } catch (e) {
-        console.log("Refetch error handling:", e);
+        console.log("Error during refetch:", e);
       }
     },
     onError: (error) => {
@@ -1514,22 +1514,41 @@ export default function AdminLLMPage() {
                   <Button 
                     onClick={() => {
                       setIsGeneratingImages(true);
-                      generateMissingImagesMutation.mutate({ limit: generatingImagesCount }, {
+                      generateMissingImagesMutation.mutate({ limit: 1 }, {
                         onSuccess: (data) => {
                           setIsGeneratingImages(false);
                           
-                          // Show results toast
-                          const successCount = data.results?.filter(r => r.success).length || 0;
-                          const totalCount = data.processed || 0;
-                          const remainingCount = data.remaining || 0;
+                          // Our API now returns different data structure for single image generation
+                          const remaining = data.remaining || 0;
                           
-                          toast({
-                            title: 'Image Generation Complete',
-                            description: `Generated ${successCount}/${totalCount} images. ${remainingCount} activities still need images.`,
-                          });
+                          if (data.activity && data.image) {
+                            toast({
+                              title: 'Image Generation Complete',
+                              description: `Generated image for "${data.activity.name}". ${remaining} activities still need images.`,
+                            });
+                          } else {
+                            toast({
+                              title: 'Image Generation Complete',
+                              description: data.message || 'No activities need images',
+                            });
+                          }
+                          
+                          // Refetch the images data
+                          try {
+                            refetchImages().catch(() => {
+                              // Silently handle any error while refetching
+                            });
+                          } catch (e) {
+                            console.log("Error during refetch:", e);
+                          }
                         },
-                        onError: () => {
+                        onError: (error) => {
                           setIsGeneratingImages(false);
+                          toast({
+                            title: 'Generation Error',
+                            description: error instanceof Error ? error.message : 'Failed to generate image',
+                            variant: 'destructive',
+                          });
                         }
                       });
                     }}
