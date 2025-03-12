@@ -142,8 +142,11 @@ adminLLMRouter.post("/create-activity-with-image", async (req: AuthenticatedRequ
     }
 
     // Add user ID and current date as next due date
+    // Remove any ID property if it exists to avoid primary key conflicts
+    const { id, ...activityWithoutId } = activity as any;
+    
     const activityWithUser: ActivityInsert & { userId: number, nextDue: Date } = {
-      ...activity,
+      ...activityWithoutId,
       userId: req.user!.id,
       nextDue: new Date(),
     };
@@ -207,8 +210,11 @@ adminLLMRouter.post("/batch-process", async (req: AuthenticatedRequest, res) => 
 
       try {
         // Add user ID and current date as next due date
+        // Remove any ID property if it exists to avoid primary key conflicts
+        const { id, ...activityWithoutId } = activityData as any;
+        
         const activityWithUser: ActivityInsert & { userId: number, nextDue: Date } = {
-          ...activityData,
+          ...activityWithoutId,
           userId: req.user!.id,
           nextDue: new Date(),
         };
