@@ -187,111 +187,49 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getNextActivity(userId: number, skipActivityNames: string[] = []): Promise<Activity | undefined> {
-    const now = new Date();
-    
-    // First try to get activities that are due now or past due
-    let query = db.select()
-      .from(activities)
-      .where(
-        and(
-          eq(activities.userId, userId),
-          or(
-            // Activity is due now (nextDue <= current date)
-            lte(activities.nextDue, now),
-            // Activity has no next due date set yet
-            isNull(activities.nextDue)
-          )
-        )
-      );
+    try {
+      const now = new Date();
       
-    // Get all overdue activities, ordered by priority (higher priority first) and then by nextDue date (oldest first)
-    const overdueResults = await query.orderBy(
-      desc(activities.priority), // Higher priority first
-      activities.nextDue // Oldest due date first
-    );
-    
-    // Filter out activities with names in the skipActivityNames list
-    // This helps prevent cycling through duplicates
-    const filteredOverdueResults = skipActivityNames.length > 0 
-      ? overdueResults.filter(activity => !skipActivityNames.includes(activity.name))
-      : overdueResults;
-    
-    // If we have an overdue activity after filtering, return it
-    if (filteredOverdueResults.length > 0) {
-      return filteredOverdueResults[0];
-    }
-    
-    // If no activities are currently due (overdue or unscheduled), return undefined
-    // This will trigger the client to show suggested activities instead
-    // This is critical for preventing cycling through activities that are scheduled for the future
-    
-    // The code below this comment will only run if we really want to show upcoming activities,
-    // but for now, we want a clean "nothing due" state to trigger recommendations
-    return undefined;
-    
-    /* Commented out the fallback logic that was causing cycling:
-    
-    // If no valid overdue activities, get the next upcoming activity
-    let upcomingQuery = db.select()
-      .from(activities)
-      .where(
-        and(
-          eq(activities.userId, userId),
-          // Activity is due in the future
-          gt(activities.nextDue, now)
-        )
-      );
-      
-    // Get all upcoming activities, ordered by nextDue (earliest first)
-    const upcomingResults = await upcomingQuery.orderBy(activities.nextDue);
-    
-    // Filter out activities with names in the skipActivityNames list
-    const filteredUpcomingResults = skipActivityNames.length > 0
-      ? upcomingResults.filter(activity => !skipActivityNames.includes(activity.name))
-      : upcomingResults;
-    
-    // Return the first upcoming activity if we have one
-    if (filteredUpcomingResults.length > 0) {
-      return filteredUpcomingResults[0];
-    }
-    
-    // If we've filtered out all activities and still need something, 
-    // find activities that were not recently completed
-    // (meaning nextDue is set to a future date)
-    if (skipActivityNames.length > 0) {
-      // If we've skipped specific activities by name and found nothing,
-      // look for any activity due in the future (even if filtered by name)
-      // This avoids showing activities that were just completed and
-      // ensures we respect their scheduling
-      const futureActivities = await db.select()
+      // First try to get activities that are due now or past due
+      let query = db.select()
         .from(activities)
         .where(
           and(
             eq(activities.userId, userId),
-            gt(activities.nextDue, now) // Only activities due in the future
+            or(
+              // Activity is due now (nextDue <= current date)
+              lte(activities.nextDue, now),
+              // Activity has no next due date set yet
+              isNull(activities.nextDue)
+            )
           )
-        )
-        .orderBy(activities.nextDue); // Get the soonest upcoming one
+        );
         
-      if (futureActivities.length > 0) {
-        return futureActivities[0];
-      }
-    }
-    
-    // As a last resort, if absolutely no other activities are found,
-    // and the user has activities, return any activity
-    const anyActivity = await db.select()
-      .from(activities)
-      .where(eq(activities.userId, userId))
-      .limit(1);
+      // Get all overdue activities, ordered by priority (higher priority first) and then by nextDue date (oldest first)
+      const overdueResults = await query.orderBy(
+        desc(activities.priority), // Higher priority first
+        activities.nextDue // Oldest due date first
+      );
       
-    if (anyActivity.length > 0) {
-      return anyActivity[0];
+      // Filter out activities with names in the skipActivityNames list
+      // This helps prevent cycling through duplicates
+      const filteredOverdueResults = skipActivityNames.length > 0 
+        ? overdueResults.filter(activity => !skipActivityNames.includes(activity.name))
+        : overdueResults;
+      
+      // If we have an overdue activity after filtering, return it
+      if (filteredOverdueResults.length > 0) {
+        return filteredOverdueResults[0];
+      }
+      
+      // If no activities are currently due (overdue or unscheduled), return undefined
+      // This will trigger the client to show suggested activities instead
+      return undefined;
+    } catch (error) {
+      console.error('Error getting next activity:', error);
+      // Return undefined on error, allowing the client to fallback to suggestions
+      return undefined;
     }
-    */
-    
-    // No due activities found
-    return undefined;
   }
   
   async skipActivity(id: number): Promise<Activity | undefined> {

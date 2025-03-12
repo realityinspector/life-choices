@@ -63,29 +63,41 @@ export default function WhatsNextPage() {
       // Store this list in window object for persistence between renders
       window.recentlySeenActivities = recentlySeenActivities;
       
-      // Call getNextActivity with our expanded list of activity names to skip
-      const activity = await getNextActivity(recentlySeenActivities, true);
+      // Add debugging information
+      console.debug('Activity data for debugging:', {
+        userActivitiesCount: activities.length,
+        userActivitiesNames: activities.map(a => a.name),
+        databaseActivitiesCount: activities.filter(a => a.id !== undefined).length,
+        sampleActivitiesCount: [...SAMPLE_ACTIVITIES, ...MORE_SAMPLE_ACTIVITIES].length
+      });
       
-      // If we found an activity, add it to our recently seen list
-      if (activity) {
-        window.recentlySeenActivities.push(activity.name);
-      }
-      
-      setCurrentActivity(activity || null);
-      
-      // If there's no next activity, load a suggested one
-      if (!activity) {
+      try {
+        // Call getNextActivity with our expanded list of activity names to skip
+        const activity = await getNextActivity(recentlySeenActivities, true);
+        
+        // If we found an activity, add it to our recently seen list
+        if (activity) {
+          window.recentlySeenActivities.push(activity.name);
+          setCurrentActivity(activity);
+          setCurrentSuggestedActivity(null);
+        } else {
+          // If there's no next activity, load a suggested one
+          setCurrentActivity(null);
+          setCurrentSuggestedActivity(getRandomSuggestedActivity());
+        }
+      } catch (apiError) {
+        console.error('API Error loading next activity:', apiError);
+        // Show a suggested activity since we couldn't load from API
+        setCurrentActivity(null);
         setCurrentSuggestedActivity(getRandomSuggestedActivity());
-      } else {
-        // Clear suggested activity if we have a regular one
-        setCurrentSuggestedActivity(null);
       }
       
       setLoading(false);
     } catch (error) {
-      console.error('Error loading next activity:', error);
+      console.error('Error in loadNextActivity:', error);
       setLoading(false);
-      // If there's an error, still try to load a suggestion
+      // If there's an error, fallback to a suggestion
+      setCurrentActivity(null);
       setCurrentSuggestedActivity(getRandomSuggestedActivity());
     }
   };

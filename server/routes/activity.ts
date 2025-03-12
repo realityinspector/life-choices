@@ -68,56 +68,78 @@ activityRouter.get('/with-images', async (req, res) => {
 
 // Get next activity suggestion
 activityRouter.get('/next', async (req: AuthenticatedRequest, res) => {
-  if (!isAuthenticated(req)) {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-  
-  const userId = req.user?.id;
-  if (!userId) {
-    return res.status(401).json({ message: "Invalid user ID" });
-  }
-  
-  // Check for skipNames query parameter that allows clients
-  // to exclude activities with specific names
-  const skipNames = req.query.skipNames 
-    ? Array.isArray(req.query.skipNames) 
-      ? req.query.skipNames.map(name => String(name))
-      : [String(req.query.skipNames)] 
-    : [];
-    
-  // Also check for skipDuplicates flag - if true, we'll detect and skip activities with the same name
-  const skipDuplicates = req.query.skipDuplicates === 'true';
-  
-  // If we want to skip duplicates, get user's activities to check for duplicates
-  let namesToSkip = [...skipNames];
-  
-  if (skipDuplicates) {
-    // Get all activities for this user to check for duplicates
-    const allActivities = await storage.getActivities(userId);
-    
-    // Group activities by name to find duplicates
-    const activitiesByName: Record<string, number> = {};
-    
-    allActivities.forEach(activity => {
-      activitiesByName[activity.name] = (activitiesByName[activity.name] || 0) + 1;
-    });
-    
-    // Add names of duplicate activities to the skip list
-    for (const [name, count] of Object.entries(activitiesByName)) {
-      if (count > 1 && !namesToSkip.includes(name)) {
-        namesToSkip.push(name);
-      }
+  try {
+    if (!isAuthenticated(req)) {
+      return res.status(401).json({ message: "Not authenticated" });
     }
+    
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Invalid user ID" });
+    }
+    
+    // Check for skipNames query parameter that allows clients
+    // to exclude activities with specific names
+    const skipNames = req.query.skipNames 
+      ? Array.isArray(req.query.skipNames) 
+        ? req.query.skipNames.map(name => String(name))
+        : [String(req.query.skipNames)] 
+      : [];
+      
+    // Also check for skipDuplicates flag - if true, we'll detect and skip activities with the same name
+    const skipDuplicates = req.query.skipDuplicates === 'true';
+    
+    // If we want to skip duplicates, get user's activities to check for duplicates
+    let namesToSkip = [...skipNames];
+    
+    try {
+      if (skipDuplicates) {
+        // Get all activities for this user to check for duplicates
+        const allActivities = await storage.getActivities(userId);
+        
+        // Group activities by name to find duplicates
+        const activitiesByName: Record<string, number> = {};
+        
+        allActivities.forEach(activity => {
+          activitiesByName[activity.name] = (activitiesByName[activity.name] || 0) + 1;
+        });
+        
+        // Add names of duplicate activities to the skip list
+        for (const [name, count] of Object.entries(activitiesByName)) {
+          if (count > 1 && !namesToSkip.includes(name)) {
+            namesToSkip.push(name);
+          }
+        }
+      }
+      
+      // Get the next activity, passing the list of activity names to skip
+      const nextActivity = await storage.getNextActivity(userId, namesToSkip);
+      
+      if (!nextActivity) {
+        return res.status(404).json({ 
+          message: "No activities found",
+          suggestion: "show_recommendations" 
+        });
+      }
+      
+      res.json(nextActivity);
+    } catch (dbError) {
+      console.error("Database error fetching activities:", dbError);
+      // Return a specific error so the client knows to show recommendations
+      return res.status(503).json({ 
+        message: "Database unavailable",
+        suggestion: "show_recommendations",
+        error: dbError instanceof Error ? dbError.message : "Unknown database error"
+      });
+    }
+  } catch (error) {
+    console.error("Error in /next endpoint:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch next activity",
+      suggestion: "show_recommendations",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
   }
-  
-  // Get the next activity, passing the list of activity names to skip
-  const nextActivity = await storage.getNextActivity(userId, namesToSkip);
-  
-  if (!nextActivity) {
-    return res.status(404).json({ message: "No activities found" });
-  }
-  
-  res.json(nextActivity);
 });
 
 // Get activities by cluster
