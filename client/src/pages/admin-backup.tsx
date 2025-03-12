@@ -19,12 +19,12 @@ export default function AdminBackupPage() {
   const { toast } = useToast();
   
   // Query for backup history, if any is available
-  const { data: backupHistory, isLoading: isLoadingHistory } = useQuery({
+  const { data: backupHistory = [], isLoading: isLoadingHistory } = useQuery<any[]>({
     queryKey: ['/api/admin-backup/backup-history'],
     queryFn: async () => {
       try {
-        const result = await apiRequest('/api/admin-backup/backup-history');
-        return result.history || [];
+        const result = await apiRequest('/api/admin-backup/backup-history') as any;
+        return Array.isArray(result?.history) ? result.history : [];
       } catch (error) {
         console.error('Error fetching backup history:', error);
         return [];

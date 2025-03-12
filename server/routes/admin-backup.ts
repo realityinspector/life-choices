@@ -4,7 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { execSync } from "child_process";
-import { DB_SCHEMAS } from "../../shared/db-schemas";
+import { DB_SCHEMAS } from "@shared/db-schemas";
 import { pool } from "../db";
 
 // Types

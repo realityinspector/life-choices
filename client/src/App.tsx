@@ -106,6 +106,7 @@ function Router() {
       {/* Admin routes - accessible with or without normal user setup */}
       <Route path="/admin/images" component={AdminImagesPage} />
       <Route path="/admin/llm" component={AdminLLMPage} />
+      <Route path="/admin/backup" component={AdminBackupPage} />
       
       <Route component={NotFound} />
     </Switch>
@@ -117,7 +118,7 @@ function AppContent() {
   const [location] = useLocation();
   
   // Admin routes - don't show bottom nav
-  const adminRoutes = ["/admin/images", "/admin/llm"];
+  const adminRoutes = ["/admin/images", "/admin/llm", "/admin/backup"];
   const isAdminRoute = adminRoutes.some(route => location.startsWith(route));
   
   // Login/landing routes - don't show bottom nav
