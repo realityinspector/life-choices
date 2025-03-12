@@ -17,6 +17,7 @@ import TasksPage from "@/pages/tasks";
 import CalendarPage from "@/pages/calendar";
 import AdminImagesPage from "@/pages/admin-images";
 import AdminLLMPage from "@/pages/admin-llm";
+import AdminBackupPage from "@/pages/admin-backup";
 import BottomNavigation from "@/components/bottom-navigation";
 
 // Set the document title
@@ -30,7 +31,7 @@ function Router() {
   const freeRoutes = ["/", "/login", "/shared-activity"];
   
   // Admin routes - these bypass normal user authentication
-  const adminRoutes = ["/admin/images", "/admin/llm"];
+  const adminRoutes = ["/admin/images", "/admin/llm", "/admin/backup"];
   const isAdminRoute = adminRoutes.some(route => location.startsWith(route));
 
   // Check if we're on a free route

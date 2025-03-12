@@ -9,6 +9,7 @@ import { activityRouter } from "./routes/activity";
 import { clusterRouter } from "./routes/cluster";
 import { adminRouter } from "./routes/admin";
 import { adminLLMRouter } from "./routes/admin-llm";
+import { adminBackupRouter } from "./routes/admin-backup";
 import path from "path";
 import express from "express";
 
@@ -59,6 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/clusters', clusterRouter);
   app.use('/api/admin', requireAdmin, adminRouter);
   app.use('/api/admin-llm', requireAdmin, adminLLMRouter);
+  app.use('/api/admin-backup', requireAdmin, adminBackupRouter);
 
 
   // User routes - protected
