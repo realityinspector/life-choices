@@ -1,82 +1,78 @@
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { 
   Home, 
   ListChecks, 
-  PlusCircle, 
+  Plus, 
   Calendar, 
-  ShoppingCart,
-  User
+  ShoppingCart, 
+  User,
+  BarChart2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-const BottomNavigation = () => {
-  const [location] = useLocation();
+export default function BottomNavigation() {
+  const [location, navigate] = useLocation();
+
+  // Helper function to determine if a link is active
+  const isActive = (path: string) => {
+    if (path === "/" && location === "/") return true;
+    if (path === "/" && location === "/whats-next") return true;
+    return location === path;
+  };
   
-  const navItems = [
-    {
-      label: "Next",
-      path: "/",
-      icon: Home,
-    },
-    {
-      label: "Tasks",
-      path: "/activities",
-      icon: ListChecks,
-    },
-    {
-      label: "Add",
-      path: "/shop-activities",
-      icon: PlusCircle,
-    },
-    {
-      label: "Calendar",
-      path: "/calendar",
-      icon: Calendar,
-    },
-    {
-      label: "Cart",
-      path: "/cart",
-      icon: ShoppingCart,
-      badge: true
-    },
-    {
-      label: "Profile",
-      path: "/profile",
-      icon: User,
-    },
-  ];
+  // Class for active links
+  const activeLinkClass = "flex flex-col items-center py-1 text-primary cursor-pointer";
+  // Class for inactive links
+  const inactiveLinkClass = "flex flex-col items-center py-1 text-gray-500 hover:text-gray-700 cursor-pointer";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-2 px-2 z-50">
-      <div className="max-w-screen-md mx-auto">
-        <div className="flex justify-between">
-          {navItems.map((item) => {
-            const isActive = location === item.path;
-            const IconComponent = item.icon;
-            
-            return (
-              <Link key={item.path} href={item.path}>
-                <a className="flex flex-col items-center justify-center w-16">
-                  <div className={cn(
-                    "p-1 rounded-full relative",
-                    isActive ? "text-primary-600" : "text-gray-500"
-                  )}>
-                    <IconComponent className="h-6 w-6" />
-                  </div>
-                  <span className={cn(
-                    "text-xs mt-1",
-                    isActive ? "text-primary-600 font-medium" : "text-gray-500"
-                  )}>
-                    {item.label}
-                  </span>
-                </a>
-              </Link>
-            );
-          })}
-        </div>
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t py-2 px-4 grid grid-cols-6 gap-1 text-center">
+      <div 
+        onClick={() => navigate("/whats-next")}
+        className={isActive("/") || isActive("/whats-next") ? activeLinkClass : inactiveLinkClass}
+      >
+        <Home className="h-5 w-5" />
+        <span className="text-xs mt-1">Next</span>
+      </div>
+      
+      <div 
+        onClick={() => navigate("/activities")}
+        className={isActive("/activities") ? activeLinkClass : inactiveLinkClass}
+      >
+        <ListChecks className="h-5 w-5" />
+        <span className="text-xs mt-1">Tasks</span>
+      </div>
+      
+      <div 
+        onClick={() => navigate("/shop-activities")}
+        className={isActive("/shop-activities") ? activeLinkClass : inactiveLinkClass}
+      >
+        <Plus className="h-5 w-5" />
+        <span className="text-xs mt-1">Add</span>
+      </div>
+      
+      <div 
+        onClick={() => navigate("/calendar")}
+        className={isActive("/calendar") ? activeLinkClass : inactiveLinkClass}
+      >
+        <Calendar className="h-5 w-5" />
+        <span className="text-xs mt-1">Calendar</span>
+      </div>
+      
+      <div 
+        onClick={() => navigate("/analytics")}
+        className={isActive("/analytics") ? activeLinkClass : inactiveLinkClass}
+      >
+        <BarChart2 className="h-5 w-5" />
+        <span className="text-xs mt-1">Forecast</span>
+      </div>
+      
+      <div 
+        onClick={() => navigate("/profile")}
+        className={isActive("/profile") ? activeLinkClass : inactiveLinkClass}
+      >
+        <User className="h-5 w-5" />
+        <span className="text-xs mt-1">Profile</span>
       </div>
     </div>
   );
-};
-
-export default BottomNavigation;
+}

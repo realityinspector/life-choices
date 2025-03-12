@@ -51,7 +51,7 @@ interface AnalyticsDashboardProps {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
 
 const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('forecast');
   
   // Calculate key metrics
   const percentageLived = calculatePercentageLived(userData);
@@ -144,23 +144,11 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
 
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-4xl font-bold mb-2">Life Analytics Dashboard</h1>
-      <p className="text-lg mb-8">Comprehensive insights about your time allocation and life journey</p>
+      <h1 className="text-4xl font-bold mb-2">Life Forecast</h1>
+      <p className="text-lg mb-8">See the projected impact of your choices on your life journey</p>
       
-      <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 mb-8">
-          <TabsTrigger value="overview">
-            <PieChartIcon className="mr-2 h-4 w-4" />
-            Journey Overview
-          </TabsTrigger>
-          <TabsTrigger value="time">
-            <Clock className="mr-2 h-4 w-4" />
-            Time Analytics
-          </TabsTrigger>
-          <TabsTrigger value="activities">
-            <ActivityIcon className="mr-2 h-4 w-4" />
-            Activity Impact
-          </TabsTrigger>
+      <Tabs defaultValue="forecast" className="w-full" onValueChange={setActiveTab}>
+        <TabsList className="hidden">
           <TabsTrigger value="forecast">
             <TrendingUp className="mr-2 h-4 w-4" />
             Life Forecast
