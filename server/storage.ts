@@ -205,11 +205,19 @@ export class DatabaseStorage implements IStorage {
           )
         );
         
-      // Get all overdue activities, ordered by priority (higher priority first) and then by nextDue date (oldest first)
+      // Get all due activities, ordered by:
+      // 1. First by priority (higher priority first)
+      // 2. Then by creation time (most recently added first) - using 'id' as a proxy for creation time
+      // 3. Finally by nextDue date (oldest first)
+      // This ensures newly added activities appear at the top if they have the same priority
       const overdueResults = await query.orderBy(
         desc(activities.priority), // Higher priority first
-        activities.nextDue // Oldest due date first
+        desc(activities.id),       // Most recently added first (highest ID = newest)
+        activities.nextDue         // Oldest due date first
       );
+      
+      // Log some debug info about the activities found
+      console.log(`Found ${overdueResults.length} due activities for user ${userId}`);
       
       // Filter out activities with names in the skipActivityNames list
       // This helps prevent cycling through duplicates
@@ -217,7 +225,7 @@ export class DatabaseStorage implements IStorage {
         ? overdueResults.filter(activity => !skipActivityNames.includes(activity.name))
         : overdueResults;
       
-      // If we have an overdue activity after filtering, return it
+      // If we have any activities after filtering, return the first one
       if (filteredOverdueResults.length > 0) {
         return filteredOverdueResults[0];
       }
@@ -384,8 +392,11 @@ export class DatabaseStorage implements IStorage {
     const originalActivity = await this.getActivity(invitation.activityId);
     if (!originalActivity) return false;
     
-    // Create a copy of the activity for the new user
-    const activityCopy: ActivityInsert & { userId: number } = {
+    // Set nextDue to right now so it appears immediately in What's Next
+    const nextDue = new Date();
+    
+    // Create a copy of the activity for the new user with immediate due date
+    const activityCopy: ActivityInsert & { userId: number, nextDue: Date } = {
       userId,
       name: originalActivity.name,
       category: originalActivity.category,
@@ -398,7 +409,8 @@ export class DatabaseStorage implements IStorage {
       priority: originalActivity.priority,
       emoji: originalActivity.emoji,
       exportToCalendar: originalActivity.exportToCalendar,
-      clusterId: originalActivity.clusterId
+      clusterId: originalActivity.clusterId,
+      nextDue
     };
     
     await this.createActivity(activityCopy);
