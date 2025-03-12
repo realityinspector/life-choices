@@ -407,11 +407,9 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
   }
 });
 
-// Generate images for all activities without images
+// Generate images for activities without images - one at a time
 adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest, res) => {
   try {
-    const { limit = 5 } = req.body; // Limit the number of images to generate in one request
-    
     // Get all activities with images
     const activitiesWithImages = await storage.getActivitiesWithImages();
     const activitiesWithImagesIds = new Set(activitiesWithImages.map(a => a.id));
@@ -431,90 +429,66 @@ adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest
       });
     }
     
-    // Limit the number of activities to process
-    const activitiesToProcess = activitiesWithoutImages.slice(0, limit);
+    // Just take the first activity that needs an image
+    const activity = activitiesWithoutImages[0];
     
-    // Track results
-    const results = [];
+    console.log(`Generating image for activity: ${activity.name} (ID: ${activity.id})`);
     
-    // Process each activity
-    for (const activity of activitiesToProcess) {
-      try {
-        console.log(`Generating image for activity: ${activity.name} (ID: ${activity.id})`);
-        
-        // Convert Activity to ActivityInsert format
-        const activityInsert: ActivityInsert = {
-          name: activity.name,
-          category: activity.category,
-          frequency: activity.frequency,
-          frequencyUnit: activity.frequencyUnit as "day" | "week" | "month" | "year",
-          duration: activity.duration,
-          durationUnit: activity.durationUnit as "minute" | "hour",
-          lifeImpact: activity.lifeImpact,
-          color: activity.color,
-          priority: activity.priority,
-          emoji: activity.emoji,
-          exportToCalendar: activity.exportToCalendar,
-          clusterId: activity.clusterId
-        };
-        
-        // Generate the image
-        const imageData = await togetherAIService.generateImageForActivity(activityInsert);
-        if (!imageData) {
-          results.push({
-            activityId: activity.id,
-            activityName: activity.name,
-            success: false,
-            error: "Failed to generate image"
-          });
-          continue;
-        }
-        
-        // Associate the image with the activity
-        const imageAssociation: InsertActivityImage = {
-          activityId: activity.id,
-          filename: imageData.filename,
-          originalFilename: imageData.originalFilename,
-          path: imageData.path,
-          mimeType: imageData.mimeType
-        };
-        
-        const savedImage = await storage.createActivityImage(imageAssociation);
-        
-        results.push({
-          activityId: activity.id,
-          activityName: activity.name,
-          success: true,
-          imageId: savedImage.id
-        });
-      } catch (activityError) {
-        console.error(`Error processing activity ${activity.id}:`, activityError);
-        results.push({
-          activityId: activity.id,
-          activityName: activity.name,
-          success: false,
-          error: activityError instanceof Error ? activityError.message : 'Unknown error'
-        });
-      }
-      
-      // Add a small delay between requests to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    // Convert Activity to ActivityInsert format
+    const activityInsert: ActivityInsert = {
+      name: activity.name,
+      category: activity.category,
+      frequency: activity.frequency,
+      frequencyUnit: activity.frequencyUnit as "day" | "week" | "month" | "year",
+      duration: activity.duration,
+      durationUnit: activity.durationUnit as "minute" | "hour",
+      lifeImpact: activity.lifeImpact,
+      color: activity.color,
+      priority: activity.priority,
+      emoji: activity.emoji,
+      exportToCalendar: activity.exportToCalendar,
+      clusterId: activity.clusterId
+    };
+    
+    // Generate an image for the activity
+    const imageData = await togetherAIService.generateImageForActivity(activityInsert);
+    if (!imageData) {
+      return res.status(500).json({ 
+        error: `Failed to generate image for activity: ${activity.name} (ID: ${activity.id})`,
+        remaining: activitiesWithoutImages.length - 1
+      });
     }
     
-    const successCount = results.filter(r => r.success).length;
+    // Associate the image with the activity
+    const imageAssociation: InsertActivityImage = {
+      activityId: activity.id,
+      filename: imageData.filename,
+      originalFilename: imageData.originalFilename,
+      path: imageData.path,
+      mimeType: imageData.mimeType
+    };
+    
+    const savedImage = await storage.createActivityImage(imageAssociation);
+    console.log(`Image generated and associated with activity: ${activity.name} (ID: ${activity.id})`);
     
     res.json({
-      message: `Generated images for ${successCount}/${activitiesToProcess.length} activities`,
-      totalWithoutImages: activitiesWithoutImages.length,
-      processed: activitiesToProcess.length,
-      remaining: activitiesWithoutImages.length - activitiesToProcess.length,
-      results
+      message: "Image generated for activity successfully",
+      activity: {
+        id: activity.id,
+        name: activity.name,
+        category: activity.category
+      },
+      image: {
+        id: savedImage.id,
+        filename: savedImage.filename
+      },
+      remaining: activitiesWithoutImages.length - 1
     });
   } catch (err: unknown) {
-    console.error("Error generating missing images:", err);
+    console.error("Error generating image:", err);
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     res.status(500).json({ 
-      error: "Failed to generate missing images",
+      error: "Failed to generate image",
       details: errorMessage
     });
   }

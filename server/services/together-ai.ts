@@ -439,12 +439,15 @@ Ensure that each activity in the array corresponds to the filename at the same p
       const prompt = this.generateImagePrompt(activity);
       console.log(`Image generation prompt: ${prompt}`);
       
-      // Call the Together API with the Stability AI model
+      // Call the Together API with the Stability AI model using the specified parameters
       const response = await this.client.images.create({
         model: this.imageModel,
         prompt: prompt,
-        n: 1,
-        steps: 30
+        width: 1024,
+        height: 1024,
+        steps: 40,
+        n: 4,
+        seed: 1000
       });
       
       // Log the full response structure for debugging
@@ -454,7 +457,7 @@ Ensure that each activity in the array corresponds to the filename at the same p
         responseKeys: Object.keys(response)
       }));
       
-      // Check if we have a valid response with a URL
+      // Check if we have a valid response with a URL or b64_json
       if (!response.data || response.data.length === 0) {
         console.error('No data in response');
         return null;
