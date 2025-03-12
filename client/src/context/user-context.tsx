@@ -16,7 +16,7 @@ interface UserContextType {
   removeMultipleActivities: (activityIds: number[]) => Promise<boolean>;
   completeActivity: (id: number) => void;
   skipActivity: (id: number) => Promise<Activity | undefined>;
-  getNextActivity: () => Promise<Activity | undefined>;
+  getNextActivity: (skipActivityNames?: string[], skipDuplicates?: boolean) => Promise<Activity | undefined>;
   createSharedActivity: (activity: ActivityInsert, recipientEmail: string) => Promise<string>;
   addActivitiesToCart: (activities: ActivityInsert[]) => void;
   getCartActivities: () => ActivityInsert[];
@@ -351,17 +351,34 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const getNextActivity = async (): Promise<Activity | undefined> => {
+  const getNextActivity = async (skipActivityNames: string[] = [], skipDuplicates: boolean = true): Promise<Activity | undefined> => {
     try {
-      const response = await apiRequest('/api/activities/next');
+      // Build query parameters to skip duplicate activities or specific activity names
+      const params = new URLSearchParams();
+      
+      // Add each activity name to skip as a separate query parameter
+      skipActivityNames.forEach(name => {
+        params.append('skipNames', name);
+      });
+      
+      // Add the skipDuplicates flag if true - this will make the backend automatically detect duplicates
+      if (skipDuplicates) {
+        params.append('skipDuplicates', 'true');
+      }
+      
+      // Make the API request with the parameters
+      const url = `/api/activities/next${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await apiRequest(url);
       return await response.json();
     } catch (error) {
+      console.error('Error fetching next activity:', error);
+      
       // Fallback to client-side logic for determining next activity
       const now = new Date();
       
       // Filter activities that are due now or past due
       // Sort activities by priority and due date
-      const sortedActivities = [...activities]
+      let filteredActivities = [...activities]
         .filter(a => {
           // Only include activities that are:
           // 1. Due now or in the past (nextDue <= current date), or
@@ -369,20 +386,54 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           if (!a.nextDue) return true;
           const dueDate = new Date(a.nextDue);
           return dueDate <= now;
-        })
-        .sort((a, b) => {
-          // First by priority (lower number = higher priority)
-          if ((a.priority || 5) !== (b.priority || 5)) {
-            return (a.priority || 5) - (b.priority || 5);
-          }
-          
-          // Then by due date
-          if (a.nextDue && b.nextDue) {
-            return new Date(a.nextDue).getTime() - new Date(b.nextDue).getTime();
-          }
-          
-          return 0;
         });
+        
+      // If skipActivityNames is provided, filter out those activities
+      if (skipActivityNames.length > 0) {
+        filteredActivities = filteredActivities.filter(a => 
+          !skipActivityNames.includes(a.name)
+        );
+      }
+      
+      // If skipDuplicates is true, filter out activities with duplicate names
+      if (skipDuplicates) {
+        // Group activities by name and find duplicates
+        const activityNames = new Set<string>();
+        const nameCounts: Record<string, number> = {};
+        
+        // Count occurrences of each activity name
+        filteredActivities.forEach(a => {
+          nameCounts[a.name] = (nameCounts[a.name] || 0) + 1;
+        });
+        
+        // Filter out activities with duplicate names
+        filteredActivities = filteredActivities.filter(a => {
+          // If this name has already been seen, skip it
+          if (nameCounts[a.name] > 1) {
+            if (activityNames.has(a.name)) {
+              return false;
+            }
+            // Otherwise, mark it as seen and keep it
+            activityNames.add(a.name);
+          }
+          return true;
+        });
+      }
+      
+      // Sort the filtered activities
+      const sortedActivities = filteredActivities.sort((a, b) => {
+        // First by priority (lower number = higher priority)
+        if ((a.priority || 5) !== (b.priority || 5)) {
+          return (a.priority || 5) - (b.priority || 5);
+        }
+        
+        // Then by due date
+        if (a.nextDue && b.nextDue) {
+          return new Date(a.nextDue).getTime() - new Date(b.nextDue).getTime();
+        }
+        
+        return 0;
+      });
         
       return sortedActivities[0];
     }

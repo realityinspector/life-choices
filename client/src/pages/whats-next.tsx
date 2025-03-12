@@ -42,10 +42,11 @@ export default function WhatsNextPage() {
     return shuffled[0];
   };
 
-  const loadNextActivity = async () => {
+  const loadNextActivity = async (skipNames: string[] = []) => {
     setLoading(true);
     try {
-      const activity = await getNextActivity();
+      // Call the improved getNextActivity with skipNames parameter
+      const activity = await getNextActivity(skipNames);
       setCurrentActivity(activity || null);
       
       // If there's no next activity, load a suggested one
@@ -66,8 +67,7 @@ export default function WhatsNextPage() {
   };
 
   const handleComplete = (activity: Activity) => {
-    // Store activity ID and name before completing
-    const completedActivityId = activity.id;
+    // Store activity name before completing
     const completedActivityName = activity.name;
     
     // Complete the activity and show the toast
@@ -83,55 +83,13 @@ export default function WhatsNextPage() {
     
     // Add a brief delay before loading the next activity to prevent cycling
     setTimeout(() => {
-      // Use an async function to load the next activity
-      (async () => {
-        try {
-          const nextActivity = await getNextActivity();
-          
-          // If the next activity has the same name as the one we just completed,
-          // it's probably a duplicate, so skip it too
-          if (nextActivity && 
-              nextActivity.name === completedActivityName && 
-              nextActivity.id !== completedActivityId) {
-            // Skip this duplicate activity
-            const skippedActivity = await skipActivity(nextActivity.id);
-            
-            // Now try to get the next activity again
-            const newNextActivity = await getNextActivity();
-            setCurrentActivity(newNextActivity || null);
-            
-            // If there's no next activity after skipping, load a suggested one
-            if (!newNextActivity) {
-              setCurrentSuggestedActivity(getRandomSuggestedActivity());
-            } else {
-              setCurrentSuggestedActivity(null);
-            }
-          } else {
-            // No duplicate, just set the next activity normally
-            setCurrentActivity(nextActivity || null);
-            
-            // If there's no next activity, load a suggested one
-            if (!nextActivity) {
-              setCurrentSuggestedActivity(getRandomSuggestedActivity());
-            } else {
-              setCurrentSuggestedActivity(null);
-            }
-          }
-          
-          setLoading(false);
-        } catch (error) {
-          console.error('Error loading next activity after completion:', error);
-          setLoading(false);
-          // If there's an error, try to load a suggestion
-          setCurrentSuggestedActivity(getRandomSuggestedActivity());
-        }
-      })();
+      // Use our updated loadNextActivity function with the name to skip
+      loadNextActivity([completedActivityName]);
     }, 500); // 500ms delay to ensure the backend has time to update
   };
 
   const handleSkip = (activity: Activity) => {
-    // Store activity ID and name before skipping
-    const skippedActivityId = activity.id;
+    // Store activity name before skipping
     const skippedActivityName = activity.name;
     
     // Skip the current activity and update its nextDue date
@@ -147,56 +105,14 @@ export default function WhatsNextPage() {
       
       // Add a brief delay before loading the next activity to prevent cycling
       setTimeout(() => {
-        // Use an async function to load the next activity
-        (async () => {
-          try {
-            const nextActivity = await getNextActivity();
-            
-            // If the next activity has the same name as the one we just skipped,
-            // it's probably a duplicate, so skip it too
-            if (nextActivity && 
-                nextActivity.name === skippedActivityName && 
-                nextActivity.id !== skippedActivityId) {
-              // Skip this duplicate activity
-              const skippedDuplicate = await skipActivity(nextActivity.id);
-              
-              // Now try to get the next activity again
-              const newNextActivity = await getNextActivity();
-              setCurrentActivity(newNextActivity || null);
-              
-              // If there's no next activity after skipping, load a suggested one
-              if (!newNextActivity) {
-                setCurrentSuggestedActivity(getRandomSuggestedActivity());
-              } else {
-                setCurrentSuggestedActivity(null);
-              }
-            } else {
-              // No duplicate, just set the next activity normally
-              setCurrentActivity(nextActivity || null);
-              
-              // If there's no next activity, load a suggested one
-              if (!nextActivity) {
-                setCurrentSuggestedActivity(getRandomSuggestedActivity());
-              } else {
-                setCurrentSuggestedActivity(null);
-              }
-            }
-            
-            setLoading(false);
-          } catch (error) {
-            console.error('Error loading next activity after skipping:', error);
-            setLoading(false);
-            // If there's an error, try to load a suggestion
-            setCurrentSuggestedActivity(getRandomSuggestedActivity());
-          }
-        })();
+        // Use our updated loadNextActivity function with the name to skip
+        loadNextActivity([skippedActivityName]);
       }, 500); // 500ms delay to ensure the backend has time to update
     });
   };
 
   const handleAddToCart = (activity: Activity) => {
-    // Store activity ID and name before adding to cart
-    const addedActivityId = activity.id;
+    // Store activity name before adding to cart
     const addedActivityName = activity.name;
     
     // Add to cart
@@ -228,49 +144,8 @@ export default function WhatsNextPage() {
     
     // Add a brief delay before loading the next activity to prevent cycling
     setTimeout(() => {
-      // Use an async function to load the next activity
-      (async () => {
-        try {
-          const nextActivity = await getNextActivity();
-          
-          // If the next activity has the same name as the one we just added to cart,
-          // it's probably a duplicate, so skip it
-          if (nextActivity && 
-              nextActivity.name === addedActivityName && 
-              nextActivity.id !== addedActivityId) {
-            // Skip this duplicate activity
-            const skippedDuplicate = await skipActivity(nextActivity.id);
-            
-            // Now try to get the next activity again
-            const newNextActivity = await getNextActivity();
-            setCurrentActivity(newNextActivity || null);
-            
-            // If there's no next activity after skipping, load a suggested one
-            if (!newNextActivity) {
-              setCurrentSuggestedActivity(getRandomSuggestedActivity());
-            } else {
-              setCurrentSuggestedActivity(null);
-            }
-          } else {
-            // No duplicate, just set the next activity normally
-            setCurrentActivity(nextActivity || null);
-            
-            // If there's no next activity, load a suggested one
-            if (!nextActivity) {
-              setCurrentSuggestedActivity(getRandomSuggestedActivity());
-            } else {
-              setCurrentSuggestedActivity(null);
-            }
-          }
-          
-          setLoading(false);
-        } catch (error) {
-          console.error('Error loading next activity after adding to cart:', error);
-          setLoading(false);
-          // If there's an error, try to load a suggestion
-          setCurrentSuggestedActivity(getRandomSuggestedActivity());
-        }
-      })();
+      // Use our updated loadNextActivity function with the name to skip
+      loadNextActivity([addedActivityName]);
     }, 500); // 500ms delay to ensure the backend has time to update
   };
   
