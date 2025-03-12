@@ -64,8 +64,12 @@ function ActivitySearch({
   showCategories = true 
 }: ActivitySearchProps) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
   const [search, setSearch] = useState("");
+  
+  // Add useEffect to log when selectedActivity changes
+  useEffect(() => {
+    console.log("ActivitySearch selectedActivity updated:", selectedActivity?.name);
+  }, [selectedActivity]);
   
   // Group activities by category if needed
   const groupedActivities = showCategories ? 
