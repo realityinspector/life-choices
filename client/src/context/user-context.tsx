@@ -158,7 +158,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const addActivity = async (activity: ActivityInsert) => {
     try {
-      const response = await apiRequest('POST', '/api/activities', activity);
+      const response = await apiRequest('/api/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(activity)
+      });
       const newActivity = await response.json();
       setActivities([...activities, newActivity]);
     } catch (error) {
@@ -186,7 +190,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     } as Activity;
     
     try {
-      await apiRequest('PUT', `/api/activities/${activityToUpdate.id}`, updatedActivity);
+      await apiRequest(`/api/activities/${activityToUpdate.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedActivity)
+      });
       const updatedActivities = [...activities];
       updatedActivities[index] = updatedActivity;
       setActivities(updatedActivities);
@@ -203,7 +211,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const activityToRemove = activities[index];
     
     try {
-      await apiRequest('DELETE', `/api/activities/${activityToRemove.id}`, undefined);
+      await apiRequest(`/api/activities/${activityToRemove.id}`, {
+        method: 'DELETE'
+      });
       const updatedActivities = activities.filter((_, i) => i !== index);
       setActivities(updatedActivities);
     } catch (error) {
@@ -216,7 +226,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const completeActivity = async (id: number) => {
     try {
-      const response = await apiRequest('POST', `/api/activities/${id}/complete`, undefined);
+      const response = await apiRequest(`/api/activities/${id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
       const updatedActivity = await response.json();
       
       // Update the activity in the local state
@@ -265,7 +278,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const getNextActivity = async (): Promise<Activity | undefined> => {
     try {
-      const response = await apiRequest('GET', '/api/activities/next', undefined);
+      const response = await apiRequest('/api/activities/next');
       return await response.json();
     } catch (error) {
       // Fallback to client-side logic for determining next activity
@@ -302,9 +315,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const createSharedActivity = async (activity: ActivityInsert, recipientEmail: string): Promise<string> => {
     try {
-      const response = await apiRequest('POST', '/api/activities/share', {
-        activity,
-        recipientEmail
+      const response = await apiRequest('/api/activities/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activity,
+          recipientEmail
+        })
       });
       const result = await response.json();
       return result.invitationToken;
@@ -339,8 +356,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const resetData = async () => {
     try {
-      await apiRequest('DELETE', '/api/user', undefined);
-      await apiRequest('DELETE', '/api/activities', undefined);
+      await apiRequest('/api/user', {
+        method: 'DELETE'
+      });
+      await apiRequest('/api/activities', {
+        method: 'DELETE'
+      });
     } catch (error) {
       // Fallback to localStorage if API fails
       localStorage.removeItem('lifechoicesUserData');
