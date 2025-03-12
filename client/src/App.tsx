@@ -18,6 +18,7 @@ import CalendarPage from "@/pages/calendar";
 import AdminImagesPage from "@/pages/admin-images";
 import AdminLLMPage from "@/pages/admin-llm";
 import AdminBackupPage from "@/pages/admin-backup";
+import AdminDashboard from "@/pages/admin";
 import BottomNavigation from "@/components/bottom-navigation";
 
 // Set the document title
@@ -31,7 +32,7 @@ function Router() {
   const freeRoutes = ["/", "/login", "/shared-activity"];
   
   // Admin routes - these bypass normal user authentication
-  const adminRoutes = ["/admin/images", "/admin/llm", "/admin/backup"];
+  const adminRoutes = ["/admin", "/admin/images", "/admin/llm", "/admin/backup"];
   const isAdminRoute = adminRoutes.some(route => location.startsWith(route));
 
   // Check if we're on a free route
@@ -104,6 +105,7 @@ function Router() {
       {isUserSetup && <Route path="/life-events" component={LifeEventsPage} />}
       
       {/* Admin routes - accessible with or without normal user setup */}
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/images" component={AdminImagesPage} />
       <Route path="/admin/llm" component={AdminLLMPage} />
       <Route path="/admin/backup" component={AdminBackupPage} />
@@ -118,7 +120,7 @@ function AppContent() {
   const [location] = useLocation();
   
   // Admin routes - don't show bottom nav
-  const adminRoutes = ["/admin/images", "/admin/llm", "/admin/backup"];
+  const adminRoutes = ["/admin", "/admin/images", "/admin/llm", "/admin/backup"];
   const isAdminRoute = adminRoutes.some(route => location.startsWith(route));
   
   // Login/landing routes - don't show bottom nav

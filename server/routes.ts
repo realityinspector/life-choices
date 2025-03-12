@@ -63,6 +63,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/admin-backup', requireAdmin, adminBackupRouter);
 
 
+  // Admin check route
+  app.get('/api/user/admin-check', requireAuth, async (req, res) => {
+    try {
+      // user will always exist due to requireAuth middleware
+      const username = req.user && typeof req.user === 'object' ? 
+                      (req.user as {username?: string}).username || '' : '';
+      
+      // List of admin usernames
+      const adminUsers = ['realityinspector'];
+      
+      const isAdmin = adminUsers.includes(username);
+      return res.json({ isAdmin });
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // User routes - protected
   app.put('/api/user', requireAuth, async (req, res) => {
     try {
