@@ -413,7 +413,13 @@ export default function AdminLLMPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin-llm/images'] });
       
       // Refetch manually to ensure we have the latest data
-      refetchImages();
+      try {
+        refetchImages().catch(err => {
+          console.log("Refetch silently failed, likely due to component unmounting");
+        });
+      } catch (e) {
+        console.log("Refetch error handling:", e);
+      }
     },
     onError: (error) => {
       console.error('Error generating image:', error);
