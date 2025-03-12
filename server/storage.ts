@@ -4,7 +4,7 @@ import { UserData, ActivityInsert, User, Activity, users, activities, InsertUser
   LLMConversation, InsertLLMConversation, llmConversations, LLMMessage, InsertLLMMessage, llmMessages,
   ActivityCluster, InsertActivityCluster, activityClusters, ActivityInvitation, InsertActivityInvitation, activityInvitations,
   ActivityImage, InsertActivityImage, activityImages } from "@shared/schema";
-import { eq, and, isNull, desc, or, lte } from "drizzle-orm";
+import { eq, and, isNull, desc, or, lte, gt } from "drizzle-orm";
 import session from "express-session";
 import pgSessionPkg from "connect-pg-simple";
 import { pool, db } from "./db";
