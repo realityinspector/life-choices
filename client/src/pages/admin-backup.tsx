@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, DownloadCloud, UploadCloud, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, DownloadCloud, UploadCloud, AlertTriangle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminBackupPage() {

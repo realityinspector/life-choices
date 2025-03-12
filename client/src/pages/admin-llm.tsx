@@ -29,7 +29,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { Info, CheckCircle, XCircle, Loader2, UploadCloud, Trash, Database, RefreshCw, Save } from "lucide-react";
+import { Info, CheckCircle, XCircle, Loader2, UploadCloud, Trash, Database, RefreshCw, Save, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { Separator } from "@/components/ui/separator";
 
 interface FileUploadState {
@@ -1077,7 +1078,15 @@ export default function AdminLLMPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">Activity Generation with AI</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Activity Generation with AI</h1>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/admin" className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Admin Dashboard
+          </Link>
+        </Button>
+      </div>
       
       {/* Duplicate detection dialog */}
       <Dialog open={showDuplicatesDialog} onOpenChange={setShowDuplicatesDialog}>
