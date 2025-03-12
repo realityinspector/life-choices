@@ -251,7 +251,7 @@ Ensure that each activity in the array corresponds to the filename at the same p
           { role: "system", content: this.generateSystemPrompt() },
           { role: "user", content: this.generateBatchUserPrompt(filenames) }
         ],
-        model: this.model,
+        model: this.textModel,
         temperature: 0.7,
         max_tokens: 3000 // Increased for batch processing
       });
@@ -317,6 +317,135 @@ Ensure that each activity in the array corresponds to the filename at the same p
     }
     
     return results;
+  }
+
+  /**
+   * Generate a prompt for image generation based on activity details
+   */
+  private generateImagePrompt(activity: ActivityInsert): string {
+    // Create a detailed prompt based on activity details
+    const categoryDescriptions: Record<string, string> = {
+      'Work': 'in a professional setting',
+      'Health': 'in a health-related context',
+      'Leisure': 'during leisure time',
+      'Education': 'in an educational setting',
+      'Family': 'with family members',
+      'Social': 'in a social gathering',
+      'Personal Growth': 'for personal development',
+      'Spiritual': 'in a spiritual context',
+      'Travel': 'during a travel experience',
+      'Chores': 'doing household tasks',
+      'Hobby': 'enjoying a hobby',
+      'Exercise': 'during physical activity',
+      'Nutrition': 'related to food and nutrition',
+      'Other': ''
+    };
+    
+    const categoryContext = categoryDescriptions[activity.category] || '';
+    
+    // Basic prompt structure
+    let prompt = `A high-quality, photorealistic image of people engaging in ${activity.name} ${categoryContext}.`;
+    
+    // Adding emotional tone based on life impact
+    if (activity.lifeImpact !== undefined) {
+      if (activity.lifeImpact > 7) {
+        prompt += ' The scene should convey joy, fulfillment, and positive energy.';
+      } else if (activity.lifeImpact > 3) {
+        prompt += ' The scene should have a pleasant, positive atmosphere.';
+      } else if (activity.lifeImpact < -3) {
+        prompt += ' The scene should convey challenge or difficulty.';
+      }
+    }
+    
+    // Add aesthetic style guidance
+    prompt += ' The image should be vibrant, well-lit, with good composition. Professional photography style.';
+    
+    return prompt;
+  }
+  
+  /**
+   * Save a base64 image to the file system
+   */
+  private async saveBase64Image(base64Data: string, activityName: string): Promise<ImageGenerationResponse> {
+    try {
+      // Extract the base64 content (remove data:image/jpeg;base64, part if present)
+      const base64Image = base64Data.includes(',') 
+        ? base64Data.split(',')[1] 
+        : base64Data;
+      
+      // Generate a sanitized filename
+      const sanitizedName = activityName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .substring(0, 20);
+      
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const filename = `${uniqueSuffix}.jpg`;
+      const originalFilename = `${sanitizedName}.jpg`;
+      
+      // Ensure the uploads directory exists
+      const uploadDir = './uploads';
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      // Full path to save the image
+      const filePath = path.join(uploadDir, filename);
+      
+      // Decode and save the image
+      const imageBuffer = Buffer.from(base64Image, 'base64');
+      fs.writeFileSync(filePath, imageBuffer);
+      
+      console.log(`Image saved to ${filePath}`);
+      
+      return {
+        filename,
+        originalFilename,
+        path: `uploads/${filename}`,
+        mimeType: 'image/jpeg'
+      };
+    } catch (error) {
+      console.error('Error saving base64 image:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Generate an image for an activity using Stability AI's SDXL model
+   */
+  async generateImageForActivity(activity: ActivityInsert): Promise<ImageGenerationResponse | null> {
+    try {
+      console.log(`Generating image for activity: ${activity.name}`);
+      
+      // Create a prompt for the image generation
+      const prompt = this.generateImagePrompt(activity);
+      console.log(`Image generation prompt: ${prompt}`);
+      
+      // Call the Together API with the Stability AI model
+      const response = await this.client.images.create({
+        model: this.imageModel,
+        prompt: prompt,
+        n: 1,
+        steps: 30
+      });
+      
+      // Check if we have a valid response
+      if (!response.data || response.data.length === 0 || !response.data[0].b64_json) {
+        console.error('No image data in response');
+        return null;
+      }
+      
+      // Save the image to the filesystem
+      const imageData = await this.saveBase64Image(
+        response.data[0].b64_json, 
+        activity.name
+      );
+      
+      return imageData;
+    } catch (error) {
+      console.error('Error generating image for activity:', error);
+      return null;
+    }
   }
 }
 

@@ -334,6 +334,192 @@ adminLLMRouter.get("/unprocessed-images", async (req: AuthenticatedRequest, res)
   }
 });
 
+// Generate an image for an activity that doesn't have one
+adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) => {
+  try {
+    const { activityId } = req.body;
+    
+    if (!activityId) {
+      return res.status(400).json({ error: "Activity ID is required" });
+    }
+    
+    // Get the activity
+    const activity = await storage.getActivity(parseInt(activityId));
+    if (!activity) {
+      return res.status(404).json({ error: "Activity not found" });
+    }
+    
+    // Check if the activity already has images
+    const existingImages = await storage.getActivityImages(activity.id);
+    if (existingImages.length > 0) {
+      return res.status(400).json({ 
+        error: "Activity already has images", 
+        imageCount: existingImages.length 
+      });
+    }
+    
+    // Convert Activity to ActivityInsert format
+    const activityInsert: ActivityInsert = {
+      name: activity.name,
+      category: activity.category,
+      frequency: activity.frequency,
+      frequencyUnit: activity.frequencyUnit as "day" | "week" | "month" | "year",
+      duration: activity.duration,
+      durationUnit: activity.durationUnit as "minute" | "hour",
+      lifeImpact: activity.lifeImpact,
+      color: activity.color,
+      priority: activity.priority,
+      emoji: activity.emoji,
+      exportToCalendar: activity.exportToCalendar,
+      clusterId: activity.clusterId
+    };
+    
+    // Generate an image for the activity
+    const imageData = await togetherAIService.generateImageForActivity(activityInsert);
+    if (!imageData) {
+      return res.status(500).json({ error: "Failed to generate image for activity" });
+    }
+    
+    // Associate the image with the activity
+    const imageAssociation: InsertActivityImage = {
+      activityId: activity.id,
+      filename: imageData.filename,
+      originalFilename: imageData.originalFilename,
+      path: imageData.path,
+      mimeType: imageData.mimeType
+    };
+    
+    const savedImage = await storage.createActivityImage(imageAssociation);
+    console.log("Saved generated image association:", savedImage);
+    
+    res.json({
+      message: "Image generated and associated successfully",
+      activity,
+      image: savedImage
+    });
+  } catch (err: unknown) {
+    console.error("Error generating image for activity:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to generate image for activity",
+      details: errorMessage
+    });
+  }
+});
+
+// Generate images for all activities without images
+adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest, res) => {
+  try {
+    const { limit = 5 } = req.body; // Limit the number of images to generate in one request
+    
+    // Get all activities with images
+    const activitiesWithImages = await storage.getActivitiesWithImages();
+    const activitiesWithImagesIds = new Set(activitiesWithImages.map(a => a.id));
+    
+    // Get all activities
+    const allActivities = await storage.getActivities();
+    
+    // Find activities without images
+    const activitiesWithoutImages = allActivities.filter(activity => 
+      !activitiesWithImagesIds.has(activity.id)
+    );
+    
+    if (activitiesWithoutImages.length === 0) {
+      return res.json({ 
+        message: "No activities without images found",
+        count: 0
+      });
+    }
+    
+    // Limit the number of activities to process
+    const activitiesToProcess = activitiesWithoutImages.slice(0, limit);
+    
+    // Track results
+    const results = [];
+    
+    // Process each activity
+    for (const activity of activitiesToProcess) {
+      try {
+        console.log(`Generating image for activity: ${activity.name} (ID: ${activity.id})`);
+        
+        // Convert Activity to ActivityInsert format
+        const activityInsert: ActivityInsert = {
+          name: activity.name,
+          category: activity.category,
+          frequency: activity.frequency,
+          frequencyUnit: activity.frequencyUnit as "day" | "week" | "month" | "year",
+          duration: activity.duration,
+          durationUnit: activity.durationUnit as "minute" | "hour",
+          lifeImpact: activity.lifeImpact,
+          color: activity.color,
+          priority: activity.priority,
+          emoji: activity.emoji,
+          exportToCalendar: activity.exportToCalendar,
+          clusterId: activity.clusterId
+        };
+        
+        // Generate the image
+        const imageData = await togetherAIService.generateImageForActivity(activityInsert);
+        if (!imageData) {
+          results.push({
+            activityId: activity.id,
+            activityName: activity.name,
+            success: false,
+            error: "Failed to generate image"
+          });
+          continue;
+        }
+        
+        // Associate the image with the activity
+        const imageAssociation: InsertActivityImage = {
+          activityId: activity.id,
+          filename: imageData.filename,
+          originalFilename: imageData.originalFilename,
+          path: imageData.path,
+          mimeType: imageData.mimeType
+        };
+        
+        const savedImage = await storage.createActivityImage(imageAssociation);
+        
+        results.push({
+          activityId: activity.id,
+          activityName: activity.name,
+          success: true,
+          imageId: savedImage.id
+        });
+      } catch (activityError) {
+        console.error(`Error processing activity ${activity.id}:`, activityError);
+        results.push({
+          activityId: activity.id,
+          activityName: activity.name,
+          success: false,
+          error: activityError instanceof Error ? activityError.message : 'Unknown error'
+        });
+      }
+      
+      // Add a small delay between requests to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    const successCount = results.filter(r => r.success).length;
+    
+    res.json({
+      message: `Generated images for ${successCount}/${activitiesToProcess.length} activities`,
+      totalWithoutImages: activitiesWithoutImages.length,
+      processed: activitiesToProcess.length,
+      remaining: activitiesWithoutImages.length - activitiesToProcess.length,
+      results
+    });
+  } catch (err: unknown) {
+    console.error("Error generating missing images:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to generate missing images",
+      details: errorMessage
+    });
+  }
+});
+
 // Delete an image association (and optionally the activity)
 adminLLMRouter.delete("/image/:id", async (req: AuthenticatedRequest, res) => {
   try {

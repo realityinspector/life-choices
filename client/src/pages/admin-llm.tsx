@@ -58,6 +58,8 @@ export default function AdminLLMPage() {
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [generatingImagesCount, setGeneratingImagesCount] = useState(5);
   
   // Effect to cleanup any dangling queries when component unmounts
   useEffect(() => {
