@@ -67,12 +67,12 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
     : activities.reduce((sum, activity) => sum + activity.lifeImpact, 0) / activities.length;
   
   // Calculate days remaining based on life expectancy
-  const daysRemaining = Math.round((userData.lifeExpectancy - userData.age) * 365.25);
+  const daysRemaining = Math.round(((userData.lifeExpectancy || 85) - (userData.age || 30)) * 365.25);
   
   // Calculate sleep metrics
-  const sleepHoursLifetime = userData.sleepHours * 365.25 * (userData.lifeExpectancy - userData.age);
-  const awakeHoursPerDay = 24 - userData.sleepHours;
-  const totalAwakeHoursRemaining = awakeHoursPerDay * 365.25 * (userData.lifeExpectancy - userData.age);
+  const sleepHoursLifetime = (userData.sleepHours || 8) * 365.25 * ((userData.lifeExpectancy || 85) - (userData.age || 30));
+  const awakeHoursPerDay = 24 - (userData.sleepHours || 8);
+  const totalAwakeHoursRemaining = awakeHoursPerDay * 365.25 * ((userData.lifeExpectancy || 85) - (userData.age || 30));
   
   // Sundial time calculations
   const sundialTimeOfDay = '3:59:41 PM'; // From CSV
