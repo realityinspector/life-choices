@@ -839,9 +839,91 @@ export default function AdminImagesPage() {
       idx === fileIndex ? { 
         ...f, 
         activityId: activity?.id || null,
-        suggestedActivity: activity || undefined 
+        suggestedActivity: activity || undefined,
+        // Update status to matched if an activity is selected
+        status: activity ? 'matched' : f.status
       } : f
     ));
+  };
+  
+  const handleSkipFile = (index: number) => {
+    setFiles(prev => prev.filter((_, idx) => idx !== index));
+    
+    toast({
+      title: 'File Skipped',
+      description: 'The file has been removed from the list.',
+    });
+  };
+  
+  const handleRematchFile = async (index: number) => {
+    const file = files[index];
+    if (!file || !file.filename) return;
+    
+    // Update state to show we're matching
+    setFiles(prev => prev.map((f, idx) => 
+      idx === index ? { ...f, status: 'matching', loading: true } : f
+    ));
+    
+    try {
+      // Call API to get suggestion
+      const matchResult = await suggestMatchMutation.mutateAsync(file.filename);
+      
+      // Find the matching activity in our list
+      const matchedActivity = matchResult.activityId 
+        ? activities.find(a => a.id === matchResult.activityId) 
+        : null;
+      
+      // Update file state with match result
+      setFiles(prev => prev.map((f, idx) => 
+        idx === index ? { 
+          ...f, 
+          suggestedMatch: matchResult.suggestedMatch,
+          activityId: matchResult.activityId,
+          suggestedActivity: matchedActivity,
+          status: matchResult.activityId ? 'matched' : 'uploaded',
+          loading: false
+        } : f
+      ));
+      
+      // Automatically save if enabled
+      if (autoSaveAfterMatch && matchResult.activityId) {
+        const fileToSave = {
+          ...file,
+          activityId: matchResult.activityId,
+          suggestedMatch: matchResult.suggestedMatch
+        };
+        
+        if (fileToSave.filename && fileToSave.activityId) {
+          await batchAssociateMutation.mutateAsync([{
+            activityId: fileToSave.activityId,
+            filename: fileToSave.filename,
+            originalFilename: fileToSave.file.name,
+            path: fileToSave.path || '',
+            mimeType: fileToSave.mimeType || 'image/jpeg'
+          }]);
+          
+          // Remove the saved file from the list
+          setFiles(prev => prev.filter((_, idx) => idx !== index));
+          
+          toast({
+            title: 'Auto-saved',
+            description: `${fileToSave.file.name} was matched and saved.`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error matching file:', error);
+      // Update state to show error
+      setFiles(prev => prev.map((f, idx) => 
+        idx === index ? { ...f, status: 'failed', loading: false } : f
+      ));
+      
+      toast({
+        title: 'Matching Error',
+        description: 'Failed to get an activity match for this file.',
+        variant: 'destructive',
+      });
+    }
   };
   
   const handleSaveAssociations = async () => {
@@ -1109,34 +1191,77 @@ export default function AdminImagesPage() {
                                     selectedActivity={file.suggestedActivity || null}
                                     onSelect={(activity) => handleActivityChange(index, activity)}
                                   />
+                                  
+                                  {/* Re-map and Skip buttons for files that are already matched or uploaded */}
+                                  {(file.status === 'matched' || file.status === 'uploaded') && file.filename && (
+                                    <div className="flex gap-1">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleRematchFile(index)}
+                                        className="whitespace-nowrap"
+                                        title="Try to match again with AI"
+                                      >
+                                        <span className="flex items-center gap-1">
+                                          <Search className="h-3 w-3" />
+                                          Re-map
+                                        </span>
+                                      </Button>
+                                      
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleSkipFile(index)}
+                                        className="whitespace-nowrap text-gray-500 hover:text-red-500"
+                                        title="Remove from list"
+                                      >
+                                        <span className="flex items-center gap-1">
+                                          <X className="h-3 w-3" />
+                                          Skip
+                                        </span>
+                                      </Button>
+                                    </div>
+                                  )}
+                                  
                                   {(file.status === 'failed' || !file.suggestedActivity) && (
-                                    <Button 
-                                      size="sm" 
-                                      className="whitespace-nowrap"
-                                      onClick={() => {
-                                        // Extract a potential activity name from the filename
-                                        const nameParts = file.file.name.split('.')[0].split(/(?=[A-Z])|\s+|(?=[a-z][A-Z])/);
-                                        const suggestedName = nameParts.length > 1 
-                                          ? nameParts.slice(1).join(' ') 
-                                          : file.file.name.split('.')[0];
-                                        
-                                        // Create the input dialog
-                                        const activityName = window.prompt(
-                                          "Enter name for new activity:", 
-                                          suggestedName
-                                        );
-                                        
-                                        if (activityName?.trim()) {
-                                          // Dispatch event to create new activity
-                                          const event = new CustomEvent('createNewActivity', { 
-                                            detail: { activityName: activityName.trim(), fileIndex: index } 
-                                          });
-                                          document.dispatchEvent(event);
-                                        }
-                                      }}
-                                    >
-                                      Create New Activity
-                                    </Button>
+                                    <div className="flex gap-1">
+                                      <Button 
+                                        size="sm" 
+                                        className="whitespace-nowrap"
+                                        onClick={() => {
+                                          // Extract a potential activity name from the filename
+                                          const nameParts = file.file.name.split('.')[0].split(/(?=[A-Z])|\s+|(?=[a-z][A-Z])/);
+                                          const suggestedName = nameParts.length > 1 
+                                            ? nameParts.slice(1).join(' ') 
+                                            : file.file.name.split('.')[0];
+                                          
+                                          // Create the input dialog
+                                          const activityName = window.prompt(
+                                            "Enter name for new activity:", 
+                                            suggestedName
+                                          );
+                                          
+                                          if (activityName?.trim()) {
+                                            // Dispatch event to create new activity
+                                            const event = new CustomEvent('createNewActivity', { 
+                                              detail: { activityName: activityName.trim(), fileIndex: index } 
+                                            });
+                                            document.dispatchEvent(event);
+                                          }
+                                        }}
+                                      >
+                                        Create New Activity
+                                      </Button>
+                                      
+                                      <Button 
+                                        size="sm"
+                                        variant="outline"
+                                        className="whitespace-nowrap"
+                                        onClick={() => handleSkipFile(index)}
+                                      >
+                                        Skip
+                                      </Button>
+                                    </div>
                                   )}
                                 </div>
                               ) : (
