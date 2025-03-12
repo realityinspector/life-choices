@@ -285,12 +285,13 @@ adminLLMRouter.post("/batch-process", async (req: AuthenticatedRequest, res) => 
           status: "success",
           activity: createdActivity
         });
-      } catch (error) {
-        console.error(`Error processing image ${images[i].originalFilename}:`, error);
+      } catch (err: unknown) {
+        console.error(`Error processing image ${images[i].originalFilename}:`, err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         results.push({
           originalFilename: images[i].originalFilename,
           status: "failed",
-          error: "Failed to create activity or associate image"
+          error: `Failed to create activity or associate image: ${errorMessage}`
         });
       }
     }
@@ -299,9 +300,13 @@ adminLLMRouter.post("/batch-process", async (req: AuthenticatedRequest, res) => 
       message: `Batch processing completed. ${results.filter(r => r.status === "success").length}/${results.length} successful.`, 
       results 
     });
-  } catch (error) {
-    console.error("Error in batch processing:", error);
-    res.status(500).json({ error: "Failed to complete batch processing" });
+  } catch (err: unknown) {
+    console.error("Error in batch processing:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to complete batch processing",
+      details: errorMessage
+    });
   }
 });
 
@@ -319,9 +324,13 @@ adminLLMRouter.get("/unprocessed-images", async (req: AuthenticatedRequest, res)
       message: "Unprocessed images fetched successfully", 
       unprocessedImages: [] // This would be populated with actual data
     });
-  } catch (error) {
-    console.error("Error fetching unprocessed images:", error);
-    res.status(500).json({ error: "Failed to fetch unprocessed images" });
+  } catch (err: unknown) {
+    console.error("Error fetching unprocessed images:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to fetch unprocessed images",
+      details: errorMessage
+    });
   }
 });
 
@@ -352,8 +361,12 @@ adminLLMRouter.delete("/image/:id", async (req: AuthenticatedRequest, res) => {
       message: "Image deleted successfully",
       activityDeleted: deleteActivity && !!image.activityId
     });
-  } catch (error) {
-    console.error("Error deleting image:", error);
-    res.status(500).json({ error: "Failed to delete image" });
+  } catch (err: unknown) {
+    console.error("Error deleting image:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to delete image",
+      details: errorMessage
+    });
   }
 });
