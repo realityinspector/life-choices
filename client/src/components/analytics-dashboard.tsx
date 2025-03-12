@@ -106,18 +106,18 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
     ? []
     : activities.map(activity => ({
         name: activity.name,
-        hours: activity.frequency * activity.duration * (userData.lifeExpectancy - userData.age) * (activity.frequencyUnit === 'week' ? 52 : activity.frequencyUnit === 'month' ? 12 : activity.frequencyUnit === 'year' ? 1 : 365)
+        hours: activity.frequency * activity.duration * ((userData.lifeExpectancy || 85) - (userData.age || 30)) * (activity.frequencyUnit === 'week' ? 52 : activity.frequencyUnit === 'month' ? 12 : activity.frequencyUnit === 'year' ? 1 : 365)
       })).sort((a, b) => b.hours - a.hours);
   
   // Life quality projection data
   const generateProjectionData = () => {
     const data = [];
-    const currentAge = userData.age;
-    const projectionYears = Math.min(30, userData.lifeExpectancy - currentAge);
+    const currentAge = userData.age || 30;
+    const projectionYears = Math.min(30, (userData.lifeExpectancy || 85) - currentAge);
     
     for (let i = 0; i <= projectionYears; i++) {
       const projectedAge = currentAge + i;
-      const percentComplete = (projectedAge / userData.lifeExpectancy) * 100;
+      const percentComplete = (projectedAge / (userData.lifeExpectancy || 85)) * 100;
       let qualityScore = 100 - (percentComplete * 0.5); // Base quality that decreases with age
       
       // Add some variation and impact from activities
@@ -341,7 +341,7 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {userData.sleepHours} hours of sleep per day
+                  {userData.sleepHours || 8} hours of sleep per day
                 </p>
               </CardContent>
             </Card>
@@ -671,7 +671,7 @@ const AnalyticsDashboard = ({ userData, activities }: AnalyticsDashboardProps) =
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {idealSelfAgeRequired - userData.lifeExpectancy} years
+                  {idealSelfAgeRequired - (userData.lifeExpectancy || 85)} years
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
                   Additional years needed to achieve ideal self
