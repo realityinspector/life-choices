@@ -53,11 +53,12 @@ export default function AdminLLMPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [files, setFiles] = useState<FileUploadState[]>([]);
-  const [batchSize, setBatchSize] = useState<number>(1);
+  const [batchSize, setBatchSize] = useState<number>(10);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [showBatchSettings, setShowBatchSettings] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState<{ [key: string]: boolean }>({});
@@ -578,34 +579,75 @@ export default function AdminLLMPage() {
                 )}
                 
                 {files.some(f => f.status === 'uploaded') && (
-                  <div className="flex items-center space-x-4">
-                    <Label htmlFor="batch-size">Batch Size:</Label>
-                    <Input
-                      id="batch-size"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={batchSize}
-                      onChange={(e) => setBatchSize(parseInt(e.target.value) || 1)}
-                      className="w-24"
-                    />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          onClick={() => setShowBatchSettings(!showBatchSettings)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <span className="mr-2">Batch Settings</span>
+                          {showBatchSettings ? '▼' : '▶'}
+                        </Button>
+                        
+                        <span className="text-sm text-muted-foreground">
+                          Current batch size: {batchSize} images per request
+                        </span>
+                      </div>
+                      
+                      <Button 
+                        onClick={processBatch} 
+                        disabled={isProcessing || !files.some(f => f.status === 'uploaded')}
+                        className="ml-auto"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing Batch
+                          </>
+                        ) : (
+                          <>
+                            <Database className="mr-2 h-4 w-4" />
+                            Process All Files
+                          </>
+                        )}
+                      </Button>
+                    </div>
                     
-                    <Button 
-                      onClick={processBatch} 
-                      disabled={isProcessing || !files.some(f => f.status === 'uploaded')}
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing
-                        </>
-                      ) : (
-                        <>
-                          <Database className="mr-2 h-4 w-4" />
-                          Process All
-                        </>
-                      )}
-                    </Button>
+                    {showBatchSettings && (
+                      <div className="p-4 border rounded-md bg-slate-50">
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="batch-size" className="block mb-2">Batch Size (images per API call)</Label>
+                            <div className="flex items-center space-x-4">
+                              <Input
+                                id="batch-size"
+                                type="number"
+                                min="1"
+                                max="10"
+                                value={batchSize}
+                                onChange={(e) => setBatchSize(parseInt(e.target.value) || 1)}
+                                className="w-24"
+                              />
+                              <div className="text-sm text-muted-foreground">
+                                <p>Recommended: 1-10 images per batch</p>
+                                <p>Higher values are more efficient but may be less reliable</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <Alert className="bg-blue-50 border-blue-200">
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>Batch Processing</AlertTitle>
+                            <AlertDescription>
+                              Processing in batches sends multiple images to the AI in a single call,
+                              which is more efficient but may produce less accurate results for complex filenames.
+                            </AlertDescription>
+                          </Alert>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 
