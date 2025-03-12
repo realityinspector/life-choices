@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { storage } from "../storage";
 import { togetherAIService } from "../services/together-ai";
@@ -25,9 +26,13 @@ function isAuthenticated(req: Request): boolean {
 // Configure multer for file uploads
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "./uploads");
+    // Create uploads directory if it doesn't exist
+    const dir = "./uploads";
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
+    // Generate a more robust unique filename
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
   },
@@ -44,7 +49,8 @@ const upload = multer({
     }
   },
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
+    fileSize: 20 * 1024 * 1024, // Increased to 20MB per file
+    fieldSize: 20 * 1024 * 1024, // Also increase field size limit
   },
 });
 
@@ -82,13 +88,15 @@ adminLLMRouter.get("/images", async (req: AuthenticatedRequest, res) => {
   }
 });
 
-// Upload image file(s)
-adminLLMRouter.post("/upload", upload.array("images", 50), async (req: AuthenticatedRequest, res) => {
+// Upload image file(s) - support for large batches of images
+adminLLMRouter.post("/upload", upload.array("images", 500), async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
       return res.status(400).json({ error: "No files were uploaded" });
     }
 
+    console.log(`Successfully uploaded ${req.files.length} files`);
+    
     const uploadedFiles = req.files.map((file: any) => ({
       filename: file.filename,
       originalFilename: file.originalname,
@@ -97,12 +105,29 @@ adminLLMRouter.post("/upload", upload.array("images", 50), async (req: Authentic
     }));
 
     res.json({ 
-      message: "Files uploaded successfully", 
+      message: `Files uploaded successfully (${req.files.length} files)`, 
       files: uploadedFiles 
     });
   } catch (error) {
     console.error("Error uploading files:", error);
-    res.status(500).json({ error: "Failed to upload files" });
+    
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ 
+          error: "One or more files exceed the maximum file size (20MB per file)"
+        });
+      } else if (error.code === 'LIMIT_FILE_COUNT') {
+        return res.status(413).json({ 
+          error: "Too many files uploaded at once. Maximum file count is 500."
+        });
+      } else if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ 
+          error: "Unexpected field name. Make sure the field name is 'images'."
+        });
+      }
+    }
+    
+    res.status(500).json({ error: "Failed to upload files", details: error.message });
   }
 });
 
