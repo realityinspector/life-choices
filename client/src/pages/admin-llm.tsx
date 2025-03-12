@@ -104,39 +104,100 @@ export default function AdminLLMPage() {
   // Upload files mutation
   const uploadMutation = useMutation({
     mutationFn: async (filesToUpload: File[]) => {
-      const formData = new FormData();
-      filesToUpload.forEach(file => {
-        formData.append('images', file);
-      });
+      // Chunk files into smaller batches to prevent timeouts and memory issues
+      const CHUNK_SIZE = 50; // Upload 50 files at a time
+      let allUploadedFiles: any[] = [];
+      const totalFiles = filesToUpload.length;
+      let processedFiles = 0;
       
-      // Using XMLHttpRequest instead of fetch to avoid abort signal issues
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
+      console.log(`Starting upload of ${totalFiles} files in chunks of ${CHUNK_SIZE}`);
+      
+      // Process files in chunks
+      for (let i = 0; i < filesToUpload.length; i += CHUNK_SIZE) {
+        const chunk = filesToUpload.slice(i, i + CHUNK_SIZE);
+        const chunkIndex = Math.floor(i / CHUNK_SIZE) + 1;
+        const totalChunks = Math.ceil(filesToUpload.length / CHUNK_SIZE);
         
-        xhr.open('POST', '/api/admin-llm/upload', true);
+        console.log(`Uploading chunk ${chunkIndex} of ${totalChunks} (${chunk.length} files)`);
         
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const percentComplete = Math.round((e.loaded / e.total) * 100);
-            setUploadProgress(percentComplete);
+        const formData = new FormData();
+        chunk.forEach(file => {
+          formData.append('images', file);
+        });
+        
+        try {
+          // Using XMLHttpRequest for better progress tracking
+          const response = await new Promise<any>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.open('POST', '/api/admin-llm/upload', true);
+            
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable) {
+                // Calculate overall progress including previous chunks
+                const chunkProgress = Math.round((e.loaded / e.total) * 100);
+                const overallProgress = Math.min(
+                  Math.round(((processedFiles + (chunk.length * chunkProgress / 100)) / totalFiles) * 100),
+                  99 // Cap at 99% until everything is done
+                );
+                setUploadProgress(overallProgress);
+              }
+            };
+            
+            xhr.onload = function() {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                  const response = JSON.parse(xhr.responseText);
+                  resolve(response);
+                } catch (e) {
+                  reject(new Error('Invalid JSON response from server'));
+                }
+              } else {
+                let errorMsg = `HTTP error: ${xhr.status}`;
+                try {
+                  const errorResponse = JSON.parse(xhr.responseText);
+                  errorMsg = errorResponse.error || errorMsg;
+                } catch (e) {
+                  // Ignore parsing errors for error responses
+                }
+                reject(new Error(errorMsg));
+              }
+            };
+            
+            xhr.onerror = function() {
+              reject(new Error('Network error during upload'));
+            };
+            
+            xhr.send(formData);
+          });
+          
+          // Track uploaded files from this chunk
+          if (response.files && Array.isArray(response.files)) {
+            allUploadedFiles = [...allUploadedFiles, ...response.files];
           }
-        };
-        
-        xhr.onload = function() {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const response = JSON.parse(xhr.responseText);
-            resolve(response);
-          } else {
-            reject(new Error(`HTTP error: ${xhr.status}`));
+          
+          // Update processed count for progress calculation
+          processedFiles += chunk.length;
+          
+          // Update progress based on completed chunks
+          const overallProgress = Math.round((processedFiles / totalFiles) * 100);
+          setUploadProgress(overallProgress);
+          
+          // Show progress toast for multi-chunk uploads
+          if (totalChunks > 1) {
+            toast({
+              title: `Chunk ${chunkIndex} of ${totalChunks} Complete`,
+              description: `Uploaded ${processedFiles}/${totalFiles} files (${overallProgress}%)`,
+            });
           }
-        };
-        
-        xhr.onerror = function() {
-          reject(new Error('Network error during upload'));
-        };
-        
-        xhr.send(formData);
-      });
+          
+        } catch (error) {
+          console.error(`Error uploading chunk ${chunkIndex}:`, error);
+          throw error; // Re-throw to trigger onError handler
+        }
+      }
+      
+      return { files: allUploadedFiles };
     },
     onSuccess: (data: any) => {
       // Update files with upload info
@@ -147,7 +208,7 @@ export default function AdminLLMPage() {
               (f: any) => f.originalFilename === fileState.file.name
             ) : null;
           
-          if (uploadedFile) {
+          if (uploadedFile && fileState.status === 'uploading') {
             return {
               ...fileState,
               status: 'uploaded',
@@ -172,12 +233,22 @@ export default function AdminLLMPage() {
     },
     onError: (error) => {
       console.error('Error uploading files:', error);
+      
+      // Reset all uploading files back to idle
+      setFiles(prev => 
+        prev.map(f => 
+          f.status === 'uploading' ? { ...f, status: 'idle', errorMessage: 'Upload failed' } : f
+        )
+      );
+      
       toast({
         title: 'Upload Error',
-        description: 'Failed to upload files. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to upload files. Please try again.',
         variant: 'destructive',
       });
+      
       setIsUploading(false);
+      setUploadProgress(0);
     }
   });
 
@@ -635,20 +706,23 @@ export default function AdminLLMPage() {
       return;
     }
     
+    // If there are a lot of files to process, warn the user
+    if (filesToProcess.length > 100) {
+      toast({
+        title: 'Processing Large Batch',
+        description: `You're about to process ${filesToProcess.length} files. This may take some time.`,
+      });
+    }
+    
     setIsProcessing(true);
     setProcessingProgress(0);
     
-    const progressStep = 100 / filesToProcess.length;
+    // Chunk the files into more manageable batches for API calls
+    const API_BATCH_SIZE = 20; // Smaller than the server batchSize for better parallelism
+    const totalFiles = filesToProcess.length;
+    let processedCount = 0;
     
     try {
-      // Prepare image data for batch processing
-      const images = filesToProcess.map(f => ({
-        filename: f.filename,
-        originalFilename: f.originalFilename,
-        path: f.path,
-        mimeType: f.mimeType
-      }));
-      
       // Update status to processing for all files
       setFiles(prev => 
         prev.map(f => 
@@ -656,14 +730,52 @@ export default function AdminLLMPage() {
         )
       );
       
-      // Process in batches
-      const result = await batchProcessMutation.mutateAsync({
-        images,
-        batchSize
+      // Process in multiple API batches for better handling of large numbers
+      for (let i = 0; i < totalFiles; i += API_BATCH_SIZE) {
+        const chunk = filesToProcess.slice(i, i + API_BATCH_SIZE);
+        const chunkImages = chunk.map(f => ({
+          filename: f.filename,
+          originalFilename: f.originalFilename,
+          path: f.path,
+          mimeType: f.mimeType
+        }));
+        
+        // Show which batch is being processed
+        const batchIndex = Math.floor(i / API_BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(totalFiles / API_BATCH_SIZE);
+        
+        if (totalBatches > 1) {
+          toast({
+            title: `Processing Batch ${batchIndex} of ${totalBatches}`,
+            description: `Processing ${chunkImages.length} files...`,
+          });
+        }
+        
+        // Send this batch to the API
+        const result = await batchProcessMutation.mutateAsync({
+          images: chunkImages,
+          batchSize
+        });
+        
+        // Update files based on results
+        if (result && result.results) {
+          // Get current processed count before this batch
+          processedCount += chunk.length;
+          
+          // Update progress
+          const currentProgress = Math.round((processedCount / totalFiles) * 100);
+          setProcessingProgress(Math.min(currentProgress, 99)); // Cap at 99% until everything is done
+          
+          // Update files with results for this batch
+          handleBatchResults(result, chunk);
+        }
+      }
+      
+      toast({
+        title: 'Batch Processing Complete',
+        description: `Successfully processed ${totalFiles} files.`,
       });
       
-      // Update files with results
-      handleBatchResults(result);
     } catch (error) {
       handleBatchError(error);
     } finally {
@@ -678,15 +790,36 @@ export default function AdminLLMPage() {
   };
 
   // Handle batch processing results
-  const handleBatchResults = (result: any) => {
+  const handleBatchResults = (result: any, currentChunk?: FileUploadState[]) => {
     if (result.results && Array.isArray(result.results)) {
       setFiles(prev => {
         const updatedFiles = [...prev];
         
         result.results.forEach((res: ActivityResponse) => {
-          const fileIndex = updatedFiles.findIndex(f => 
-            f.originalFilename === res.originalFilename && f.status === 'processing'
-          );
+          // First try to find a match in the current chunk (if provided) for better performance
+          let fileIndex = -1;
+          
+          if (currentChunk) {
+            // Find the index in the currentChunk first for efficiency
+            const chunkIndex = currentChunk.findIndex(f => 
+              f.originalFilename === res.originalFilename && f.status === 'processing'
+            );
+            
+            if (chunkIndex !== -1) {
+              // Get the corresponding index in the overall files array
+              fileIndex = updatedFiles.findIndex(f => 
+                f.originalFilename === currentChunk[chunkIndex].originalFilename && 
+                f.status === 'processing'
+              );
+            }
+          }
+          
+          // If not found in chunk (or no chunk provided), do a full search
+          if (fileIndex === -1) {
+            fileIndex = updatedFiles.findIndex(f => 
+              f.originalFilename === res.originalFilename && f.status === 'processing'
+            );
+          }
           
           if (fileIndex !== -1) {
             if (res.status === 'success' && res.activity) {
@@ -708,10 +841,14 @@ export default function AdminLLMPage() {
         return updatedFiles;
       });
       
-      toast({
-        title: 'Batch Processing Complete',
-        description: `Processed ${result.results.length} images. ${result.results.filter((r: any) => r.status === 'success').length} successful.`,
-      });
+      // Only show the completion toast when not processing multiple chunks
+      if (!currentChunk) {
+        const successCount = result.results.filter((r: any) => r.status === 'success').length;
+        toast({
+          title: 'Batch Processing Complete',
+          description: `Processed ${result.results.length} images. ${successCount} successful.`,
+        });
+      }
     }
   };
   
