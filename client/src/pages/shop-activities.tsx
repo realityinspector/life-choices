@@ -512,15 +512,15 @@ export default function ShopActivitiesPage() {
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
   
-  // Fetch activities with images
+  // Fetch all activities with images for the shop (no user filtering)
   const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
-    queryKey: ['/api/activities/with-images'],
+    queryKey: ['/api/activities/shop/with-images'],
     queryFn: async ({ signal }) => {
       try {
-        const res = await apiRequest('/api/activities/with-images', { signal });
+        const res = await apiRequest('/api/activities/shop/with-images', { signal });
         return res.json();
       } catch (error) {
-        console.error('Error fetching activities with images:', error);
+        console.error('Error fetching shop activities with images:', error);
         return [];
       }
     }

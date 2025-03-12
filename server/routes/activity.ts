@@ -58,9 +58,44 @@ activityRouter.get('/with-images', async (req, res) => {
     res.json(activitiesWithImages);
   } catch (err: unknown) {
     console.error("Error fetching activities with images:", err);
+  }
+});
+
+// Get all activities in the system for the shop (no user filtering)
+activityRouter.get('/shop', async (req, res) => {
+  try {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    // Fetch all activities without filtering by user
+    const allActivities = await storage.getActivities();
+    res.json(allActivities);
+  } catch (err: unknown) {
+    console.error("Error fetching shop activities:", err);
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     res.status(500).json({ 
-      error: "Failed to fetch activities with images",
+      error: "Failed to fetch shop activities",
+      details: errorMessage
+    });
+  }
+});
+
+// Get all activities with their images for the shop (no user filtering)
+activityRouter.get('/shop/with-images', async (req, res) => {
+  try {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    // Pass undefined as userId to fetch all activities with images without filtering
+    const activitiesWithImages = await storage.getActivitiesWithImages();
+    res.json(activitiesWithImages);
+  } catch (err: unknown) {
+    console.error("Error fetching shop activities with images:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to fetch shop activities with images",
       details: errorMessage
     });
   }
