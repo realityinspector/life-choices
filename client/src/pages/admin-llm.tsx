@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { Info, CheckCircle, XCircle, Loader2, UploadCloud, Trash, Database, RefreshCw } from "lucide-react";
+import { Info, CheckCircle, XCircle, Loader2, UploadCloud, Trash, Database, RefreshCw, Save } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -672,7 +672,7 @@ export default function AdminLLMPage() {
                             </>
                           ) : (
                             <>
-                              <SaveAll className="mr-2 h-4 w-4" />
+                              <Save className="mr-2 h-4 w-4" />
                               Save All
                             </>
                           )}
