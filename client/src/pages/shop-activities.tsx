@@ -16,6 +16,9 @@ import Navigation from "@/components/navigation";
 import { SAMPLE_ACTIVITIES, MORE_SAMPLE_ACTIVITIES } from "@shared/sample-activities";
 import { apiRequest } from "@/lib/queryClient";
 
+// Debug flag to help troubleshoot issues
+const DEBUG_MODE = true;
+
 // Activity Card component for consistency across tabs
 interface ActivityCardProps {
   activity: Required<ActivityInsert> | (Activity & { description?: string; completed?: boolean });
@@ -89,23 +92,35 @@ const ActivityCard = ({
     }
   };
 
-  // Check if this activity already exists in the user's activities
-  // We need to check by ID for database activities and by name for sample/example activities
-  const activityExists = userActivities.some(a => {
-    if ('id' in activity && 'id' in a) {
-      // If both have IDs, compare by ID (most accurate)
-      return a.id === activity.id;
+  // Debug to ensure we can see what's happening
+  useEffect(() => {
+    if (window.location.pathname === '/shop-activities') {
+      console.debug('Activity check:', { 
+        activityId: 'id' in activity ? activity.id : 'none',
+        activityName: activity.name, 
+        userActivitiesCount: userActivities.length
+      });
     }
+  }, [activity, userActivities]);
+  
+  // Check if this activity already exists in the user's activities
+  // First try ID comparison for database activities, then fall back to name
+  const activityExists = userActivities.some(a => {
+    // If both have IDs and they're the same
+    if ('id' in activity && 'id' in a && activity.id !== undefined && a.id !== undefined) {
+      return activity.id === a.id;
+    }
+    
     // Otherwise fall back to name comparison for sample activities
-    return a.name === activity.name;
+    return activity.name.toLowerCase() === a.name.toLowerCase();
   });
   
-  // Find the activity in user's activities if it exists
+  // Find the activity in user's activities if it exists (using the same logic)
   const existingActivity = userActivities.find(a => {
-    if ('id' in activity && 'id' in a) {
-      return a.id === activity.id;
+    if ('id' in activity && 'id' in a && activity.id !== undefined && a.id !== undefined) {
+      return activity.id === a.id;
     }
-    return a.name === activity.name;
+    return activity.name.toLowerCase() === a.name.toLowerCase();
   });
   
   // Helper function to convert Activity to ActivityInsert safely
@@ -563,6 +578,18 @@ export default function ShopActivitiesPage() {
     };
   });
   
+  // Debug to console the user's activities and the database activities for comparison
+  useEffect(() => {
+    if (window.location.pathname === '/shop-activities') {
+      console.debug('Activity data for debugging:', {
+        userActivitiesCount: activities.length,
+        userActivitiesNames: activities.map(a => a.name),
+        databaseActivitiesCount: databaseActivities.length,
+        sampleActivitiesCount: enhancedSampleActivities.length + enhancedMoreSampleActivities.length
+      });
+    }
+  }, [activities, databaseActivities, enhancedSampleActivities, enhancedMoreSampleActivities]);
+
   // Combine all activities from different sources, prioritizing database entries
   const allActivities = [
     ...enhancedDatabaseActivities,
