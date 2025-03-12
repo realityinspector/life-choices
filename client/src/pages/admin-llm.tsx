@@ -364,7 +364,60 @@ export default function AdminLLMPage() {
     }
   };
 
-  // Process all uploaded files in batch
+  // Process all files including those already processed
+  const saveAll = async () => {
+    const allFilesToProcess = files.filter(f => 
+      (f.status === 'uploaded' || f.status === 'success' || f.status === 'failed') && 
+      f.filename && f.originalFilename && f.path && f.mimeType
+    );
+    
+    if (allFilesToProcess.length === 0) {
+      toast({
+        title: 'No Files to Process',
+        description: 'Please upload files first.',
+      });
+      return;
+    }
+    
+    setIsProcessing(true);
+    setProcessingProgress(0);
+    
+    const progressStep = 100 / allFilesToProcess.length;
+    
+    try {
+      // Prepare image data for batch processing
+      const images = allFilesToProcess.map(f => ({
+        filename: f.filename,
+        originalFilename: f.originalFilename,
+        path: f.path,
+        mimeType: f.mimeType
+      }));
+      
+      // Update status to processing for all files
+      setFiles(prev => 
+        prev.map(f => 
+          (f.status === 'uploaded' || f.status === 'success' || f.status === 'failed') ? 
+          { ...f, status: 'processing' } : f
+        )
+      );
+  
+      // Process in batches
+      const result = await batchProcessMutation.mutateAsync({
+        images,
+        batchSize
+      });
+      
+      // Update files with results
+      handleBatchResults(result);
+    } catch (error) {
+      handleBatchError(error);
+    } finally {
+      setIsProcessing(false);
+      setProcessingProgress(100);
+    }
+  };
+
+  // Process only uploaded files in batch
   const processBatch = async () => {
     const filesToProcess = files.filter(f => f.status === 'uploaded' && f.filename && f.originalFilename && f.path && f.mimeType);
     
@@ -404,59 +457,9 @@ export default function AdminLLMPage() {
       });
       
       // Update files with results
-      if (result.results && Array.isArray(result.results)) {
-        setFiles(prev => {
-          const updatedFiles = [...prev];
-          
-          result.results.forEach((res: ActivityResponse) => {
-            const fileIndex = updatedFiles.findIndex(f => 
-              f.originalFilename === res.originalFilename && f.status === 'processing'
-            );
-            
-            if (fileIndex !== -1) {
-              if (res.status === 'success' && res.activity) {
-                updatedFiles[fileIndex] = {
-                  ...updatedFiles[fileIndex],
-                  status: 'success',
-                  activity: res.activity
-                };
-              } else {
-                updatedFiles[fileIndex] = {
-                  ...updatedFiles[fileIndex],
-                  status: 'failed',
-                  errorMessage: res.error || 'Processing failed'
-                };
-              }
-            }
-          });
-          
-          return updatedFiles;
-        });
-        
-        toast({
-          title: 'Batch Processing Complete',
-          description: `Processed ${result.results.length} images. ${result.results.filter((r: any) => r.status === 'success').length} successful.`,
-        });
-      }
+      handleBatchResults(result);
     } catch (error) {
-      console.error('Error in batch processing:', error);
-      
-      // Mark all processing files as failed
-      setFiles(prev => 
-        prev.map(f => 
-          f.status === 'processing' ? { 
-            ...f, 
-            status: 'failed',
-            errorMessage: 'Batch processing failed.'
-          } : f
-        )
-      );
-      
-      toast({
-        title: 'Batch Processing Error',
-        description: 'An error occurred during batch processing.',
-        variant: 'destructive',
-      });
+      handleBatchError(error);
     } finally {
       setIsProcessing(false);
       setProcessingProgress(100);
@@ -466,6 +469,66 @@ export default function AdminLLMPage() {
   // Remove a file from the list
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle batch processing results
+  const handleBatchResults = (result: any) => {
+    if (result.results && Array.isArray(result.results)) {
+      setFiles(prev => {
+        const updatedFiles = [...prev];
+        
+        result.results.forEach((res: ActivityResponse) => {
+          const fileIndex = updatedFiles.findIndex(f => 
+            f.originalFilename === res.originalFilename && f.status === 'processing'
+          );
+          
+          if (fileIndex !== -1) {
+            if (res.status === 'success' && res.activity) {
+              updatedFiles[fileIndex] = {
+                ...updatedFiles[fileIndex],
+                status: 'success',
+                activity: res.activity
+              };
+            } else {
+              updatedFiles[fileIndex] = {
+                ...updatedFiles[fileIndex],
+                status: 'failed',
+                errorMessage: res.error || 'Processing failed'
+              };
+            }
+          }
+        });
+        
+        return updatedFiles;
+      });
+      
+      toast({
+        title: 'Batch Processing Complete',
+        description: `Processed ${result.results.length} images. ${result.results.filter((r: any) => r.status === 'success').length} successful.`,
+      });
+    }
+  };
+  
+  // Handle batch processing errors
+  const handleBatchError = (error: any) => {
+    console.error('Error in batch processing:', error);
+    
+    // Mark all processing files as failed
+    setFiles(prev => 
+      prev.map(f => 
+        f.status === 'processing' ? { 
+          ...f, 
+          status: 'failed',
+          errorMessage: 'Batch processing failed.'
+        } : f
+      )
+    );
+    
+    toast({
+      title: 'Batch Processing Error',
+      description: 'An error occurred during batch processing.',
+      variant: 'destructive',
+    });
   };
 
   // Clear all files
@@ -596,23 +659,42 @@ export default function AdminLLMPage() {
                         </span>
                       </div>
                       
-                      <Button 
-                        onClick={processBatch} 
-                        disabled={isProcessing || !files.some(f => f.status === 'uploaded')}
-                        className="ml-auto"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing Batch
-                          </>
-                        ) : (
-                          <>
-                            <Database className="mr-2 h-4 w-4" />
-                            Process All Files
-                          </>
-                        )}
-                      </Button>
+                      <div className="flex space-x-2 ml-auto">
+                        <Button 
+                          onClick={saveAll} 
+                          disabled={isProcessing || files.length === 0}
+                          variant="secondary"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing All
+                            </>
+                          ) : (
+                            <>
+                              <SaveAll className="mr-2 h-4 w-4" />
+                              Save All
+                            </>
+                          )}
+                        </Button>
+                        
+                        <Button 
+                          onClick={processBatch} 
+                          disabled={isProcessing || !files.some(f => f.status === 'uploaded')}
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing Batch
+                            </>
+                          ) : (
+                            <>
+                              <Database className="mr-2 h-4 w-4" />
+                              Process Uploaded
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                     
                     {showBatchSettings && (
