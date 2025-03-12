@@ -1080,11 +1080,42 @@ export default function AdminImagesPage() {
                             </TableCell>
                             <TableCell>
                               {file.status === 'uploaded' || file.status === 'matched' || file.status === 'failed' ? (
-                                <ActivitySearch
-                                  activities={activities}
-                                  selectedActivity={file.suggestedActivity || null}
-                                  onSelect={(activity) => handleActivityChange(index, activity)}
-                                />
+                                <div className="flex items-center space-x-2">
+                                  <ActivitySearch
+                                    activities={activities}
+                                    selectedActivity={file.suggestedActivity || null}
+                                    onSelect={(activity) => handleActivityChange(index, activity)}
+                                  />
+                                  {(file.status === 'failed' || !file.suggestedActivity) && (
+                                    <Button 
+                                      size="sm" 
+                                      className="whitespace-nowrap"
+                                      onClick={() => {
+                                        // Extract a potential activity name from the filename
+                                        const nameParts = file.file.name.split('.')[0].split(/(?=[A-Z])|\s+|(?=[a-z][A-Z])/);
+                                        const suggestedName = nameParts.length > 1 
+                                          ? nameParts.slice(1).join(' ') 
+                                          : file.file.name.split('.')[0];
+                                        
+                                        // Create the input dialog
+                                        const activityName = window.prompt(
+                                          "Enter name for new activity:", 
+                                          suggestedName
+                                        );
+                                        
+                                        if (activityName?.trim()) {
+                                          // Dispatch event to create new activity
+                                          const event = new CustomEvent('createNewActivity', { 
+                                            detail: { activityName: activityName.trim() } 
+                                          });
+                                          document.dispatchEvent(event);
+                                        }
+                                      }}
+                                    >
+                                      Create New Activity
+                                    </Button>
+                                  )}
+                                </div>
                               ) : (
                                 '-'
                               )}
@@ -1250,14 +1281,50 @@ export default function AdminImagesPage() {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label>Select Activity</Label>
-                <ActivitySearch
-                  activities={activities}
-                  selectedActivity={selectedActivity}
-                  onSelect={setSelectedActivity}
-                  placeholder="Choose an activity for this image..."
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Select Activity</Label>
+                  <ActivitySearch
+                    activities={activities}
+                    selectedActivity={selectedActivity}
+                    onSelect={setSelectedActivity}
+                    placeholder="Choose an activity for this image..."
+                  />
+                </div>
+                
+                <div className="flex justify-between">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => {
+                      // Extract a potential activity name from the image filename
+                      const image = activityImages.find(img => img.id === editingImageId);
+                      if (!image) return;
+                      
+                      const nameParts = image.originalFilename.split('.')[0].split(/(?=[A-Z])|\s+|(?=[a-z][A-Z])/);
+                      const suggestedName = nameParts.length > 1 
+                        ? nameParts.slice(1).join(' ') 
+                        : image.originalFilename.split('.')[0];
+                      
+                      // Create the input dialog
+                      const activityName = window.prompt(
+                        "Enter name for new activity:", 
+                        suggestedName
+                      );
+                      
+                      if (activityName?.trim()) {
+                        // Dispatch event to create new activity
+                        const event = new CustomEvent('createNewActivity', { 
+                          detail: { activityName: activityName.trim() } 
+                        });
+                        document.dispatchEvent(event);
+                      }
+                    }}
+                  >
+                    Create New Activity
+                  </Button>
+                </div>
               </div>
             </div>
           )}
