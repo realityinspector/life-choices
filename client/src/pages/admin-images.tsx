@@ -1077,9 +1077,9 @@ export default function AdminImagesPage() {
                                 <div className="w-16 h-16 relative">
                                   <FileImage className="absolute inset-0 w-full h-full text-gray-300" />
                                   <img 
-                                    src={`/uploads/${image.filename}`} 
+                                    src={image.path} 
                                     alt={image.originalFilename}
-                                    className="absolute inset-0 w-full h-full object-cover"
+                                    className="absolute inset-0 w-full h-full object-cover rounded-md"
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none';
                                     }}
