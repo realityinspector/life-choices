@@ -82,9 +82,13 @@ adminLLMRouter.get("/images", async (req: AuthenticatedRequest, res) => {
   try {
     const images = await storage.getActivityImages();
     res.json(images);
-  } catch (error) {
-    console.error("Error fetching activity images:", error);
-    res.status(500).json({ error: "Failed to fetch activity images" });
+  } catch (err: unknown) {
+    console.error("Error fetching activity images:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to fetch activity images",
+      details: errorMessage
+    });
   }
 });
 
@@ -108,26 +112,32 @@ adminLLMRouter.post("/upload", upload.array("images", 500), async (req: Authenti
       message: `Files uploaded successfully (${req.files.length} files)`, 
       files: uploadedFiles 
     });
-  } catch (error) {
-    console.error("Error uploading files:", error);
+  } catch (err: unknown) {
+    console.error("Error uploading files:", err);
     
-    if (error instanceof multer.MulterError) {
-      if (error.code === 'LIMIT_FILE_SIZE') {
+    // Handle specific Multer errors
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({ 
           error: "One or more files exceed the maximum file size (20MB per file)"
         });
-      } else if (error.code === 'LIMIT_FILE_COUNT') {
+      } else if (err.code === 'LIMIT_FILE_COUNT') {
         return res.status(413).json({ 
           error: "Too many files uploaded at once. Maximum file count is 500."
         });
-      } else if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
         return res.status(400).json({ 
           error: "Unexpected field name. Make sure the field name is 'images'."
         });
       }
     }
     
-    res.status(500).json({ error: "Failed to upload files", details: error.message });
+    // Default error handling
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+    res.status(500).json({ 
+      error: "Failed to upload files", 
+      details: errorMessage 
+    });
   }
 });
 
@@ -151,9 +161,13 @@ adminLLMRouter.post("/generate-activity", async (req: AuthenticatedRequest, res)
       message: "Activity generated successfully", 
       activity: activityData
     });
-  } catch (error) {
-    console.error("Error generating activity:", error);
-    res.status(500).json({ error: "Failed to generate activity" });
+  } catch (err: unknown) {
+    console.error("Error generating activity:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to generate activity",
+      details: errorMessage 
+    });
   }
 });
 
@@ -200,9 +214,13 @@ adminLLMRouter.post("/create-activity-with-image", async (req: AuthenticatedRequ
       message: "Activity created and image associated successfully", 
       activity: createdActivity
     });
-  } catch (error) {
-    console.error("Error creating activity with image:", error);
-    res.status(500).json({ error: "Failed to create activity with image" });
+  } catch (err: unknown) {
+    console.error("Error creating activity with image:", err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to create activity with image",
+      details: errorMessage
+    });
   }
 });
 

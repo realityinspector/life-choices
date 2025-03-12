@@ -767,7 +767,7 @@ export default function AdminLLMPage() {
           setProcessingProgress(Math.min(currentProgress, 99)); // Cap at 99% until everything is done
           
           // Update files with results for this batch
-          handleBatchResults(result, chunk);
+          handleBatchResults(result, chunk as FileUploadState[]);
         }
       }
       
