@@ -90,10 +90,23 @@ const ActivityCard = ({
   };
 
   // Check if this activity already exists in the user's activities
-  const activityExists = userActivities.some(a => a.name === activity.name);
+  // We need to check by ID for database activities and by name for sample/example activities
+  const activityExists = userActivities.some(a => {
+    if ('id' in activity && 'id' in a) {
+      // If both have IDs, compare by ID (most accurate)
+      return a.id === activity.id;
+    }
+    // Otherwise fall back to name comparison for sample activities
+    return a.name === activity.name;
+  });
   
   // Find the activity in user's activities if it exists
-  const existingActivity = userActivities.find(a => a.name === activity.name);
+  const existingActivity = userActivities.find(a => {
+    if ('id' in activity && 'id' in a) {
+      return a.id === activity.id;
+    }
+    return a.name === activity.name;
+  });
   
   // Helper function to convert Activity to ActivityInsert safely
   const toActivityInsert = (act: any): ActivityInsert => {
@@ -238,7 +251,7 @@ const ActivityCard = ({
                   disabled={activityExists}
                 >
                   <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                  {activityExists ? "Already Added" : "Add to Cart"}
+                  {activityExists ? "Already in Tasks" : "Add to Cart"}
                 </Button>
                 <Button 
                   className="flex-1 text-xs h-8" 
@@ -248,20 +261,10 @@ const ActivityCard = ({
                   disabled={activityExists}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  {activityExists ? "Already Added" : "Add Now"}
+                  {activityExists ? "Already in Tasks" : "Add to Tasks"}
                 </Button>
               </div>
-              {activityExists ? (
-                <Button 
-                  className="w-full text-xs h-8" 
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleExportToCalendar}
-                >
-                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                  Add to Calendar
-                </Button>
-              ) : (
+              {!activityExists && (
                 <Button 
                   className="w-full text-xs h-8" 
                   size="sm"
