@@ -73,7 +73,7 @@ export default function ProfilePage() {
         </Link>
         
         {isAdmin && (
-          <Link href="/admin/llm" className="flex flex-col items-center py-1 text-gray-500">
+          <Link href="/admin" className="flex flex-col items-center py-1 text-gray-500">
             <Settings className="h-6 w-6" />
             <span className="text-xs mt-1">Admin</span>
           </Link>

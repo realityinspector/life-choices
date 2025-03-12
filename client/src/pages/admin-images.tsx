@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,7 +12,8 @@ import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
 import { Activity, ActivityImage } from '@shared/schema';
 import { Loader2, CheckCircle2, XCircle, Unlink, FileImage, Upload, Search, 
-         Save, Edit, Filter, AlertCircle, Check, X, ChevronsUpDown, ChevronDown } from 'lucide-react';
+         Save, Edit, Filter, AlertCircle, Check, X, ChevronsUpDown, ChevronDown, 
+         ArrowLeft } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
