@@ -8,11 +8,11 @@ export const DB_SCHEMAS = [
   "activity_clusters",
   "activity_invitations",
   "activity_images",
-  "life_events",
   "event_categories",
+  "life_events",
   "user_life_events",
   "system_prompts",
   "llm_conversations",
   "llm_messages",
-  "sessions" // Express session table
+  "session" // Express session table
 ];
