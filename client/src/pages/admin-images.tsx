@@ -78,6 +78,13 @@ function ActivitySearch({
     }
   }, [selectedActivity]);
   
+  // Function to handle selection and ensure UI updates
+  const handleSelect = (activity: Activity) => {
+    setValue(activity.name); // Update local state immediately
+    onSelect(activity);      // Notify parent component
+    setOpen(false);          // Close dropdown
+  };
+  
   // Group activities by category if needed
   const groupedActivities = showCategories ? 
     Object.entries(
@@ -143,10 +150,7 @@ function ActivitySearch({
                       <CommandItem
                         key={activity.id}
                         value={`${activity.id}-${activity.name}`}
-                        onSelect={() => {
-                          onSelect(activity);
-                          setOpen(false);
-                        }}
+                        onSelect={() => handleSelect(activity)}
                         className="flex justify-between"
                       >
                         <div className="flex items-center">
@@ -168,6 +172,7 @@ function ActivitySearch({
                   variant="ghost" 
                   className="w-full justify-start text-muted-foreground"
                   onClick={() => {
+                    setValue(""); // Clear value in local state
                     onSelect(null);
                     setOpen(false);
                   }}
