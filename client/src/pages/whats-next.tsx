@@ -15,19 +15,15 @@ export default function WhatsNextPage() {
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
-  const [suggestedActivities, setSuggestedActivities] = useState<ActivityInsert[]>([]);
+  const [currentSuggestedActivity, setCurrentSuggestedActivity] = useState<ActivityInsert | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     loadNextActivity();
     setCartCount(getCartActivities().length);
-    // Get suggested activities
-    if (!currentActivity) {
-      setSuggestedActivities(getRandomSuggestedActivities(3));
-    }
   }, []);
 
-  const getRandomSuggestedActivities = (count: number): ActivityInsert[] => {
+  const getRandomSuggestedActivity = (): ActivityInsert | null => {
     // Combine sample activities from both sources
     const allSampleActivities = [...SAMPLE_ACTIVITIES, ...MORE_SAMPLE_ACTIVITIES];
     
@@ -38,11 +34,12 @@ export default function WhatsNextPage() {
       )
     );
     
-    // Shuffle the available activities
-    const shuffled = [...availableActivities].sort(() => Math.random() - 0.5);
+    // No available activities left
+    if (availableActivities.length === 0) return null;
     
-    // Take the requested number of activities
-    return shuffled.slice(0, count);
+    // Shuffle and pick one
+    const shuffled = [...availableActivities].sort(() => Math.random() - 0.5);
+    return shuffled[0];
   };
 
   const loadNextActivity = async () => {
@@ -51,17 +48,20 @@ export default function WhatsNextPage() {
       const activity = await getNextActivity();
       setCurrentActivity(activity || null);
       
-      // If there's no next activity, load some suggested activities
+      // If there's no next activity, load a suggested one
       if (!activity) {
-        setSuggestedActivities(getRandomSuggestedActivities(3));
+        setCurrentSuggestedActivity(getRandomSuggestedActivity());
+      } else {
+        // Clear suggested activity if we have a regular one
+        setCurrentSuggestedActivity(null);
       }
       
       setLoading(false);
     } catch (error) {
       console.error('Error loading next activity:', error);
       setLoading(false);
-      // If there's an error, still try to load suggestions
-      setSuggestedActivities(getRandomSuggestedActivities(3));
+      // If there's an error, still try to load a suggestion
+      setCurrentSuggestedActivity(getRandomSuggestedActivity());
     }
   };
 
@@ -123,8 +123,13 @@ export default function WhatsNextPage() {
       variant: 'default',
     });
     
-    // Refresh the suggestions to show different ones
-    setSuggestedActivities(getRandomSuggestedActivities(3));
+    // Get the next suggested activity
+    setCurrentSuggestedActivity(getRandomSuggestedActivity());
+  };
+  
+  const handleSkipSuggestion = () => {
+    // Get a different suggested activity
+    setCurrentSuggestedActivity(getRandomSuggestedActivity());
   };
 
   return (
@@ -161,7 +166,7 @@ export default function WhatsNextPage() {
                 });
               }}
             />
-          ) : suggestedActivities.length > 0 ? (
+          ) : currentSuggestedActivity ? (
             <div className="w-full max-w-md">
               <div className="text-center mb-6">
                 <div className="mx-auto h-16 w-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
@@ -171,47 +176,55 @@ export default function WhatsNextPage() {
                 <p className="text-gray-500 mb-4">No planned activities right now. Here are some suggestions you might enjoy:</p>
               </div>
               
-              <div className="grid gap-4">
-                {suggestedActivities.map((activity, index) => (
-                  <Card key={index} className="overflow-hidden border-2 border-purple-200 bg-purple-50 shadow-sm">
-                    <div className={`h-1.5 bg-purple-500`} />
-                    <CardHeader className="pb-2 pt-3">
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-base">{activity.name}</CardTitle>
-                        <Badge className="text-xs">{activity.category}</Badge>
-                      </div>
-                      <CardDescription className="mt-1 text-xs">
-                        {activity.frequency} x {activity.frequencyUnit}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pb-2 pt-0">
-                      <div className="flex justify-between text-xs">
-                        <div className="flex items-center">
-                          <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                          <span>{activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Zap className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                          <span>Impact: {(activity.lifeImpact ?? 0) > 0 ? '+' : ''}{activity.lifeImpact ?? 0}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="pt-2">
-                      <Button 
-                        className="w-full text-xs h-8" 
-                        size="sm"
-                        onClick={() => handleAddSuggestedActivity(activity)}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1.5" />
-                        Add This Activity
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-                
-                <Link href="/shop-activities" className="block mt-2">
+              <Card className="overflow-hidden border-purple-200 bg-purple-50 shadow-sm">
+                <div className="h-1.5 bg-purple-500" />
+                <CardHeader className="pb-2 pt-3">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-base">{currentSuggestedActivity.name}</CardTitle>
+                    <Badge className="text-xs bg-blue-500">{currentSuggestedActivity.category}</Badge>
+                  </div>
+                  <CardDescription className="mt-1 text-xs">
+                    {currentSuggestedActivity.frequency} x {currentSuggestedActivity.frequencyUnit}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-2 pt-0">
+                  <div className="flex justify-between text-xs">
+                    <div className="flex items-center">
+                      <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                      <span>{currentSuggestedActivity.duration} {currentSuggestedActivity.durationUnit}
+                        {currentSuggestedActivity.duration > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <Zap className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                      <span>Impact: {(currentSuggestedActivity.lifeImpact ?? 0) > 0 ? '+' : ''}
+                        {currentSuggestedActivity.lifeImpact ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="pt-2">
+                  <Button 
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white" 
+                    onClick={() => handleAddSuggestedActivity(currentSuggestedActivity)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add This Activity
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              <div className="flex mt-4 gap-2">
+                <Button 
+                  className="flex-1" 
+                  variant="outline"
+                  onClick={handleSkipSuggestion}
+                >
+                  Show Another
+                </Button>
+                <Link href="/shop-activities" className="flex-1">
                   <Button className="w-full" variant="outline">
-                    Browse More Activities
+                    Browse More
                   </Button>
                 </Link>
               </div>
