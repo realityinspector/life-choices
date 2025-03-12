@@ -92,21 +92,40 @@ const ActivityCard = ({
     }
   };
 
-  // Debug to ensure we can see what's happening
+  // Important: For shop activities, we want to check against the user's personally added activities,
+  // NOT the system-provided activities that are available to all users
+  
+  // Get the current user data from the parent component
+  const { userData: currentUser } = useUser();
+  
+  // Step 1: Determine if this activity is a user-selected activity (not just a system activity)
+  // A user activity has the current user's ID attached to it
+  const isUserSelectedActivity = (a: Activity): boolean => {
+    // Check if the activity has userId matching the current user
+    return 'userId' in a && currentUser && a.userId === currentUser.id;
+  };
+  
+  // Filter to only include user-selected activities (not all system activities)
+  const userSelectedActivities = userActivities.filter(isUserSelectedActivity);
+  
+  // Debug to help us understand what's happening
   useEffect(() => {
-    if (window.location.pathname === '/shop-activities') {
+    if (window.location.pathname === '/shop-activities' && DEBUG_MODE) {
       console.debug('Activity check:', { 
         activityId: 'id' in activity ? activity.id : 'none',
-        activityName: activity.name, 
-        userActivitiesCount: userActivities.length
+        activityName: activity.name,
+        isInUserSelectedActivities: userSelectedActivities.some(a => 
+          a.name.toLowerCase() === activity.name.toLowerCase()
+        ),
+        totalActivities: userActivities.length,
+        userSelectedCount: userSelectedActivities.length
       });
     }
-  }, [activity, userActivities]);
+  }, [activity, userActivities, userSelectedActivities]);
   
-  // Check if this activity already exists in the user's activities
-  // First try ID comparison for database activities, then fall back to name
-  const activityExists = userActivities.some(a => {
-    // If both have IDs and they're the same
+  // Check if this activity is already in the user's SELECTED activities (not just system activities)
+  const activityExists = userSelectedActivities.some(a => {
+    // First try ID comparison for database activities
     if ('id' in activity && 'id' in a && activity.id !== undefined && a.id !== undefined) {
       return activity.id === a.id;
     }
@@ -115,8 +134,8 @@ const ActivityCard = ({
     return activity.name.toLowerCase() === a.name.toLowerCase();
   });
   
-  // Find the activity in user's activities if it exists (using the same logic)
-  const existingActivity = userActivities.find(a => {
+  // Find the activity in user's selected activities if it exists (using the same logic)
+  const existingActivity = userSelectedActivities.find(a => {
     if ('id' in activity && 'id' in a && activity.id !== undefined && a.id !== undefined) {
       return activity.id === a.id;
     }
