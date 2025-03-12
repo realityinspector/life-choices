@@ -162,8 +162,8 @@ function ActivitySearch({
                 );
               })}
             </ScrollArea>
-            {selectedActivity && (
-              <div className="p-1 border-t">
+            <div className="p-1 border-t">
+              {selectedActivity && (
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start text-muted-foreground"
@@ -174,8 +174,43 @@ function ActivitySearch({
                 >
                   Clear selection
                 </Button>
+              )}
+              
+              <div className="p-2 mt-1 border-t">
+                <div className="text-sm font-medium mb-1">Create new activity:</div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="new-activity-input"
+                    type="text"
+                    placeholder="Enter activity name"
+                    className="flex-1 h-8"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const input = document.getElementById('new-activity-input') as HTMLInputElement;
+                      const activityName = input?.value?.trim();
+                      
+                      if (!activityName) {
+                        // Show toast using context
+                        const toast = document.createEvent('CustomEvent');
+                        document.dispatchEvent(toast);
+                        return;
+                      }
+                      
+                      // Dispatch a custom event to create a new activity
+                      const event = new CustomEvent('createNewActivity', { 
+                        detail: { activityName } 
+                      });
+                      document.dispatchEvent(event);
+                      setOpen(false);
+                    }}
+                  >
+                    Create
+                  </Button>
+                </div>
               </div>
-            )}
+            </div>
           </CommandList>
         </Command>
       </PopoverContent>
@@ -221,6 +256,57 @@ export default function AdminImagesPage() {
   const [autoSaveAfterMatch, setAutoSaveAfterMatch] = useState(true);
   const [searchActive, setSearchActive] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Setup event listener for creating new activities
+  useEffect(() => {
+    const handleCreateActivity = async (e: any) => {
+      const { activityName } = e.detail;
+      if (!activityName) return;
+      
+      try {
+        // Create the new activity
+        const newActivity = await createActivityMutation.mutateAsync(activityName);
+        
+        // Use the new activity
+        if (newActivity?.id) {
+          // If we're editing an image, associate it
+          if (editingImageId !== null) {
+            const image = activityImages.find(img => img.id === editingImageId);
+            if (image) {
+              await associateImageMutation.mutateAsync({
+                activityId: newActivity.id,
+                filename: image.filename,
+                originalFilename: image.originalFilename,
+                path: image.path,
+                mimeType: image.mimeType
+              });
+              setEditingImageId(null);
+            }
+          }
+          
+          toast({
+            title: 'Activity Created',
+            description: `New activity "${activityName}" created and ready to use.`,
+          });
+        }
+      } catch (error) {
+        console.error('Error creating activity from event:', error);
+        toast({
+          title: 'Creation Error',
+          description: 'Failed to create a new activity.',
+          variant: 'destructive',
+        });
+      }
+    };
+    
+    // Listen for the custom event
+    document.addEventListener('createNewActivity', handleCreateActivity);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('createNewActivity', handleCreateActivity);
+    };
+  }, [activityImages, editingImageId, createActivityMutation, associateImageMutation, toast]);
   
   // Fetch activities for dropdown selection (including both database activities and shop catalog)
   const { data: activities = [] } = useQuery<Activity[]>({
