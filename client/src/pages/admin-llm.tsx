@@ -359,6 +359,64 @@ export default function AdminLLMPage() {
     retry: false,
     retryDelay: 1000
   });
+  
+  // Generate images for activities without images
+  const generateMissingImagesMutation = useMutation({
+    mutationFn: async (params: { limit: number }) => {
+      const res = await apiRequest('/api/admin-llm/generate-missing-images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      // Invalidate queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin-llm/images'] });
+      
+      // Refetch manually to ensure we have the latest data
+      refetchImages();
+    },
+    onError: (error) => {
+      console.error('Error generating missing images:', error);
+      toast({
+        title: 'Generation Error',
+        description: error instanceof Error ? error.message : 'Failed to generate missing images',
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Generate image for a single activity
+  const generateImageMutation = useMutation({
+    mutationFn: async (activityId: number) => {
+      const res = await apiRequest('/api/admin-llm/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activityId }),
+      });
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      // Invalidate queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin-llm/images'] });
+      
+      // Refetch manually to ensure we have the latest data
+      refetchImages();
+    },
+    onError: (error) => {
+      console.error('Error generating image:', error);
+      toast({
+        title: 'Generation Error',
+        description: error instanceof Error ? error.message : 'Failed to generate image',
+        variant: 'destructive',
+      });
+    }
+  });
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1076,9 +1134,10 @@ export default function AdminLLMPage() {
       </Dialog>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="upload">Upload & Generate</TabsTrigger>
           <TabsTrigger value="existing">Existing Images</TabsTrigger>
+          <TabsTrigger value="generate">Auto-Generate Images</TabsTrigger>
         </TabsList>
         
         <TabsContent value="upload" className="space-y-4">
@@ -1384,6 +1443,174 @@ export default function AdminLLMPage() {
                 {files.length === 0 && (
                   <div className="text-center py-10 text-gray-500">
                     No files selected. Please choose files to upload.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="generate" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Auto-Generate Images for Activities</CardTitle>
+              <CardDescription>
+                Generate images for activities that don't have any images associated with them using AI.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <Alert className="bg-blue-50 border-blue-200">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Image Generation with AI</AlertTitle>
+                  <AlertDescription>
+                    This feature uses Stability AI's SDXL model to generate professional-quality images 
+                    for activities based on their name and category. The generation is done in batches to 
+                    avoid overwhelming the API.
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="flex flex-col space-y-4">
+                  <div>
+                    <Label htmlFor="image-count">Number of activities to process at once:</Label>
+                    <div className="mt-2 flex items-center space-x-4">
+                      <Input
+                        id="image-count"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={generatingImagesCount}
+                        onChange={(e) => setGeneratingImagesCount(parseInt(e.target.value) || 1)}
+                        className="w-24"
+                      />
+                      <div className="text-sm text-muted-foreground">
+                        <p>Recommended: 1-5 activities per batch</p>
+                        <p>Higher values will take longer to process</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={() => {
+                      setIsGeneratingImages(true);
+                      generateMissingImagesMutation.mutate({ limit: generatingImagesCount }, {
+                        onSuccess: (data) => {
+                          setIsGeneratingImages(false);
+                          
+                          // Show results toast
+                          const successCount = data.results?.filter(r => r.success).length || 0;
+                          const totalCount = data.processed || 0;
+                          const remainingCount = data.remaining || 0;
+                          
+                          toast({
+                            title: 'Image Generation Complete',
+                            description: `Generated ${successCount}/${totalCount} images. ${remainingCount} activities still need images.`,
+                          });
+                        },
+                        onError: () => {
+                          setIsGeneratingImages(false);
+                        }
+                      });
+                    }}
+                    disabled={isGeneratingImages}
+                    className="w-full md:w-auto"
+                  >
+                    {isGeneratingImages ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Generate Images for Activities Without Images
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Optionally display a list of activities without images for targeted image generation */}
+              <div>
+                <h3 className="font-medium text-lg mb-4">Activities Without Images</h3>
+                {activities && activityImages ? (
+                  <div>
+                    {/* Calculate activities without images */}
+                    {(() => {
+                      const activitiesWithImagesIds = new Set(activityImages.map(img => img.activityId));
+                      const activitiesWithoutImages = activities.filter(a => !activitiesWithImagesIds.has(a.id));
+                      
+                      if (activitiesWithoutImages.length === 0) {
+                        return (
+                          <div className="text-center py-6 text-muted-foreground">
+                            All activities have images! Great job!
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className="border rounded-md">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Category</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {activitiesWithoutImages.slice(0, 10).map((activity) => (
+                                <TableRow key={activity.id}>
+                                  <TableCell className="font-medium">
+                                    {activity.name}
+                                  </TableCell>
+                                  <TableCell>{activity.category}</TableCell>
+                                  <TableCell align="right">
+                                    <Button 
+                                      size="sm" 
+                                      onClick={() => {
+                                        generateImageMutation.mutate(activity.id, {
+                                          onSuccess: () => {
+                                            toast({
+                                              title: 'Image Generated',
+                                              description: `Successfully generated image for "${activity.name}"`,
+                                            });
+                                          }
+                                        });
+                                      }}
+                                      disabled={generateImageMutation.isPending}
+                                    >
+                                      {generateImageMutation.isPending ? (
+                                        <>
+                                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                          Generating
+                                        </>
+                                      ) : (
+                                        <>
+                                          <RefreshCw className="mr-2 h-3 w-3" />
+                                          Generate Image
+                                        </>
+                                      )}
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                              {activitiesWithoutImages.length > 10 && (
+                                <TableRow>
+                                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                    {activitiesWithoutImages.length - 10} more activities without images...
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    Loading activities...
                   </div>
                 )}
               </div>
