@@ -429,9 +429,20 @@ Ensure that each activity in the array corresponds to the filename at the same p
         steps: 30
       });
       
+      // Log the full response structure for debugging
+      console.log('Image generation response structure:', JSON.stringify({
+        hasData: !!response.data,
+        dataLength: response.data ? response.data.length : 0,
+        hasB64: response.data && response.data.length > 0 ? !!response.data[0].b64_json : false,
+        responseKeys: Object.keys(response)
+      }));
+      
       // Check if we have a valid response
       if (!response.data || response.data.length === 0 || !response.data[0].b64_json) {
         console.error('No image data in response');
+        if (response.data && response.data.length > 0) {
+          console.log('Response data first item keys:', Object.keys(response.data[0]));
+        }
         return null;
       }
       
@@ -444,6 +455,10 @@ Ensure that each activity in the array corresponds to the filename at the same p
       return imageData;
     } catch (error) {
       console.error('Error generating image for activity:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       return null;
     }
   }
