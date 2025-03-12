@@ -12,7 +12,7 @@ import { Activity, ActivityInsert, UserData, ActivityImage } from "@shared/schem
 import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link as LinkIcon, Lock, Globe, Calendar, ArrowRight, User, ListChecks, Image } from "lucide-react";
 import Header from "@/components/header";
 import { Link, useLocation } from "wouter";
-import Navigation from "@/components/navigation";
+// import Navigation from "@/components/navigation"; // Removed as we use central bottom navigation
 import { SAMPLE_ACTIVITIES, MORE_SAMPLE_ACTIVITIES } from "@shared/sample-activities";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -980,7 +980,7 @@ export default function ShopActivitiesPage() {
         </div>
       </main>
       
-      <Navigation currentPath="/shop-activities" />
+      {/* Navigation removed as we use centralized bottom navigation */}
     </div>
   );
 }
