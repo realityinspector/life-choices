@@ -66,9 +66,16 @@ function ActivitySearch({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   
-  // Add useEffect to log when selectedActivity changes
+  // Initialize a local value state to handle internal component state properly
+  const [value, setValue] = useState<string>("");
+  
+  // Update local value whenever selectedActivity changes
   useEffect(() => {
-    console.log("ActivitySearch selectedActivity updated:", selectedActivity?.name);
+    if (selectedActivity) {
+      setValue(selectedActivity.name);
+    } else {
+      setValue("");
+    }
   }, [selectedActivity]);
   
   // Group activities by category if needed
@@ -676,8 +683,9 @@ export default function AdminImagesPage() {
   };
   
   const saveAssociations = async () => {
+    // First make sure we have valid files to associate
     const validAssociations = files
-      .filter(f => f.status === 'matched' && f.activityId)
+      .filter(f => f.status === 'matched' && f.activityId && f.filename && f.path)
       .map(f => ({
         activityId: f.activityId!,
         filename: f.filename!,

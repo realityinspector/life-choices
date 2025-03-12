@@ -130,7 +130,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setIsUserSetup(true);
     
     try {
-      await apiRequest('POST', '/api/user', newUserData);
+      await apiRequest('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUserData)
+      });
     } catch (error) {
       // Fallback to localStorage if API fails
       localStorage.setItem('lifechoicesUserData', JSON.stringify(newUserData));
@@ -141,7 +145,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setUserData(newUserData);
     
     try {
-      await apiRequest('PUT', '/api/user', newUserData);
+      await apiRequest('/api/user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUserData)
+      });
     } catch (error) {
       // Fallback to localStorage if API fails
       localStorage.setItem('lifechoicesUserData', JSON.stringify(newUserData));
