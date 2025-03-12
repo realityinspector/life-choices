@@ -226,9 +226,9 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6">
         {/* Activity List */}
-        <div className="lg:col-span-2">
+        <div>
           <div className="bg-white shadow rounded-lg p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center">
