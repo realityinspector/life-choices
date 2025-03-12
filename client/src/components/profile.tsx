@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useUser } from "@/context/user-context";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Trash2, ShieldCheck } from "lucide-react";
+import { Download, Trash2, ShieldCheck, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface ProfileProps {}
@@ -165,20 +165,34 @@ const Profile = ({}: ProfileProps) => {
       {isAdmin && (
         <div className="mt-6 bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:px-6">
-            <h2 className="text-lg font-medium text-gray-900">Admin Access</h2>
+            <div className="flex items-center">
+              <h2 className="text-lg font-medium text-gray-900">Admin Access</h2>
+              <div className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                Admin
+              </div>
+            </div>
             <p className="mt-1 text-sm text-gray-500">Special privileges for administrators</p>
           </div>
           <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
             <p className="text-sm text-gray-600 mb-4">
-              You have administrator privileges. You can access admin features to manage images, activities, and more.
+              You have administrator privileges. You can access admin features to manage assets, activities, and system settings.
             </p>
-            <a 
-              href="/admin/images" 
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              <ShieldCheck className="h-5 w-5 mr-2" />
-              Admin Dashboard
-            </a>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <a 
+                href="/admin/images" 
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <ShieldCheck className="h-5 w-5 mr-2" />
+                Image Management
+              </a>
+              <a 
+                href="/admin/images" 
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <Settings className="h-5 w-5 mr-2" />
+                Admin Panel
+              </a>
+            </div>
           </div>
         </div>
       )}
