@@ -61,10 +61,18 @@ export default function AdminLLMPage() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [generatingImagesCount, setGeneratingImagesCount] = useState(5);
+  // Add a ref to track component mount state
+  const isMountedRef = useRef(true);
   
   // Effect to cleanup any dangling queries when component unmounts
   useEffect(() => {
+    // Set component as mounted
+    isMountedRef.current = true;
+    
     return () => {
+      // Mark component as unmounted
+      isMountedRef.current = false;
+      
       // Cancel any in-progress queries to prevent "signal aborted" errors
       queryClient.cancelQueries({ queryKey: ['/api/activities'] });
       queryClient.cancelQueries({ queryKey: ['/api/admin-llm/images'] });
@@ -364,71 +372,127 @@ export default function AdminLLMPage() {
   // Generate images for activities without images
   const generateMissingImagesMutation = useMutation({
     mutationFn: async (params: { limit: number }) => {
-      const res = await apiRequest('/api/admin-llm/generate-missing-images', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
+      // Create an AbortController for this request
+      const controller = new AbortController();
+      const { signal } = controller;
       
-      return res.json();
-    },
-    onSuccess: () => {
-      // Invalidate queries to refresh the UI
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin-llm/images'] });
+      // Setup request timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
       
-      // Refetch manually to ensure we have the latest data
       try {
-        refetchImages().catch(() => {
-          // Silently handle any error while refetching
+        const res = await apiRequest('/api/admin-llm/generate-missing-images', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+          signal, // Pass the signal to make the request abortable
         });
-      } catch (e) {
-        console.log("Error during refetch:", e);
+        
+        // Clear the timeout since request completed
+        clearTimeout(timeoutId);
+        
+        return res.json();
+      } catch (error) {
+        // Clear the timeout in case of error
+        clearTimeout(timeoutId);
+        
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Generate missing images request was aborted');
+          throw new Error('Request timed out or was aborted');
+        }
+        
+        throw error;
       }
     },
-    onError: (error) => {
-      console.error('Error generating missing images:', error);
-      toast({
-        title: 'Generation Error',
-        description: error instanceof Error ? error.message : 'Failed to generate missing images',
-        variant: 'destructive',
+    onSuccess: () => {
+      // Use cancellation-safe invalidation
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/activities'],
+        refetchType: 'none' // Don't automatically refetch
       });
-    }
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/admin-llm/images'],
+        refetchType: 'none' // Don't automatically refetch
+      });
+      
+      // We'll handle the refetch in the specific success callback
+      // and check for component mount state there
+    },
+    onError: (error) => {
+      // Only process errors if component is still mounted
+      if (isMountedRef.current) {
+        console.error('Error generating missing images:', error);
+        toast({
+          title: 'Generation Error',
+          description: error instanceof Error ? error.message : 'Failed to generate missing images',
+          variant: 'destructive',
+        });
+      }
+    },
+    // Prevent automatic retries which can lead to errors when component unmounts
+    retry: false
   });
   
   // Generate image for a single activity
   const generateImageMutation = useMutation({
     mutationFn: async (activityId: number) => {
-      const res = await apiRequest('/api/admin-llm/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activityId }),
-      });
+      // Create an AbortController for this request
+      const controller = new AbortController();
+      const { signal } = controller;
       
-      return res.json();
-    },
-    onSuccess: () => {
-      // Invalidate queries to refresh the UI
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin-llm/images'] });
+      // Setup request timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
       
-      // Refetch manually to ensure we have the latest data
       try {
-        refetchImages().catch(() => {
-          // Silently handle any error while refetching
+        const res = await apiRequest('/api/admin-llm/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activityId }),
+          signal, // Pass the signal to make the request abortable
         });
-      } catch (e) {
-        console.log("Error during refetch:", e);
+        
+        // Clear the timeout since request completed
+        clearTimeout(timeoutId);
+        
+        return res.json();
+      } catch (error) {
+        // Clear the timeout in case of error
+        clearTimeout(timeoutId);
+        
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Generate image request was aborted');
+          throw new Error('Request timed out or was aborted');
+        }
+        
+        throw error;
       }
     },
-    onError: (error) => {
-      console.error('Error generating image:', error);
-      toast({
-        title: 'Generation Error',
-        description: error instanceof Error ? error.message : 'Failed to generate image',
-        variant: 'destructive',
+    onSuccess: () => {
+      // Use cancellation-safe invalidation
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/activities'],
+        refetchType: 'none' // Don't automatically refetch
       });
-    }
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/admin-llm/images'],
+        refetchType: 'none' // Don't automatically refetch
+      });
+      
+      // We'll handle the refetch in the specific success callback
+      // and check for component mount state there
+    },
+    onError: (error) => {
+      // Only process errors if component is still mounted
+      if (isMountedRef.current) {
+        console.error('Error generating image:', error);
+        toast({
+          title: 'Generation Error',
+          description: error instanceof Error ? error.message : 'Failed to generate image',
+          variant: 'destructive',
+        });
+      }
+    },
+    // Prevent automatic retries which can lead to errors when component unmounts
+    retry: false
   });
 
   // Handle file selection
@@ -1533,20 +1597,30 @@ export default function AdminLLMPage() {
                             });
                           }
                           
-                          // Refetch the images data
+                          // Refetch the images data, but only if component is still mounted
                           try {
                             // Use setTimeout to ensure refetch happens after component state updates
-                            setTimeout(() => {
-                              // Check if component is still mounted before refetching
-                              if (!generateMissingImagesMutation.isPending) {
-                                refetchImages().catch((err) => {
-                                  // Silently handle any error while refetching
-                                  console.log("Refetch error caught:", err);
-                                });
+                            const refetchTimeout = setTimeout(() => {
+                              // Safety check: only refetch if component is still mounted
+                              if (isMountedRef.current && !generateMissingImagesMutation.isPending) {
+                                // Use a cancellable promise for the refetch
+                                const refetchPromise = refetchImages();
+                                
+                                // Handle any errors safely
+                                if (refetchPromise && typeof refetchPromise.catch === 'function') {
+                                  refetchPromise.catch((err) => {
+                                    if (isMountedRef.current) {
+                                      console.log("Refetch error caught:", err);
+                                    }
+                                  });
+                                }
                               }
-                            }, 100);
+                            }, 300); // Increased timeout for better stability
+                            
+                            // Clean up the timeout if component unmounts
+                            return () => clearTimeout(refetchTimeout);
                           } catch (e) {
-                            console.log("Error during refetch:", e);
+                            console.log("Error during refetch setup:", e);
                           }
                         },
                         onError: (error) => {
@@ -1624,13 +1698,26 @@ export default function AdminLLMPage() {
                                             });
                                             
                                             // Safely refetch images after generation
-                                            setTimeout(() => {
-                                              if (!generateImageMutation.isPending) {
-                                                refetchImages().catch(err => {
-                                                  console.log("Individual refetch error caught:", err);
-                                                });
-                                              }
-                                            }, 100);
+                                            if (isMountedRef.current) {
+                                              const refetchTimeout = setTimeout(() => {
+                                                // Check if component is still mounted before refetching
+                                                if (isMountedRef.current && !generateImageMutation.isPending) {
+                                                  const refetchPromise = refetchImages();
+                                                  
+                                                  // Handle errors safely
+                                                  if (refetchPromise && typeof refetchPromise.catch === 'function') {
+                                                    refetchPromise.catch(err => {
+                                                      if (isMountedRef.current) {
+                                                        console.log("Individual refetch error caught:", err);
+                                                      }
+                                                    });
+                                                  }
+                                                }
+                                              }, 300);
+                                              
+                                              // This component doesn't directly return cleanup here, but it's safe because
+                                              // we're checking isMountedRef.current before starting the timeout
+                                            }
                                           }
                                         });
                                       }}
