@@ -61,7 +61,7 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
     }
   };
 
-  const handleAddActivitySubmit = (e: React.FormEvent) => {
+  const handleAddActivitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!activityFormData.name || !activityFormData.category) {
@@ -73,23 +73,38 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
       return;
     }
     
-    addActivity(activityFormData);
-    setActivityFormData({
-      name: '',
-      category: '',
-      frequency: 1,
-      frequencyUnit: 'day',
-      duration: 1,
-      durationUnit: 'hour',
-      lifeImpact: 0,
-      color: 'blue',
-    });
-    setShowAddActivityForm(false);
-    
-    toast({
-      title: "Activity added",
-      description: `${activityFormData.name} has been added to your activities.`,
-    });
+    try {
+      // Store the name before we reset the form
+      const activityName = activityFormData.name;
+      
+      // Wait for the activity to be added
+      await addActivity(activityFormData);
+      
+      // Reset form after successful addition
+      setActivityFormData({
+        name: '',
+        category: '',
+        frequency: 1,
+        frequencyUnit: 'day',
+        duration: 1,
+        durationUnit: 'hour',
+        lifeImpact: 0,
+        color: 'blue',
+      });
+      setShowAddActivityForm(false);
+      
+      toast({
+        title: "Activity added",
+        description: `${activityName} has been added to your activities.`,
+      });
+    } catch (error) {
+      console.error("Error in handle add activity:", error);
+      toast({
+        title: "Error adding activity",
+        description: "There was a problem adding your activity. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const editActivity = (index: number) => {
