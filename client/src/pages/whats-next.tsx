@@ -19,7 +19,7 @@ declare global {
 }
 
 export default function WhatsNextPage() {
-  const { activities, getNextActivity, completeActivity, skipActivity, addActivitiesToCart, getCartActivities, addActivity, updateActivity } = useUser();
+  const { activities, getNextActivity, completeActivity, skipActivity, addActivitiesToCart, getCartActivities, addActivity, updateActivity, updateActivityById } = useUser();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
@@ -271,29 +271,39 @@ export default function WhatsNextPage() {
       // Use strict equality to handle null/undefined correctly
       const currentExportValue = activity.exportToCalendar === true;
       
-      const updatedActivity = {
-        ...activity,
-        exportToCalendar: !currentExportValue,
-        // Ensure the frequencyUnit and durationUnit are properly typed
+      // Prepare minimal update payload with just the necessary fields
+      const updatePayload = {
+        name: activity.name,
+        category: activity.category,
+        frequency: activity.frequency,
         frequencyUnit: activity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
-        durationUnit: activity.durationUnit as 'minute' | 'hour'
+        duration: activity.duration,
+        durationUnit: activity.durationUnit as 'minute' | 'hour',
+        lifeImpact: activity.lifeImpact,
+        color: activity.color,
+        priority: activity.priority,
+        emoji: activity.emoji,
+        clusterId: activity.clusterId,
+        exportToCalendar: !currentExportValue // Toggle the value
       };
       
-      // Update the activity
-      await updateActivity(activity.id, updatedActivity);
+      // Update the activity using direct ID-based update
+      const updatedActivity = await updateActivityById(activity.id, updatePayload);
       
-      // Fetch the updated activity to refresh the current view
-      const updated = await getNextActivity([]);
-      if (updated) {
-        setCurrentActivity(updated);
+      if (updatedActivity) {
+        // Update the current activity in the state to reflect changes immediately
+        setCurrentActivity(updatedActivity);
+        
+        // Show a toast notification
+        toast({
+          title: !currentExportValue ? 'Added to Calendar' : 'Removed from Calendar',
+          description: `"${activity.name}" will ${!currentExportValue ? 'now' : 'no longer'} be exported to your calendar.`,
+          variant: 'default',
+        });
+      } else {
+        // If update returned undefined, there was an issue
+        throw new Error('Failed to update activity - server returned undefined');
       }
-      
-      // Show a toast notification
-      toast({
-        title: !currentExportValue ? 'Added to Calendar' : 'Removed from Calendar',
-        description: `"${activity.name}" will ${!currentExportValue ? 'now' : 'no longer'} be exported to your calendar.`,
-        variant: 'default',
-      });
     } catch (error) {
       console.error('Error updating calendar export setting:', error);
       toast({

@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function CalendarPage() {
-  const { userData, activities, updateActivity } = useUser();
+  const { userData, activities, updateActivity, updateActivityById } = useUser();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [selectedActivities, setSelectedActivities] = useState<number[]>([]);
@@ -71,23 +71,42 @@ export default function CalendarPage() {
       // Determine current export value with strict equality check
       const currentExportValue = activity.exportToCalendar === true;
       
-      // Create a properly typed ActivityInsert object
-      const updatedActivity = {
-        ...activity,
-        exportToCalendar: !currentExportValue,
-        // Ensure the types are properly cast
+      // Prepare minimal update payload with just the necessary fields
+      const updatePayload = {
+        name: activity.name,
+        category: activity.category,
+        frequency: activity.frequency,
         frequencyUnit: activity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
-        durationUnit: activity.durationUnit as 'minute' | 'hour'
+        duration: activity.duration,
+        durationUnit: activity.durationUnit as 'minute' | 'hour',
+        lifeImpact: activity.lifeImpact,
+        color: activity.color,
+        priority: activity.priority,
+        emoji: activity.emoji,
+        clusterId: activity.clusterId,
+        exportToCalendar: !currentExportValue // Toggle the value
       };
       
-      await updateActivity(activity.id, updatedActivity);
+      // Use the new direct ID-based update method
+      const updatedActivity = await updateActivityById(activity.id, updatePayload);
       
-      // Use the new value (opposite of currentExportValue) for messaging
-      toast({
-        title: !currentExportValue ? 'Added to calendar exports' : 'Removed from calendar exports',
-        description: `"${activity.name}" will ${!currentExportValue ? 'now' : 'no longer'} be exported to calendar`,
-        variant: 'default',
-      });
+      // If update was successful, refresh the filtered activities list
+      if (updatedActivity) {
+        // Update the filtered activities list with the updated activity
+        setFilteredActivities(prevActivities => 
+          prevActivities.map(a => a.id === activity.id ? updatedActivity : a)
+        );
+        
+        // Use the new value (opposite of currentExportValue) for messaging
+        toast({
+          title: !currentExportValue ? 'Added to calendar exports' : 'Removed from calendar exports',
+          description: `"${activity.name}" will ${!currentExportValue ? 'now' : 'no longer'} be exported to calendar`,
+          variant: 'default',
+        });
+      } else {
+        // If update returned undefined, there was an issue
+        throw new Error('Failed to update activity - server returned undefined');
+      }
     } catch (error) {
       console.error('Error updating activity:', error);
       toast({
