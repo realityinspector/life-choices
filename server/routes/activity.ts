@@ -6,10 +6,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Helper function to ensure correct type assertions for ActivityInsert
 function ensureActivityTypes(data: any): ActivityInsert {
+  // Create a properly typed object with all fields
   return {
     ...data,
     frequencyUnit: data.frequencyUnit as "day" | "week" | "month" | "year",
-    durationUnit: data.durationUnit as "minute" | "hour"
+    durationUnit: data.durationUnit as "minute" | "hour",
+    // Ensure exportToCalendar is properly handled as a boolean
+    exportToCalendar: data.exportToCalendar === true
   };
 }
 

@@ -137,7 +137,7 @@ export default function CalendarPage() {
   const downloadCalendarExport = (format: 'ical' | 'google' | 'outlook' | 'apple') => {
     const activitiesToExport = selectedActivities.length > 0 
       ? filteredActivities.filter(a => selectedActivities.includes(a.id))
-      : filteredActivities.filter(a => a.exportToCalendar);
+      : filteredActivities.filter(a => a.exportToCalendar === true);
 
     if (activitiesToExport.length === 0) {
       toast({

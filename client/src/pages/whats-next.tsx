@@ -268,9 +268,12 @@ export default function WhatsNextPage() {
   const handleToggleCalendarExport = async (activity: Activity) => {
     try {
       // Create a copy of the activity with the toggled exportToCalendar property
+      // Use strict equality to handle null/undefined correctly
+      const currentExportValue = activity.exportToCalendar === true;
+      
       const updatedActivity = {
         ...activity,
-        exportToCalendar: !activity.exportToCalendar,
+        exportToCalendar: !currentExportValue,
         // Ensure the frequencyUnit and durationUnit are properly typed
         frequencyUnit: activity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
         durationUnit: activity.durationUnit as 'minute' | 'hour'
@@ -287,8 +290,8 @@ export default function WhatsNextPage() {
       
       // Show a toast notification
       toast({
-        title: updatedActivity.exportToCalendar ? 'Added to Calendar' : 'Removed from Calendar',
-        description: `"${activity.name}" will ${updatedActivity.exportToCalendar ? 'now' : 'no longer'} be exported to your calendar.`,
+        title: !currentExportValue ? 'Added to Calendar' : 'Removed from Calendar',
+        description: `"${activity.name}" will ${!currentExportValue ? 'now' : 'no longer'} be exported to your calendar.`,
         variant: 'default',
       });
     } catch (error) {
