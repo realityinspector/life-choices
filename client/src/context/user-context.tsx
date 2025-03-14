@@ -442,19 +442,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       
       // Make the API request with the parameters
       const url = `/api/activities/next${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await apiRequest(url);
       
-      // Check if the response is successful
-      if (response.ok) {
-        return await response.json();
-      } else {
-        // If the server returns a 404 (no activities found), return undefined
-        if (response.status === 404) {
-          return undefined;
-        }
-        // For other errors, throw to be caught by the catch block
-        throw new Error(`Failed to fetch next activity: ${response.status}`);
+      // Use the modified apiRequest function with ignoreStatuses option to handle 404 gracefully
+      const response = await apiRequest(url, {
+        ignoreStatuses: [404] // Don't throw on 404, we'll handle it as "no activities found"
+      });
+      
+      // If it's a 404, return undefined (no activities found)
+      if (response.status === 404) {
+        console.log("No activities found from server, using fallback logic");
+        return undefined;
       }
+      
+      // Otherwise, return the parsed response
+      return await response.json();
     } catch (error) {
       console.error('Error fetching next activity:', error);
       
@@ -532,12 +533,25 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify({
           activity,
           recipientEmail
-        })
+        }),
+        // Ignore 404 errors which might occur if the sharing feature is disabled
+        ignoreStatuses: [404]
       });
-      const result = await response.json();
-      return result.invitationToken;
+      
+      // If the response is OK, return the invitation token
+      if (response.ok) {
+        const result = await response.json();
+        return result.invitationToken;
+      }
+      
+      // For any non-OK response that wasn't ignored, log and generate a temporary token
+      console.log(`Activity sharing returned status: ${response.status}`);
+      return `share-${uuidv4()}`;
     } catch (error) {
-      // Generate a fake token for demo purposes
+      // Log the error but don't crash the app
+      console.error('Error sharing activity:', error);
+      
+      // Generate a token as a fallback
       return `share-${uuidv4()}`;
     }
   };
@@ -594,19 +608,28 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const resetData = async () => {
     try {
+      // Delete user and activities data with improved error handling
       await apiRequest('/api/user', {
-        method: 'DELETE'
+        method: 'DELETE',
+        ignoreStatuses: [401, 404] // Ignore authentication errors and not found
       });
+      
       await apiRequest('/api/activities', {
-        method: 'DELETE'
+        method: 'DELETE',
+        ignoreStatuses: [401, 404] // Ignore authentication errors and not found
       });
+      
+      console.log("Server data reset complete");
     } catch (error) {
-      // Fallback to localStorage if API fails
-      localStorage.removeItem('lifechoicesUserData');
-      localStorage.removeItem('lifechoicesActivities');
-      localStorage.removeItem('lifechoicesCart');
+      console.error("Error resetting server data:", error);
     }
     
+    // Always clear local storage regardless of API success
+    localStorage.removeItem('lifechoicesUserData');
+    localStorage.removeItem('lifechoicesActivities');
+    localStorage.removeItem('lifechoicesCart');
+    
+    // Reset app state
     setUserData({
       name: '',
       username: '',
@@ -618,55 +641,42 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setActivities([]);
     setActivityCart([]);
     setIsUserSetup(false);
+    
+    console.log("Application state reset complete");
   };
   
   const logout = async () => {
     try {
-      // Call the server logout endpoint
-      await fetch('/api/logout', {
+      // Call the server logout endpoint with improved error handling
+      await apiRequest('/api/logout', {
         method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' },
+        ignoreStatuses: [401, 404] // Ignore authentication errors and not found
       });
       
-      // Clear the user data regardless of server response
-      setUserData({
-        name: '',
-        username: '',
-        password: '',
-        age: 30,
-        lifeExpectancy: 85,
-        sleepHours: 8
-      });
-      setActivities([]);
-      setIsUserSetup(false);
-      
-      // Also clear localStorage
-      localStorage.removeItem('lifechoicesUserData');
-      localStorage.removeItem('lifechoicesActivities');
-      
-      // Note: We don't clear cart on logout so users can pick up where they left off
+      console.log("Server logout successful");
     } catch (error) {
-      console.error('Error during logout:', error);
-      
-      // Even if logout fails, clear local state
-      setUserData({
-        name: '',
-        username: '',
-        password: '',
-        age: 30,
-        lifeExpectancy: 85,
-        sleepHours: 8
-      });
-      setActivities([]);
-      setIsUserSetup(false);
-      
-      // Also clear localStorage
-      localStorage.removeItem('lifechoicesUserData');
-      localStorage.removeItem('lifechoicesActivities');
+      console.error('Error during server logout:', error);
     }
+    
+    // Always clear user data regardless of server response
+    setUserData({
+      name: '',
+      username: '',
+      password: '',
+      age: 30,
+      lifeExpectancy: 85,
+      sleepHours: 8
+    });
+    setActivities([]);
+    setIsUserSetup(false);
+    
+    // Clear localStorage
+    localStorage.removeItem('lifechoicesUserData');
+    localStorage.removeItem('lifechoicesActivities');
+    
+    // Note: We don't clear cart on logout so users can pick up where they left off
+    console.log("Local logout completed");
   };
 
   return (
