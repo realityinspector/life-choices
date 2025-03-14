@@ -27,8 +27,21 @@ export default function WhatsNextPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadNextActivity();
+    // Initialize cart count
     setCartCount(getCartActivities().length);
+    
+    // Load the next activity with error handling
+    loadNextActivity().catch(error => {
+      console.error("Error loading initial activity:", error);
+      setLoading(false);
+      
+      // Show a toast notification for the error
+      toast({
+        title: "Error",
+        description: "Failed to load activities. Please try refreshing the page.",
+        variant: "destructive"
+      });
+    });
   }, []);
 
   const getRandomSuggestedActivity = async (): Promise<ActivityInsert | null> => {
@@ -134,17 +147,25 @@ export default function WhatsNextPage() {
         } else {
           // If there's no next activity, load a suggested one
           setCurrentActivity(null);
-          getRandomSuggestedActivity().then(suggestedActivity => {
+          try {
+            const suggestedActivity = await getRandomSuggestedActivity();
             setCurrentSuggestedActivity(suggestedActivity);
-          });
+          } catch (suggestionError) {
+            console.error('Error getting suggested activity:', suggestionError);
+            setCurrentSuggestedActivity(null);
+          }
         }
       } catch (apiError) {
         console.error('API Error loading next activity:', apiError);
         // Show a suggested activity since we couldn't load from API
         setCurrentActivity(null);
-        getRandomSuggestedActivity().then(suggestedActivity => {
+        try {
+          const suggestedActivity = await getRandomSuggestedActivity();
           setCurrentSuggestedActivity(suggestedActivity);
-        });
+        } catch (suggestionError) {
+          console.error('Error getting suggested activity:', suggestionError);
+          setCurrentSuggestedActivity(null);
+        }
       }
       
       setLoading(false);
@@ -153,14 +174,13 @@ export default function WhatsNextPage() {
       setLoading(false);
       // If there's an error, fallback to a suggestion
       setCurrentActivity(null);
-      getRandomSuggestedActivity()
-        .then(suggestedActivity => {
-          setCurrentSuggestedActivity(suggestedActivity);
-        })
-        .catch(fallbackError => {
-          console.error('Error getting fallback suggestion:', fallbackError);
-          setCurrentSuggestedActivity(null);
-        });
+      try {
+        const suggestedActivity = await getRandomSuggestedActivity();
+        setCurrentSuggestedActivity(suggestedActivity);
+      } catch (fallbackError) {
+        console.error('Error getting fallback suggestion:', fallbackError);
+        setCurrentSuggestedActivity(null);
+      }
     }
   };
 
@@ -182,9 +202,14 @@ export default function WhatsNextPage() {
       setLoading(true);
       
       // Add a brief delay before loading the next activity to ensure backend has time to update
-      setTimeout(() => {
-        // Try to get the next due activity or show recommendations if none are due
-        loadNextActivity([]);
+      setTimeout(async () => {
+        try {
+          // Try to get the next due activity or show recommendations if none are due
+          await loadNextActivity([]);
+        } catch (error) {
+          console.error("Error loading next activity after complete:", error);
+          setLoading(false);
+        }
       }, 1000); // 1 second delay to ensure database updates are processed
     } catch (error) {
       console.error("Error completing activity:", error);
@@ -220,9 +245,14 @@ export default function WhatsNextPage() {
       setLoading(true);
       
       // Add a brief delay before loading the next activity
-      setTimeout(() => {
-        // Try to get the next due activity or show recommendations if none are due
-        loadNextActivity([]);
+      setTimeout(async () => {
+        try {
+          // Try to get the next due activity or show recommendations if none are due
+          await loadNextActivity([]);
+        } catch (error) {
+          console.error("Error loading next activity after skip:", error);
+          setLoading(false);
+        }
       }, 1000); // 1 second delay to ensure database updates are processed
     } catch (error) {
       console.error("Error skipping activity:", error);
@@ -234,8 +264,13 @@ export default function WhatsNextPage() {
       
       // Even if we failed, try to load the next activity
       setLoading(true);
-      setTimeout(() => {
-        loadNextActivity([]);
+      setTimeout(async () => {
+        try {
+          await loadNextActivity([]);
+        } catch (loadError) {
+          console.error("Error loading next activity after skip error:", loadError);
+          setLoading(false);
+        }
       }, 1000);
     }
   };
@@ -273,9 +308,14 @@ export default function WhatsNextPage() {
       setLoading(true);
       
       // Add a brief delay before loading the next activity
-      setTimeout(() => {
-        // Try to get the next due activity or show recommendations if none are due
-        loadNextActivity([]);
+      setTimeout(async () => {
+        try {
+          // Try to get the next due activity or show recommendations if none are due
+          await loadNextActivity([]);
+        } catch (loadError) {
+          console.error("Error loading next activity after add to cart:", loadError);
+          setLoading(false);
+        }
       }, 1000); // 1 second delay to ensure database updates are processed
     } catch (error) {
       console.error("Error adding to cart:", error);
