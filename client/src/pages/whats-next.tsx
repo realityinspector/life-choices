@@ -291,13 +291,15 @@ export default function WhatsNextPage() {
     }
   };
 
+  const { userData } = useUser();
+  
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Use the consistent Header component */}
-      <Header />
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
+      {/* Use the consistent Header component with userData */}
+      <Header userData={userData} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center pt-6 px-4 pb-16 relative">
+      <div className="flex-1 flex flex-col items-center pt-6 px-4 relative">
         <h2 className="text-2xl font-bold mb-6 text-center">What's Next?</h2>
         
         <div className="w-full max-w-md h-[500px] relative flex items-center justify-center">
