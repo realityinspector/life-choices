@@ -115,7 +115,10 @@ export default function WhatsNextPage() {
         clusterId: selectedActivity.clusterId ?? null
       };
     } catch (error) {
-      console.error('Error fetching suggestions from shop:', error);
+      // Only log non-abort errors (abort errors are expected during unmounting)
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        console.error('Error fetching suggestions from shop:', error);
+      }
       
       // Fallback to sample activities if fetch fails
       const allSampleActivities = [...SAMPLE_ACTIVITIES, ...MORE_SAMPLE_ACTIVITIES];
