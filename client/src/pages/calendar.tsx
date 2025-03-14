@@ -68,19 +68,24 @@ export default function CalendarPage() {
 
   const toggleExportToCalendar = async (activity: Activity) => {
     try {
+      // Determine current export value with strict equality check
+      const currentExportValue = activity.exportToCalendar === true;
+      
       // Create a properly typed ActivityInsert object
       const updatedActivity = {
         ...activity,
-        exportToCalendar: !activity.exportToCalendar,
+        exportToCalendar: !currentExportValue,
         // Ensure the types are properly cast
         frequencyUnit: activity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
         durationUnit: activity.durationUnit as 'minute' | 'hour'
       };
       
       await updateActivity(activity.id, updatedActivity);
+      
+      // Use the new value (opposite of currentExportValue) for messaging
       toast({
-        title: updatedActivity.exportToCalendar ? 'Added to calendar exports' : 'Removed from calendar exports',
-        description: `"${activity.name}" will ${updatedActivity.exportToCalendar ? 'now' : 'no longer'} be exported to calendar`,
+        title: !currentExportValue ? 'Added to calendar exports' : 'Removed from calendar exports',
+        description: `"${activity.name}" will ${!currentExportValue ? 'now' : 'no longer'} be exported to calendar`,
         variant: 'default',
       });
     } catch (error) {
@@ -351,14 +356,14 @@ export default function CalendarPage() {
                   <div className="flex items-center space-x-2">
                     <Switch
                       id={`export-${activity.id}`}
-                      checked={activity.exportToCalendar ?? false}
+                      checked={activity.exportToCalendar === true}
                       onCheckedChange={() => toggleExportToCalendar(activity)}
                     />
                     <Label htmlFor={`export-${activity.id}`} className="sr-only">
                       Export to Calendar
                     </Label>
                     <span className="text-xs text-muted-foreground">
-                      {activity.exportToCalendar ?? false ? 'Exporting' : 'Not exporting'}
+                      {activity.exportToCalendar === true ? 'Exporting' : 'Not exporting'}
                     </span>
                   </div>
                   
