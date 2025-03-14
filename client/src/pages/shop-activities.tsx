@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/user-context";
 import { Activity, ActivityInsert, UserData, ActivityImage } from "@shared/schema";
-import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link as LinkIcon, Lock, Globe, Calendar, ArrowRight, User, ListChecks, Image } from "lucide-react";
+import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Share2, Link as LinkIcon, Lock, Globe, Calendar, ArrowRight, User, ListChecks, Image, Triangle } from "lucide-react";
 import Header from "@/components/header";
 import { Link, useLocation } from "wouter";
 // import Navigation from "@/components/navigation"; // Removed as we use central bottom navigation
