@@ -9,12 +9,14 @@ import {
   FileDown,
   FileText,
   MoreHorizontal,
-  DownloadCloud
+  DownloadCloud,
+  Mail,  // For Outlook
+  Apple, // For Apple
+  Chrome  // For Google
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/header';
-import { SiGooglecalendar, SiApple } from 'react-icons/si';
 import { Activity } from '@shared/schema';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -66,10 +68,15 @@ export default function CalendarPage() {
 
   const toggleExportToCalendar = async (activity: Activity) => {
     try {
+      // Create a properly typed ActivityInsert object
       const updatedActivity = {
         ...activity,
-        exportToCalendar: !activity.exportToCalendar
+        exportToCalendar: !activity.exportToCalendar,
+        // Ensure the types are properly cast
+        frequencyUnit: activity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
+        durationUnit: activity.durationUnit as 'minute' | 'hour'
       };
+      
       await updateActivity(activity.id, updatedActivity);
       toast({
         title: updatedActivity.exportToCalendar ? 'Added to calendar exports' : 'Removed from calendar exports',
@@ -261,15 +268,15 @@ export default function CalendarPage() {
                   <span>iCalendar (.ics)</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => downloadCalendarExport('google')}>
-                  <SiGooglecalendar className="h-4 w-4 mr-2" />
+                  <Chrome className="h-4 w-4 mr-2" />
                   <span>Google Calendar</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => downloadCalendarExport('outlook')}>
-                  <SiMicrosoftoffice className="h-4 w-4 mr-2" />
+                  <Mail className="h-4 w-4 mr-2" />
                   <span>Outlook Calendar</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => downloadCalendarExport('apple')}>
-                  <SiApple className="h-4 w-4 mr-2" />
+                  <Apple className="h-4 w-4 mr-2" />
                   <span>Apple Calendar</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -344,14 +351,14 @@ export default function CalendarPage() {
                   <div className="flex items-center space-x-2">
                     <Switch
                       id={`export-${activity.id}`}
-                      checked={activity.exportToCalendar}
+                      checked={activity.exportToCalendar ?? false}
                       onCheckedChange={() => toggleExportToCalendar(activity)}
                     />
                     <Label htmlFor={`export-${activity.id}`} className="sr-only">
                       Export to Calendar
                     </Label>
                     <span className="text-xs text-muted-foreground">
-                      {activity.exportToCalendar ? 'Exporting' : 'Not exporting'}
+                      {activity.exportToCalendar ?? false ? 'Exporting' : 'Not exporting'}
                     </span>
                   </div>
                   
@@ -363,15 +370,15 @@ export default function CalendarPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => downloadCalendarExport('google')}>
-                        <SiGooglecalendar className="h-4 w-4 mr-2" />
+                        <Chrome className="h-4 w-4 mr-2" />
                         <span>Google Calendar</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => downloadCalendarExport('outlook')}>
-                        <SiMicrosoftoutlook className="h-4 w-4 mr-2" />
+                        <Mail className="h-4 w-4 mr-2" />
                         <span>Outlook Calendar</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => downloadCalendarExport('apple')}>
-                        <SiApple className="h-4 w-4 mr-2" />
+                        <Apple className="h-4 w-4 mr-2" />
                         <span>Apple Calendar</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
