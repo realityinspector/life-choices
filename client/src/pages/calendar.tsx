@@ -47,9 +47,9 @@ export default function CalendarPage() {
         
         <div className="bg-white rounded-lg shadow-md p-6 text-center">
           <CalendarIcon className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-medium text-gray-700 mb-2">Calendar Integration COMING SOON</h3>
+          <h3 className="text-lg font-medium text-gray-700 mb-2">LIFE CHOICES Calendar Integration</h3>
           <p className="text-gray-500 mb-4">
-            Export your scheduled activities to your favorite calendar app to keep track of everything in one place.
+            Soon you'll be able to export your scheduled activities to your favorite calendar app to keep track of everything in one place.
           </p>
           <button className="bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded-md font-medium">
             COMING SOON

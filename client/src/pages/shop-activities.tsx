@@ -740,39 +740,32 @@ export default function ShopActivitiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Simple header */}
-      <div className="bg-white p-4 flex items-center justify-between border-b">
-        <h1 className="text-xl font-bold text-primary flex items-center">
-          <Triangle className="h-5 w-5 mr-2" />
-          ALL ONE THING
-        </h1>
-        <div className="flex items-center">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => setShowCart(!showCart)} 
-            className="relative bg-white hover:bg-gray-50 border-black"
-          >
-            <ShoppingCart className="h-5 w-5 text-primary" />
-            {cartItems.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                {cartItems.length}
-              </span>
-            )}
-          </Button>
-        </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
+      <Header userData={userData} />
+      <div className="flex items-center justify-end px-4 py-2 border-b">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={() => setShowCart(!showCart)} 
+          className="relative bg-white hover:bg-gray-50 border-black"
+        >
+          <ShoppingCart className="h-5 w-5 text-primary" />
+          {cartItems.length > 0 && (
+            <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full text-xs w-5 h-5 flex items-center justify-center">
+              {cartItems.length}
+            </span>
+          )}
+        </Button>
       </div>
       
       <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Triangle className="h-6 w-6 text-primary mr-2" />
-            Community Activities
+            LIFE CHOICES Activities
           </h1>
           <p className="text-gray-500 mt-1">
-            Explore activities shared by the community for co-working, co-learning, and co-existing
+            Explore activities for your personal growth and well-being
           </p>
         </div>
         
@@ -790,10 +783,10 @@ export default function ShopActivitiesPage() {
               <div className="flex-1 overflow-auto p-4">
                 {cartItems.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center">
-                    <Triangle className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h2 className="text-3xl font-bold mb-4">LIFE CHOICES</h2>
                     <h3 className="text-lg font-medium mb-2">Your collection is empty</h3>
                     <p className="text-muted-foreground mb-6">
-                      Explore community activities and add them to your collection
+                      Explore our activities and add them to your collection
                     </p>
                     <Button onClick={() => setShowCart(false)} className="border-black text-black bg-white hover:bg-gray-50">Explore Activities</Button>
                   </div>

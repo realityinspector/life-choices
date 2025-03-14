@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
       <div className="bg-white p-4 flex items-center justify-between border-b">
         <h1 className="text-xl font-bold text-primary flex items-center">
           <BarChart3 className="h-5 w-5 mr-2" />
-          Analytics Dashboard
+          LIFE CHOICES Analytics
         </h1>
       </div>
 
