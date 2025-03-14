@@ -19,15 +19,13 @@ const Header = ({ userData }: HeaderProps) => {
           <div className="flex items-center mb-4 md:mb-0">
             {/* App Logo */}
             <div className="flex-shrink-0">
-              <div className="text-black font-sans font-bold text-2xl flex items-center">
-                <span>ALL </span>
-                <span className="relative mx-1">
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-b-[18px] border-solid border-black"></div>
-                  </div>
-                  ONE
-                </span>
-                <span> THING</span>
+              <div className="flex items-center">
+                <div className="bg-black rounded-md p-1 mr-2">
+                  <img src="../../images/aot-logo.png" alt="Life Choices Logo" className="h-8 w-8" />
+                </div>
+                <div className="text-black font-sans font-bold text-2xl">
+                  LIFE CHOICES
+                </div>
               </div>
             </div>
             

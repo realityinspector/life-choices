@@ -5,8 +5,8 @@ import {
   Calendar, 
   User,
   BarChart2,
-  Share2,
-  Triangle,
+  ShoppingCart,
+  ArrowDown,
   Home
 } from "lucide-react";
 
@@ -31,7 +31,7 @@ export default function BottomNavigation() {
         onClick={() => navigate("/whats-next")}
         className={isActive("/") || isActive("/whats-next") ? activeLinkClass : inactiveLinkClass}
       >
-        <Triangle className="h-5 w-5 transform rotate-180" />
+        <ArrowDown className="h-5 w-5 transform rotate-180" />
         <span className="text-xs mt-1">Next</span>
       </div>
       
@@ -47,7 +47,7 @@ export default function BottomNavigation() {
         onClick={() => navigate("/shop-activities")}
         className={isActive("/shop-activities") ? activeLinkClass : inactiveLinkClass}
       >
-        <Triangle className="h-5 w-5" />
+        <Plus className="h-5 w-5" />
         <span className="text-xs mt-1">Add</span>
       </div>
       
@@ -63,8 +63,8 @@ export default function BottomNavigation() {
         onClick={() => navigate("/analytics")}
         className={isActive("/analytics") ? activeLinkClass : inactiveLinkClass}
       >
-        <Triangle className="h-5 w-5 transform rotate-90" />
-        <span className="text-xs mt-1">Community</span>
+        <BarChart2 className="h-5 w-5" />
+        <span className="text-xs mt-1">Analytics</span>
       </div>
       
       <div 
