@@ -118,7 +118,7 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
           />
         </div>
       </div>
-      <Button className="w-full mt-6" type="submit">
+      <Button className="w-full mt-6 bg-black" type="submit">
         Sign In
       </Button>
       <div className="mt-4 text-center text-sm">

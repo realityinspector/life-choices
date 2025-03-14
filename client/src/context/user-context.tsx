@@ -141,22 +141,32 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         } else {
           console.error("ALL ONE THING: Failed to fetch user data, status:", userDataResponse.status);
           
-          // If not authenticated, try to load from localStorage as fallback
-          const savedUserData = localStorage.getItem('lifechoicesUserData');
-          const savedActivities = localStorage.getItem('lifechoicesActivities');
-          const savedCart = localStorage.getItem('lifechoicesCart');
+          // Check if user has explicitly logged out
+          const isLoggedOut = localStorage.getItem('lifechoicesLoggedOut') === 'true';
           
-          if (savedUserData) {
-            setUserData(JSON.parse(savedUserData));
-            setIsUserSetup(true);
-          }
-          
-          if (savedActivities) {
-            setActivities(JSON.parse(savedActivities));
-          }
-
-          if (savedCart) {
-            setActivityCart(JSON.parse(savedCart));
+          // Only load from localStorage if user hasn't explicitly logged out
+          if (!isLoggedOut) {
+            const savedUserData = localStorage.getItem('lifechoicesUserData');
+            const savedActivities = localStorage.getItem('lifechoicesActivities');
+            const savedCart = localStorage.getItem('lifechoicesCart');
+            
+            if (savedUserData) {
+              console.log("ALL ONE THING: Loading user data from localStorage fallback");
+              setUserData(JSON.parse(savedUserData));
+              setIsUserSetup(true);
+            }
+            
+            if (savedActivities) {
+              console.log("ALL ONE THING: Loading activities from localStorage fallback");
+              setActivities(JSON.parse(savedActivities));
+            }
+  
+            if (savedCart) {
+              console.log("ALL ONE THING: Loading cart from localStorage fallback");
+              setActivityCart(JSON.parse(savedCart));
+            }
+          } else {
+            console.log("ALL ONE THING: User is logged out, not loading from localStorage");
           }
         }
       } catch (error) {
@@ -748,11 +758,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setActivities([]);
     setIsUserSetup(false);
     
-    // Clear localStorage
+    // Clear ALL localStorage items to prevent auto-login from fallback
     localStorage.removeItem('lifechoicesUserData');
     localStorage.removeItem('lifechoicesActivities');
+    localStorage.removeItem('lifechoicesCart'); // Also clear cart on logout to prevent stale data
     
-    // Note: We don't clear cart on logout so users can pick up where they left off
+    // Set a logout flag to prevent fallback login
+    localStorage.setItem('lifechoicesLoggedOut', 'true');
+    
     console.log("Local logout completed");
   };
 
