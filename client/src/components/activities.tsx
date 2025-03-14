@@ -123,7 +123,7 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
     setShowAddActivityForm(true);
   };
 
-  const handleUpdateActivitySubmit = (e: React.FormEvent) => {
+  const handleUpdateActivitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (editingActivityIndex === null) return;
@@ -137,35 +137,59 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
       return;
     }
     
-    updateActivity(editingActivityIndex, activityFormData);
-    setActivityFormData({
-      name: '',
-      category: '',
-      frequency: 1,
-      frequencyUnit: 'day',
-      duration: 1,
-      durationUnit: 'hour',
-      lifeImpact: 0,
-      color: 'blue',
-    });
-    setShowAddActivityForm(false);
-    setEditingActivityIndex(null);
-    
-    toast({
-      title: "Activity updated",
-      description: `${activityFormData.name} has been updated.`,
-    });
-  };
-
-  const handleRemoveActivity = (index: number) => {
-    if (window.confirm('Are you sure you want to delete this activity?')) {
-      const activityName = activities[index].name;
-      removeActivity(index);
+    try {
+      // Store the name before we reset the form
+      const activityName = activityFormData.name;
+      
+      // Wait for the activity to be updated
+      await updateActivity(editingActivityIndex, activityFormData);
+      
+      // Reset form after successful update
+      setActivityFormData({
+        name: '',
+        category: '',
+        frequency: 1,
+        frequencyUnit: 'day',
+        duration: 1,
+        durationUnit: 'hour',
+        lifeImpact: 0,
+        color: 'blue',
+      });
+      setShowAddActivityForm(false);
+      setEditingActivityIndex(null);
       
       toast({
-        title: "Activity deleted",
-        description: `${activityName} has been removed from your activities.`,
+        title: "Activity updated",
+        description: `${activityName} has been updated.`,
       });
+    } catch (error) {
+      console.error("Error in handle update activity:", error);
+      toast({
+        title: "Error updating activity",
+        description: "There was a problem updating your activity. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveActivity = async (index: number) => {
+    if (window.confirm('Are you sure you want to delete this activity?')) {
+      try {
+        const activityName = activities[index].name;
+        await removeActivity(index);
+        
+        toast({
+          title: "Activity deleted",
+          description: `${activityName} has been removed from your activities.`,
+        });
+      } catch (error) {
+        console.error("Error removing activity:", error);
+        toast({
+          title: "Error deleting activity",
+          description: "There was a problem deleting the activity. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
   
@@ -236,7 +260,7 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
     }
   };
 
-  const addTemplateActivity = (type: string) => {
+  const addTemplateActivity = async (type: string) => {
     let template: ActivityInsert = {
       name: '',
       category: '',
@@ -299,11 +323,20 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
         break;
     }
     
-    addActivity(template);
-    toast({
-      title: `${type} activity added`,
-      description: `${template.name} has been added to your activities.`,
-    });
+    try {
+      await addActivity(template);
+      toast({
+        title: `${type} activity added`,
+        description: `${template.name} has been added to your activities.`,
+      });
+    } catch (error) {
+      console.error("Error adding template activity:", error);
+      toast({
+        title: "Error adding activity",
+        description: "There was a problem adding the activity template. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
