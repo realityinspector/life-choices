@@ -767,6 +767,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         updateUserData,
         addActivity,
         updateActivity,
+        updateActivityById,
         removeActivity,
         removeMultipleActivities,
         completeActivity,
