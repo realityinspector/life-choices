@@ -3,6 +3,7 @@ import { UserData } from "@shared/schema";
 import Navigation from "./navigation";
 import { CheckCircle2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import aotLogo from "../images/aot-logo.png";
 
 interface HeaderProps {
   userData?: UserData;
@@ -21,7 +22,7 @@ const Header = ({ userData }: HeaderProps) => {
             <div className="flex-shrink-0">
               <div className="flex items-center">
                 <div className="bg-black rounded-md p-1 mr-2">
-                  <img src="../../images/aot-logo.png" alt="Life Choices Logo" className="h-8 w-8" />
+                  <img src={aotLogo} alt="Life Choices Logo" className="h-8 w-8" />
                 </div>
                 <div className="text-black font-sans font-bold text-2xl">
                   LIFE CHOICES

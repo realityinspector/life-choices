@@ -3,9 +3,10 @@ import AnalyticsDashboard from '@/components/analytics-dashboard';
 import { useQuery } from '@tanstack/react-query';
 import { getQueryFn } from '@/lib/queryClient';
 import { Activity } from '@shared/schema';
-import { Loader2, Users, Triangle, Share2 } from 'lucide-react';
+import { Loader2, BarChart3, PieChart, LineChart, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'wouter';
+import Header from '@/components/header';
 
 export default function AnalyticsPage() {
   const [, navigate] = useLocation();

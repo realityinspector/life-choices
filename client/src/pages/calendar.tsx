@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useUser } from '@/context/user-context';
-import { ListChecks, Plus, Calendar, ShoppingCart, User, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
+import Header from '@/components/header';
 
 export default function CalendarPage() {
   const { userData } = useUser();
@@ -28,10 +29,7 @@ export default function CalendarPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        {/* Simple header */}
-        <div className="bg-white p-4 flex items-center justify-between border-b">
-          <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
-        </div>
+        <Header userData={userData} />
         <div className="flex-1 flex justify-center items-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
@@ -41,22 +39,19 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Simple header */}
-      <div className="bg-white p-4 flex items-center justify-between border-b">
-        <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
-      </div>
+      <Header userData={userData} />
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Calendar</h2>
         
         <div className="bg-white rounded-lg shadow-md p-6 text-center">
-          <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+          <CalendarIcon className="h-16 w-16 mx-auto mb-4 text-gray-400" />
           <h3 className="text-lg font-medium text-gray-700 mb-2">Calendar Integration COMING SOON</h3>
           <p className="text-gray-500 mb-4">
             Export your scheduled activities to your favorite calendar app to keep track of everything in one place.
           </p>
-          <button className="bg-teal-600 hover:bg-teal-700 text-white py-2 px-4 rounded-md font-medium">
+          <button className="bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded-md font-medium">
             COMING SOON
           </button>
         </div>
