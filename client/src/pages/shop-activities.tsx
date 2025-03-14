@@ -19,6 +19,24 @@ import { apiRequest } from "@/lib/queryClient";
 // Debug flag to help troubleshoot issues
 const DEBUG_MODE = true;
 
+// Add global error handler to catch any unhandled errors
+if (typeof window !== 'undefined') {
+  console.log("ALL ONE THING: Setting up global error handler");
+  window.addEventListener('error', (event) => {
+    console.error("ALL ONE THING: GLOBAL ERROR", event.error);
+    console.error("ALL ONE THING: Error message:", event.message);
+    console.error("ALL ONE THING: Error at:", event.filename, "line:", event.lineno, "col:", event.colno);
+  });
+  
+  // Also catch unhandled promise rejections
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error("ALL ONE THING: UNHANDLED PROMISE REJECTION", event.reason);
+    if (event.reason instanceof Error) {
+      console.error("ALL ONE THING: Stack trace:", event.reason.stack);
+    }
+  });
+}
+
 // Activity Card component for consistency across tabs
 interface ActivityCardProps {
   activity: Required<ActivityInsert> | (Activity & { description?: string; completed?: boolean });

@@ -10,11 +10,11 @@ interface UserContextType {
   isAdmin: boolean;
   completeSetup: (userData: UserData) => void;
   updateUserData: (userData: UserData) => void;
-  addActivity: (activity: ActivityInsert) => void;
+  addActivity: (activity: ActivityInsert) => Promise<Activity | undefined>;
   updateActivity: (index: number, activity: ActivityInsert) => void;
   removeActivity: (index: number) => void;
   removeMultipleActivities: (activityIds: number[]) => Promise<boolean>;
-  completeActivity: (id: number) => void;
+  completeActivity: (id: number) => Promise<Activity | undefined>;
   skipActivity: (id: number) => Promise<Activity | undefined>;
   getNextActivity: (skipActivityNames?: string[], skipDuplicates?: boolean) => Promise<Activity | undefined>;
   createSharedActivity: (activity: ActivityInsert, recipientEmail: string) => Promise<string>;
@@ -46,6 +46,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log("ALL ONE THING: Starting to load user data");
         // First try to get user data from API with credentials
         const userDataResponse = await fetch('/api/user', {
           method: 'GET',
@@ -56,51 +57,89 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         });
         
         if (userDataResponse.ok) {
-          const userData = await userDataResponse.json();
-          
-          if (userData) {
-            setUserData(userData);
-            setIsUserSetup(true);
+          try {
+            const userData = await userDataResponse.json();
+            console.log("ALL ONE THING: User data loaded successfully");
             
-            // Then get activities
-            const activitiesResponse = await fetch('/api/activities', {
-              method: 'GET',
-              credentials: 'include',
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (activitiesResponse.ok) {
-              const activities = await activitiesResponse.json();
-              setActivities(activities);
-            }
-            
-            // Check if user is admin
-            try {
-              const adminCheckResponse = await fetch('/api/user/admin-check', {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                  'Content-Type': 'application/json'
-                }
-              });
+            if (userData) {
+              setUserData(userData);
+              setIsUserSetup(true);
               
-              if (adminCheckResponse.ok) {
-                const { isAdmin: adminStatus } = await adminCheckResponse.json();
-                setIsAdmin(adminStatus);
+              // Then get activities
+              try {
+                console.log("ALL ONE THING: Fetching activities");
+                const activitiesResponse = await fetch('/api/activities', {
+                  method: 'GET',
+                  credentials: 'include',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                });
+                
+                if (activitiesResponse.ok) {
+                  try {
+                    const activities = await activitiesResponse.json();
+                    console.log(`ALL ONE THING: Activities loaded successfully (${activities.length} items)`);
+                    setActivities(activities);
+                  } catch (err) {
+                    console.error("ALL ONE THING: Error parsing activities JSON:", err);
+                  }
+                } else {
+                  console.error("ALL ONE THING: Failed to fetch activities, status:", activitiesResponse.status);
+                }
+              } catch (activitiesError) {
+                console.error("ALL ONE THING: Error fetching activities:", activitiesError);
               }
-            } catch (error) {
-              console.error('Error checking admin status:', error);
+              
+              // Check if user is admin
+              try {
+                console.log("ALL ONE THING: Checking admin status");
+                const adminCheckResponse = await fetch('/api/user/admin-check', {
+                  method: 'GET',
+                  credentials: 'include',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                });
+                
+                if (adminCheckResponse.ok) {
+                  try {
+                    const { isAdmin: adminStatus } = await adminCheckResponse.json();
+                    console.log("ALL ONE THING: Admin status:", adminStatus);
+                    setIsAdmin(adminStatus);
+                  } catch (err) {
+                    console.error("ALL ONE THING: Error parsing admin check JSON:", err);
+                  }
+                } else {
+                  console.error("ALL ONE THING: Failed admin check, status:", adminCheckResponse.status);
+                }
+              } catch (error) {
+                console.error('ALL ONE THING: Error checking admin status:', error);
+              }
+              
+              // Load cart from localStorage (cart is client-side only)
+              try {
+                console.log("ALL ONE THING: Loading cart from localStorage");
+                const savedCart = localStorage.getItem('lifechoicesCart');
+                if (savedCart) {
+                  const parsedCart = JSON.parse(savedCart);
+                  console.log(`ALL ONE THING: Cart loaded with ${parsedCart.length} items`);
+                  setActivityCart(parsedCart);
+                } else {
+                  console.log("ALL ONE THING: No cart data found in localStorage");
+                }
+              } catch (cartError) {
+                console.error("ALL ONE THING: Error loading cart from localStorage:", cartError);
+              }
+            } else {
+              console.error("ALL ONE THING: User data is empty or undefined");
             }
-            
-            // Load cart from localStorage (cart is client-side only)
-            const savedCart = localStorage.getItem('lifechoicesCart');
-            if (savedCart) {
-              setActivityCart(JSON.parse(savedCart));
-            }
+          } catch (userDataError) {
+            console.error("ALL ONE THING: Error parsing user data JSON:", userDataError);
           }
         } else {
+          console.error("ALL ONE THING: Failed to fetch user data, status:", userDataResponse.status);
+          
           // If not authenticated, try to load from localStorage as fallback
           const savedUserData = localStorage.getItem('lifechoicesUserData');
           const savedActivities = localStorage.getItem('lifechoicesActivities');
@@ -121,6 +160,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         console.error('Error loading user data:', error);
+        
+        // Handle complete failure by checking localStorage
+        const savedUserData = localStorage.getItem('lifechoicesUserData');
+        const savedActivities = localStorage.getItem('lifechoicesActivities');
+        const savedCart = localStorage.getItem('lifechoicesCart');
+        
+        if (savedUserData) {
+          setUserData(JSON.parse(savedUserData));
+          setIsUserSetup(true);
+        }
+        
+        if (savedActivities) {
+          setActivities(JSON.parse(savedActivities));
+        }
+
+        if (savedCart) {
+          setActivityCart(JSON.parse(savedCart));
+        }
       }
     };
     
@@ -158,7 +215,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addActivity = async (activity: ActivityInsert) => {
+  const addActivity = async (activity: ActivityInsert): Promise<Activity | undefined> => {
     try {
       console.log("Adding new activity:", activity.name);
       
@@ -243,7 +300,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const removeMultipleActivities = async (activityIds: number[]) => {
+  const removeMultipleActivities = async (activityIds: number[]): Promise<boolean> => {
     try {
       // Delete each activity one by one
       for (const id of activityIds) {
@@ -265,7 +322,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const completeActivity = async (id: number) => {
+  const completeActivity = async (id: number): Promise<Activity | undefined> => {
     try {
       const response = await apiRequest(`/api/activities/${id}/complete`, {
         method: 'POST',
@@ -283,7 +340,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       // Fallback to local update
       const activityIndex = activities.findIndex(a => a.id === id);
-      if (activityIndex === -1) return;
+      if (activityIndex === -1) return undefined;
       
       const activity = activities[activityIndex];
       const now = new Date();
@@ -317,7 +374,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const skipActivity = async (id: number) => {
+  const skipActivity = async (id: number): Promise<Activity | undefined> => {
     try {
       const response = await apiRequest(`/api/activities/${id}/skip`, {
         method: 'POST',
@@ -335,7 +392,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       // Fallback to local update
       const activityIndex = activities.findIndex(a => a.id === id);
-      if (activityIndex === -1) return;
+      if (activityIndex === -1) return undefined;
       
       const activity = activities[activityIndex];
       const now = new Date();
@@ -489,18 +546,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('lifechoicesCart');
   };
 
-  const saveCartActivities = async () => {
+  const saveCartActivities = async (): Promise<Activity[] | undefined> => {
     // Store the number of activities to process
     const activityCount = activityCart.length;
     console.log(`Processing ${activityCount} activities from cart`);
     
     if (activityCount === 0) {
-      return; // No activities to process
+      return undefined; // No activities to process
     }
     
     try {
       // Add all activities in the cart to the user's activities
-      const newActivities = [];
+      const newActivities: Activity[] = [];
       
       // Process all activities in series to maintain order
       for (const activity of activityCart) {
@@ -520,6 +577,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Error saving cart activities:", error);
       // Don't clear the cart on error so the user can try again
+      return undefined;
     }
   };
 
@@ -574,15 +632,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setActivities([]);
       setIsUserSetup(false);
       
-      // Keep cart data (optional - can be cleared too if needed)
-      
-      // Remove any localStorage data that might have been used as fallback
+      // Also clear localStorage
       localStorage.removeItem('lifechoicesUserData');
       localStorage.removeItem('lifechoicesActivities');
-    } catch (error) {
-      console.error('Logout error:', error);
       
-      // Still clear client-side state even if API fails
+      // Note: We don't clear cart on logout so users can pick up where they left off
+    } catch (error) {
+      console.error('Error during logout:', error);
+      
+      // Even if logout fails, clear local state
       setUserData({
         name: '',
         username: '',
@@ -594,35 +652,37 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setActivities([]);
       setIsUserSetup(false);
       
-      // Remove localStorage data
+      // Also clear localStorage
       localStorage.removeItem('lifechoicesUserData');
       localStorage.removeItem('lifechoicesActivities');
     }
   };
 
   return (
-    <UserContext.Provider value={{
-      isUserSetup,
-      userData,
-      activities,
-      isAdmin,
-      completeSetup,
-      updateUserData,
-      addActivity,
-      updateActivity,
-      removeActivity,
-      removeMultipleActivities,
-      completeActivity,
-      skipActivity,
-      getNextActivity,
-      createSharedActivity,
-      addActivitiesToCart,
-      getCartActivities,
-      clearCart,
-      saveCartActivities,
-      resetData,
-      logout
-    }}>
+    <UserContext.Provider
+      value={{
+        isUserSetup,
+        userData,
+        activities,
+        isAdmin,
+        completeSetup,
+        updateUserData,
+        addActivity,
+        updateActivity,
+        removeActivity,
+        removeMultipleActivities,
+        completeActivity,
+        skipActivity,
+        getNextActivity,
+        createSharedActivity,
+        addActivitiesToCart,
+        getCartActivities,
+        clearCart,
+        saveCartActivities,
+        resetData,
+        logout
+      }}
+    >
       {children}
     </UserContext.Provider>
   );
