@@ -20,14 +20,14 @@ const Header = ({ userData }: HeaderProps) => {
             {/* App Logo */}
             <div className="flex-shrink-0">
               <div className="text-black font-sans font-bold text-2xl flex items-center">
-                <div className="relative mr-2">
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <div className="w-4 h-4 bg-black transform rotate-45"></div>
+                <span>ALL </span>
+                <span className="relative mx-1">
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <div className="w-4 h-4 border-black border-2 bg-transparent transform rotate-45"></div>
                   </div>
-                  <span>ALL </span>
-                  <span className="relative">ONE</span>
-                  <span> THING</span>
-                </div>
+                  ONE
+                </span>
+                <span> THING</span>
               </div>
             </div>
             

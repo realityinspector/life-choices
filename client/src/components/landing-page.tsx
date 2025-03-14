@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { UserData } from "@shared/schema";
-import { CheckCircle2, ListChecks, Share2, Calendar, ArrowRight, Smartphone } from "lucide-react";
+import { ListChecks, Share2, Calendar, ArrowRight, CheckCircle2, Triangle } from "lucide-react";
 
 const LandingPage = () => {
   // Simplified userData without life expectancy focus
@@ -15,22 +15,28 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-gradient-to-r from-teal-500 to-emerald-400 shadow-lg">
+      <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center">
-              <div className="text-white font-sans font-bold text-3xl flex items-center">
-                <CheckCircle2 className="h-8 w-8 mr-2" />
-                Life Choices
+              <div className="text-black font-sans font-bold text-3xl flex items-center">
+                <span>ALL </span>
+                <span className="relative mx-1">
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <div className="w-4 h-4 border-black border-2 bg-transparent transform rotate-45"></div>
+                  </div>
+                  ONE
+                </span>
+                <span> THING</span>
               </div>
             </div>
             <div className="hidden md:block">
-              <p className="text-teal-50 font-medium">Do what matters, one choice at a time</p>
+              <p className="text-black font-medium">Co-work. Co-learn. Co-exist.</p>
             </div>
             <div className="flex space-x-4">
               <button
                 onClick={() => window.location.href = "/login"}
-                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-teal-600 bg-white hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+                className="inline-flex items-center justify-center px-4 py-2 border border-black text-sm font-medium rounded-md shadow-sm text-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
               >
                 Sign In
               </button>
@@ -51,10 +57,17 @@ const LandingPage = () => {
                     {/* Screen Content */}
                     <div className="absolute inset-0 m-2 rounded-[28px] bg-teal-50 overflow-hidden flex flex-col">
                       {/* App Header */}
-                      <div className="bg-teal-500 p-4 text-white">
+                      <div className="bg-white p-4 text-black border-b border-gray-200">
                         <div className="text-xl font-bold flex items-center">
-                          <CheckCircle2 className="h-5 w-5 mr-2" />
-                          Life Choices
+                          <div className="relative mr-2">
+                            <span className="relative mx-1">
+                              <div className="absolute -top-3 transform rotate-45">
+                                <div className="w-3 h-3 border-black border bg-transparent"></div>
+                              </div>
+                              ONE
+                            </span>
+                          </div>
+                          THING
                         </div>
                       </div>
                       
@@ -67,8 +80,8 @@ const LandingPage = () => {
                             <div className="text-sm text-gray-500">15 min • Daily Routine</div>
                           </div>
                           <div className="flex space-x-2">
-                            <button className="p-2 rounded-full bg-teal-100 text-teal-600">
-                              <CheckCircle2 size={18} />
+                            <button className="p-2 rounded-full bg-white border border-black text-black">
+                              <Triangle size={18} className="transform rotate-180" />
                             </button>
                             <button className="p-2 rounded-full bg-gray-100 text-gray-600">
                               <ArrowRight size={18} />
@@ -104,7 +117,7 @@ const LandingPage = () => {
                       {/* Bottom Navigation */}
                       <div className="mt-auto bg-white border-t border-gray-200 flex justify-around p-3">
                         <div className="flex flex-col items-center">
-                          <CheckCircle2 size={20} className="text-teal-600" />
+                          <Triangle size={20} className="text-black transform rotate-180" />
                           <span className="text-xs">Next</span>
                         </div>
                         <div className="flex flex-col items-center text-gray-400">
@@ -113,7 +126,7 @@ const LandingPage = () => {
                         </div>
                         <div className="flex flex-col items-center text-gray-400">
                           <Share2 size={20} />
-                          <span className="text-xs">Share</span>
+                          <span className="text-xs">Community</span>
                         </div>
                         <div className="flex flex-col items-center text-gray-400">
                           <Calendar size={20} />
@@ -162,46 +175,46 @@ const LandingPage = () => {
           <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">Key Features</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
-              <div className="p-3 bg-teal-100 rounded-full mb-4">
-                <CheckCircle2 className="h-8 w-8 text-teal-600" />
+              <div className="p-3 bg-white border border-black mb-4">
+                <Triangle className="h-8 w-8 text-black transform rotate-180" />
               </div>
-              <h3 className="font-bold text-lg mb-2">What's Next</h3>
-              <p className="text-gray-600">Focus on your immediate task with smart rotation between work, personal, and health activities.</p>
+              <h3 className="font-bold text-lg mb-2">Co-working</h3>
+              <p className="text-gray-600">Create collaborative professional spaces with activities designed for focused productivity and teamwork.</p>
             </div>
             
             <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
-              <div className="p-3 bg-teal-100 rounded-full mb-4">
-                <ListChecks className="h-8 w-8 text-teal-600" />
+              <div className="p-3 bg-white border border-black mb-4">
+                <Triangle className="h-8 w-8 text-black" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Activity Clusters</h3>
-              <p className="text-gray-600">Add predefined clusters like "Lose 10 lbs" to automatically include all related activities.</p>
+              <h3 className="font-bold text-lg mb-2">Co-learning</h3>
+              <p className="text-gray-600">Engage in educational pursuits that foster knowledge sharing and experiential learning within the community.</p>
             </div>
             
             <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
-              <div className="p-3 bg-teal-100 rounded-full mb-4">
-                <Share2 className="h-8 w-8 text-teal-600" />
+              <div className="p-3 bg-white border border-black mb-4">
+                <Triangle className="h-8 w-8 text-black transform rotate-90" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Social Sharing</h3>
-              <p className="text-gray-600">Share activities with friends and family. Onboard simply by accepting a shared routine.</p>
+              <h3 className="font-bold text-lg mb-2">Co-existing</h3>
+              <p className="text-gray-600">Build spaces where shared values and collective experiences strengthen community bonds and support well-being.</p>
             </div>
           </div>
         </div>
 
         {/* Call to Action */}
         <div className="px-4 sm:px-0">
-          <div className="bg-gradient-to-r from-teal-500 to-emerald-500 rounded-lg shadow-xl overflow-hidden">
+          <div className="bg-[#F5F5F0] border border-black rounded-lg shadow-md overflow-hidden">
             <div className="px-6 py-12 text-center">
-              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                Start making better choices today
+              <h2 className="text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
+                Join a community that recognizes our shared consciousness
               </h2>
-              <p className="mt-4 max-w-2xl mx-auto text-xl text-teal-50">
-                Join thousands who are focusing on what matters most in their daily lives.
+              <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-700">
+                Build spaces where humanity can thrive together.
               </p>
               <div className="mt-8">
                 <div className="inline-flex rounded-md shadow">
                   <a
                     href="/login"
-                    className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-teal-600 bg-white hover:bg-teal-50"
+                    className="inline-flex items-center justify-center px-5 py-3 border border-black text-base font-medium rounded-md text-black bg-white hover:bg-gray-50"
                   >
                     Get Started
                   </a>
@@ -209,9 +222,9 @@ const LandingPage = () => {
                 <div className="ml-3 inline-flex rounded-md shadow">
                   <a
                     href="/shop-activities"
-                    className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-teal-800 hover:bg-teal-900"
+                    className="inline-flex items-center justify-center px-5 py-3 border border-black text-base font-medium rounded-md text-white bg-black hover:bg-gray-900"
                   >
-                    Browse Activities
+                    Discover Community Activities
                   </a>
                 </div>
               </div>
@@ -220,11 +233,23 @@ const LandingPage = () => {
         </div>
       </main>
 
-      <footer className="bg-gradient-to-r from-teal-700 to-emerald-700 shadow-inner">
+      <footer className="bg-[#E8E6D9] shadow-inner">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-white">
-            Life Choices: Do what matters, one choice at a time.
-          </p>
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="text-black font-sans font-bold text-xl flex items-center mb-4 md:mb-0">
+              <span>ALL </span>
+              <span className="relative mx-1">
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <div className="w-3 h-3 border-black border-2 bg-transparent transform rotate-45"></div>
+                </div>
+                ONE
+              </span>
+              <span> THING</span>
+            </div>
+            <p className="text-center text-sm text-black">
+              Co-work. Co-learn. Co-exist. Your New Town Square.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
