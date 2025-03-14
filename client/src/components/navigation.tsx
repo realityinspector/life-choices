@@ -9,7 +9,9 @@ import {
   Home,
   LogOut,
   Settings,
-  Triangle
+  Triangle,
+  CheckCircle2,
+  BarChart2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/user-context";

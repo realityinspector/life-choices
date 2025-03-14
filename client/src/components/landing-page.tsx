@@ -23,7 +23,7 @@ const LandingPage = () => {
                 <span>ALL </span>
                 <span className="relative mx-1">
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="w-4 h-4 border-black border-2 bg-transparent transform rotate-45"></div>
+                    <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-b-[18px] border-solid border-black"></div>
                   </div>
                   ONE
                 </span>
@@ -61,8 +61,8 @@ const LandingPage = () => {
                         <div className="text-xl font-bold flex items-center">
                           <div className="relative mr-2">
                             <span className="relative mx-1">
-                              <div className="absolute -top-3 transform rotate-45">
-                                <div className="w-3 h-3 border-black border bg-transparent"></div>
+                              <div className="absolute -top-3 transform">
+                                <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[12px] border-solid border-black"></div>
                               </div>
                               ONE
                             </span>
@@ -138,15 +138,15 @@ const LandingPage = () => {
                 </div>
                 
                 <div className="w-full md:w-1/2 p-4">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Focus on what's next, not what's gone</h2>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Build community through shared activities</h2>
                   <p className="text-lg text-gray-600 mb-6">
-                    Life Choices helps you tackle daily tasks while keeping you aligned with your long-term goals. No complicated time tracking, just simple, effective choices.
+                    ALL ONE THING helps you connect with others through shared activities that foster community and purpose. No complicated social networks, just meaningful interactions.
                   </p>
                   
-                  <div className="bg-teal-50 rounded-lg p-4 mb-6 border border-teal-100">
-                    <h3 className="text-lg font-medium text-teal-800">Mobile-First Experience</h3>
-                    <p className="mt-1 text-sm text-teal-700">
-                      Simple swipe interface lets you quickly complete tasks, skip to the next one, or share activities with friends.
+                  <div className="bg-black bg-opacity-5 rounded-lg p-4 mb-6 border border-black border-opacity-10">
+                    <h3 className="text-lg font-medium text-black">Community-First Experience</h3>
+                    <p className="mt-1 text-sm text-gray-700">
+                      Simple intuitive interface lets you quickly share activities, collaborate with others, and build meaningful connections.
                     </p>
                   </div>
                   
@@ -157,7 +157,7 @@ const LandingPage = () => {
                     </p>
                     <div className="mt-4">
                       <button
-                        className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+                        className="w-full inline-flex items-center justify-center px-4 py-2 border border-black text-sm font-medium rounded-md shadow-sm text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
                         onClick={() => window.location.href = "/login"}
                       >
                         Create Free Account
@@ -240,7 +240,7 @@ const LandingPage = () => {
               <span>ALL </span>
               <span className="relative mx-1">
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <div className="w-3 h-3 border-black border-2 bg-transparent transform rotate-45"></div>
+                  <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[12px] border-solid border-black"></div>
                 </div>
                 ONE
               </span>

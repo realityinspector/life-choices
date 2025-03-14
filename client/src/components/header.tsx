@@ -23,7 +23,7 @@ const Header = ({ userData }: HeaderProps) => {
                 <span>ALL </span>
                 <span className="relative mx-1">
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="w-4 h-4 border-black border-2 bg-transparent transform rotate-45"></div>
+                    <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-b-[18px] border-solid border-black"></div>
                   </div>
                   ONE
                 </span>
