@@ -164,37 +164,55 @@ export default function WhatsNextPage() {
     }
   };
 
-  const handleComplete = (activity: Activity) => {
-    // Store activity name before completing
-    const completedActivityName = activity.name;
-    
-    // Complete the activity and show the toast
-    completeActivity(activity.id);
-    toast({
-      title: 'Activity Completed',
-      description: `Great job completing "${activity.name}"!`,
-      variant: 'default',
-    });
-    
-    // Set temporary loading state
-    setLoading(true);
-    
-    // Add a brief delay before loading the next activity to ensure backend has time to update
-    setTimeout(() => {
-      // Try to get the next due activity or show recommendations if none are due
-      loadNextActivity([]);
-    }, 1000); // 1 second delay to ensure database updates are processed
+  const handleComplete = async (activity: Activity) => {
+    try {
+      // Store activity name before completing
+      const completedActivityName = activity.name;
+      
+      // Complete the activity and show the toast
+      await completeActivity(activity.id);
+      
+      toast({
+        title: 'Activity Completed',
+        description: `Great job completing "${completedActivityName}"!`,
+        variant: 'default',
+      });
+      
+      // Set temporary loading state
+      setLoading(true);
+      
+      // Add a brief delay before loading the next activity to ensure backend has time to update
+      setTimeout(() => {
+        // Try to get the next due activity or show recommendations if none are due
+        loadNextActivity([]);
+      }, 1000); // 1 second delay to ensure database updates are processed
+    } catch (error) {
+      console.error("Error completing activity:", error);
+      toast({
+        title: "Error",
+        description: "Failed to complete activity. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Even if we failed, try to load the next activity
+      setLoading(true);
+      setTimeout(() => {
+        loadNextActivity([]);
+      }, 1000);
+    }
   };
 
-  const handleSkip = (activity: Activity) => {
-    // Store activity name before skipping
-    const skippedActivityName = activity.name;
-    
-    // Skip the current activity and update its nextDue date
-    skipActivity(activity.id).then(() => {
+  const handleSkip = async (activity: Activity) => {
+    try {
+      // Store activity name before skipping
+      const skippedActivityName = activity.name;
+      
+      // Skip the current activity and update its nextDue date
+      await skipActivity(activity.id);
+      
       toast({
         title: 'Activity Skipped',
-        description: `"${activity.name}" has been rescheduled for later.`,
+        description: `"${skippedActivityName}" has been rescheduled for later.`,
         variant: 'default',
       });
       
@@ -206,63 +224,110 @@ export default function WhatsNextPage() {
         // Try to get the next due activity or show recommendations if none are due
         loadNextActivity([]);
       }, 1000); // 1 second delay to ensure database updates are processed
-    });
+    } catch (error) {
+      console.error("Error skipping activity:", error);
+      toast({
+        title: "Error",
+        description: "Failed to skip activity. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Even if we failed, try to load the next activity
+      setLoading(true);
+      setTimeout(() => {
+        loadNextActivity([]);
+      }, 1000);
+    }
   };
 
-  const handleAddToCart = (activity: Activity) => {
-    // Store activity name before adding to cart
-    const addedActivityName = activity.name;
-    
-    // Add to cart
-    addActivitiesToCart([{
-      name: activity.name,
-      category: activity.category,
-      frequency: activity.frequency,
-      frequencyUnit: activity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
-      duration: activity.duration,
-      durationUnit: activity.durationUnit as 'minute' | 'hour',
-      lifeImpact: activity.lifeImpact || 0,
-      color: activity.color,
-      priority: activity.priority,
-      exportToCalendar: activity.exportToCalendar,
-      emoji: activity.emoji,
-      clusterId: activity.clusterId
-    }]);
-    
-    setCartCount(getCartActivities().length);
-    
-    toast({
-      title: 'Added to Cart',
-      description: `"${activity.name}" added to your cart`,
-      variant: 'default',
-    });
-    
-    // Set temporary loading state
-    setLoading(true);
-    
-    // Add a brief delay before loading the next activity
-    setTimeout(() => {
-      // Try to get the next due activity or show recommendations if none are due
-      loadNextActivity([]);
-    }, 1000); // 1 second delay to ensure database updates are processed
+  const handleAddToCart = async (activity: Activity) => {
+    try {
+      // Store activity name before adding to cart
+      const addedActivityName = activity.name;
+      
+      // Add to cart
+      addActivitiesToCart([{
+        name: activity.name,
+        category: activity.category,
+        frequency: activity.frequency,
+        frequencyUnit: activity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
+        duration: activity.duration,
+        durationUnit: activity.durationUnit as 'minute' | 'hour',
+        lifeImpact: activity.lifeImpact || 0,
+        color: activity.color,
+        priority: activity.priority,
+        exportToCalendar: activity.exportToCalendar,
+        emoji: activity.emoji,
+        clusterId: activity.clusterId
+      }]);
+      
+      setCartCount(getCartActivities().length);
+      
+      toast({
+        title: 'Added to Cart',
+        description: `"${addedActivityName}" added to your cart`,
+        variant: 'default',
+      });
+      
+      // Set temporary loading state
+      setLoading(true);
+      
+      // Add a brief delay before loading the next activity
+      setTimeout(() => {
+        // Try to get the next due activity or show recommendations if none are due
+        loadNextActivity([]);
+      }, 1000); // 1 second delay to ensure database updates are processed
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add activity to cart. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Even if we failed, we should try to load the next activity
+      setLoading(true);
+      setTimeout(() => {
+        loadNextActivity([]);
+      }, 1000);
+    }
   };
   
-  const handleAddSuggestedActivity = (activity: ActivityInsert) => {
-    addActivity(activity);
-    
-    toast({
-      title: 'Activity Added',
-      description: `"${activity.name}" has been added to your activities.`,
-      variant: 'default',
-    });
-    
-    // Set loading state
-    setLoading(true);
-    
-    // Always try to load planned activities first before showing another suggestion
-    setTimeout(() => {
-      loadNextActivity([]);
-    }, 1000); // Short delay to let the database update
+  const handleAddSuggestedActivity = async (activity: ActivityInsert) => {
+    try {
+      // Save the activity name before we potentially lose it
+      const activityName = activity.name;
+      
+      // Wait for the activity to be added
+      await addActivity(activity);
+      
+      toast({
+        title: 'Activity Added',
+        description: `"${activityName}" has been added to your activities.`,
+        variant: 'default',
+      });
+      
+      // Set loading state
+      setLoading(true);
+      
+      // Always try to load planned activities first before showing another suggestion
+      setTimeout(() => {
+        loadNextActivity([]);
+      }, 1000); // Short delay to let the database update
+    } catch (error) {
+      console.error("Error adding suggested activity:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add activity. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Even if we failed to add, we should try to load something new
+      setLoading(true);
+      setTimeout(() => {
+        loadNextActivity([]);
+      }, 1000);
+    }
   };
   
   const handleToggleCalendarExport = async (activity: Activity) => {
@@ -314,29 +379,36 @@ export default function WhatsNextPage() {
     }
   };
 
-  const handleSkipSuggestion = () => {
+  const handleSkipSuggestion = async () => {
     // Set loading state
     setLoading(true);
     
-    // Check for actual planned activities first before showing another suggestion
-    // But also keep track of the previously seen suggestion to avoid repeats
-    if (currentSuggestedActivity) {
-      const skipNames = [...(window.recentlySeenActivities || []), currentSuggestedActivity.name];
-      window.recentlySeenActivities = skipNames;
-      
-      // Try to load a new suggestion directly to avoid loading planned activities again
-      // since we already know there are none from the previous check
-      getRandomSuggestedActivity().then(suggestedActivity => {
+    try {
+      // Check for actual planned activities first before showing another suggestion
+      // But also keep track of the previously seen suggestion to avoid repeats
+      if (currentSuggestedActivity) {
+        const skipNames = [...(window.recentlySeenActivities || []), currentSuggestedActivity.name];
+        window.recentlySeenActivities = skipNames;
+        
+        // Try to load a new suggestion directly to avoid loading planned activities again
+        // since we already know there are none from the previous check
+        const suggestedActivity = await getRandomSuggestedActivity();
         setCurrentSuggestedActivity(suggestedActivity);
         setLoading(false);
-      }).catch(error => {
-        console.error('Error getting next suggestion:', error);
-        setCurrentSuggestedActivity(null);
-        setLoading(false);
+      } else {
+        // Fallback to standard loading if there's no current suggestion
+        await loadNextActivity([]);
+      }
+    } catch (error) {
+      console.error('Error getting next suggestion:', error);
+      setCurrentSuggestedActivity(null);
+      setLoading(false);
+      
+      toast({
+        title: "Error",
+        description: "Failed to find another activity suggestion. Please try again.",
+        variant: "destructive"
       });
-    } else {
-      // Fallback to standard loading if there's no current suggestion
-      loadNextActivity([]);
     }
   };
 
