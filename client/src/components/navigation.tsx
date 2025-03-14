@@ -44,32 +44,12 @@ const Navigation = ({ currentPath }: NavigationProps) => {
     }
   };
   
-  // Define the main navigation items
+  // Define the main navigation items - removed "Next", Calendar, Browse, and Analytics as requested
   const navItems = [
-    {
-      label: "Next",
-      path: "/",
-      icon: <Home className="h-4 w-4 mr-2" />,
-    },
     {
       label: "Tasks",
       path: "/activities",
       icon: <ListChecks className="h-4 w-4 mr-2" />,
-    },
-    {
-      label: "Calendar",
-      path: "/calendar",
-      icon: <Calendar className="h-4 w-4 mr-2" />,
-    },
-    {
-      label: "Browse",
-      path: "/shop-activities",
-      icon: <Store className="h-4 w-4 mr-2" />,
-    },
-    {
-      label: "Analytics",
-      path: "/analytics",
-      icon: <BarChart2 className="h-4 w-4 mr-2" />,
     },
     {
       label: "Profile",

@@ -30,12 +30,7 @@ const Header = ({ userData }: HeaderProps) => {
               </div>
             </div>
             
-            {/* User greeting if available */}
-            {userData && userData.name && (
-              <div className="ml-4 text-sm text-gray-500">
-                Welcome, <span className="font-medium text-gray-700">{userData.name}</span>
-              </div>
-            )}
+            {/* User greeting removed as requested */}
           </div>
           
           {/* Navigation - only show on desktop (mobile uses bottom navigation) */}

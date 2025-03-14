@@ -443,7 +443,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       // Make the API request with the parameters
       const url = `/api/activities/next${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await apiRequest(url);
-      return await response.json();
+      
+      // Check if the response is successful
+      if (response.ok) {
+        return await response.json();
+      } else {
+        // If the server returns a 404 (no activities found), return undefined
+        if (response.status === 404) {
+          return undefined;
+        }
+        // For other errors, throw to be caught by the catch block
+        throw new Error(`Failed to fetch next activity: ${response.status}`);
+      }
     } catch (error) {
       console.error('Error fetching next activity:', error);
       
