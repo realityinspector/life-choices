@@ -327,8 +327,13 @@ export default function WhatsNextPage() {
       
       // Even if we failed, we should try to load the next activity
       setLoading(true);
-      setTimeout(() => {
-        loadNextActivity([]);
+      setTimeout(async () => {
+        try {
+          await loadNextActivity([]);
+        } catch (loadError) {
+          console.error("Error loading next activity after cart error:", loadError);
+          setLoading(false);
+        }
       }, 1000);
     }
   };
@@ -351,8 +356,13 @@ export default function WhatsNextPage() {
       setLoading(true);
       
       // Always try to load planned activities first before showing another suggestion
-      setTimeout(() => {
-        loadNextActivity([]);
+      setTimeout(async () => {
+        try {
+          await loadNextActivity([]);
+        } catch (loadError) {
+          console.error("Error loading next activity after adding suggested activity:", loadError);
+          setLoading(false);
+        }
       }, 1000); // Short delay to let the database update
     } catch (error) {
       console.error("Error adding suggested activity:", error);
@@ -364,8 +374,13 @@ export default function WhatsNextPage() {
       
       // Even if we failed to add, we should try to load something new
       setLoading(true);
-      setTimeout(() => {
-        loadNextActivity([]);
+      setTimeout(async () => {
+        try {
+          await loadNextActivity([]);
+        } catch (loadError) {
+          console.error("Error loading next activity after suggested activity error:", loadError);
+          setLoading(false);
+        }
       }, 1000);
     }
   };
