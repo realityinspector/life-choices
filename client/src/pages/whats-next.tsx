@@ -30,6 +30,25 @@ export default function WhatsNextPage() {
     // Initialize cart count
     setCartCount(getCartActivities().length);
     
+    // Check if user is logged out in localStorage
+    const isLoggedOutFlag = localStorage.getItem('lifechoicesLoggedOut') === 'true';
+    if (isLoggedOutFlag) {
+      // Clear the logged out flag to allow fallback to localStorage
+      console.log("Clearing the logged out flag to allow fallback authentication");
+      localStorage.removeItem('lifechoicesLoggedOut');
+      
+      // Notify user they need to log in again
+      toast({
+        title: "Session Expired",
+        description: "Your session has expired. Please log in again.",
+        variant: "default"
+      });
+      
+      // Redirect to login page
+      window.location.href = '/login';
+      return;
+    }
+    
     // Load the next activity with error handling
     loadNextActivity().catch(error => {
       console.error("Error loading initial activity:", error);
