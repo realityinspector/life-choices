@@ -128,9 +128,11 @@ function AppContent() {
   const shouldShowNav = isUserSetup && !isAdminRoute && !noNavRoutes.includes(location);
   
   return (
-    <div className="pb-16"> {/* Add padding at the bottom for the navigation bar */}
+    <div className="flex flex-col min-h-screen">
       <Router />
-      {shouldShowNav && <BottomNavigation />}
+      {shouldShowNav && <div className="fixed bottom-0 left-0 right-0 z-50">
+        <BottomNavigation />
+      </div>}
       <Toaster />
     </div>
   );

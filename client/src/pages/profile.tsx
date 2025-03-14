@@ -37,7 +37,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
       {/* Use consistent header with branding */}
       <Header userData={userData} />
 

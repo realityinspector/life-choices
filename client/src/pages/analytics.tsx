@@ -43,7 +43,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
       <Header userData={userData} />
       <div className="bg-white p-4 flex items-center justify-between border-b">
         <h1 className="text-xl font-bold text-primary flex items-center">

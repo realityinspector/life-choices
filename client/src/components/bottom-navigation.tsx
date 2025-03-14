@@ -26,7 +26,7 @@ export default function BottomNavigation() {
   const inactiveLinkClass = "flex flex-col items-center py-1 text-gray-500 hover:text-gray-700 cursor-pointer";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t py-2 px-4 grid grid-cols-6 gap-1 text-center">
+    <div className="bg-white border-t py-2 px-4 grid grid-cols-6 gap-1 text-center">
       <div 
         onClick={() => navigate("/whats-next")}
         className={isActive("/") || isActive("/whats-next") ? activeLinkClass : inactiveLinkClass}
