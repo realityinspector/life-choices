@@ -22,7 +22,7 @@ import AdminDashboard from "@/pages/admin";
 import BottomNavigation from "@/components/bottom-navigation";
 
 // Set the document title
-document.title = "Life Choices | Do what matters, one choice at a time";
+document.title = "LIFE CHOICES | Do what matters, one choice at a time";
 
 function Router() {
   const { isUserSetup } = useUser();

@@ -49,7 +49,7 @@ const Navigation = ({ currentPath }: NavigationProps) => {
     {
       label: "Next",
       path: "/",
-      icon: <Triangle className="h-4 w-4 mr-2 transform rotate-180" />,
+      icon: <Home className="h-4 w-4 mr-2" />,
     },
     {
       label: "Tasks",
@@ -64,12 +64,12 @@ const Navigation = ({ currentPath }: NavigationProps) => {
     {
       label: "Browse",
       path: "/shop-activities",
-      icon: <Triangle className="h-4 w-4 mr-2" />,
+      icon: <Store className="h-4 w-4 mr-2" />,
     },
     {
-      label: "Community",
+      label: "Analytics",
       path: "/analytics",
-      icon: <Triangle className="h-4 w-4 mr-2 transform rotate-90" />,
+      icon: <BarChart2 className="h-4 w-4 mr-2" />,
     },
     {
       label: "Profile",
