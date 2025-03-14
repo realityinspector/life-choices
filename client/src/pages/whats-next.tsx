@@ -64,9 +64,13 @@ export default function WhatsNextPage() {
   }, []);
 
   const getRandomSuggestedActivity = async (): Promise<ActivityInsert | null> => {
+    // Create AbortController for the fetch request
+    const controller = new AbortController();
+    const { signal } = controller;
+    
     try {
       // Try to fetch shop activities first (includes both DB activities and sample activities)
-      const response = await fetch('/api/activities/shop');
+      const response = await fetch('/api/activities/shop', { signal });
       if (!response.ok) {
         throw new Error('Failed to fetch shop activities');
       }

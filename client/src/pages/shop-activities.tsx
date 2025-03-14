@@ -538,10 +538,17 @@ export default function ShopActivitiesPage() {
         const res = await apiRequest('/api/activities/shop/with-images', { signal });
         return res.json();
       } catch (error) {
-        console.error('Error fetching shop activities with images:', error);
+        // Only log non-abort errors (abort errors are expected during unmounting)
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error('Error fetching shop activities with images:', error);
+        }
         return [];
       }
-    }
+    },
+    // Add retry: false to prevent retries when component unmounts
+    retry: false,
+    // Add staleTime to reduce duplicate requests
+    staleTime: 30000 // 30 seconds
   });
   
   // Extract all images for easier reference
@@ -569,10 +576,17 @@ export default function ShopActivitiesPage() {
         const res = await apiRequest('/api/activities/shop', { signal });
         return res.json();
       } catch (error) {
-        console.error('Error fetching shop activities:', error);
+        // Only log non-abort errors (abort errors are expected during unmounting)
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error('Error fetching shop activities:', error);
+        }
         return [];
       }
-    }
+    },
+    // Add retry: false to prevent retries when component unmounts
+    retry: false,
+    // Add staleTime to reduce duplicate requests
+    staleTime: 30000 // 30 seconds
   });
   
   // Process database activities to match the expected format
