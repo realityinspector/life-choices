@@ -6,6 +6,7 @@ import { ShoppingCart, Trash2, CheckCircle2, Info, Plus, Calendar, ArrowLeft, Us
 import { useLocation, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import Header from "@/components/header";
 
 export default function CartPage() {
   const { getCartActivities, clearCart, saveCartActivities } = useUser();
@@ -89,22 +90,25 @@ export default function CartPage() {
     }
   };
 
+  // Get userData from useUser context
+  const { userData } = useUser();
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Simple header */}
-      <div className="bg-white p-4 flex items-center justify-between border-b">
-        <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
-        <div className="flex items-center">
-          {cartActivities.length > 0 && (
-            <button 
-              onClick={clearCart}
-              className="text-red-500 hover:text-red-700 flex items-center text-sm"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Clear
-            </button>
-          )}
-        </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
+      {/* Use the consistent Header component */}
+      <Header userData={userData} />
+      
+      {/* Clear cart button (moved from custom header) */}
+      <div className="bg-white p-2 flex justify-end border-b">
+        {cartActivities.length > 0 && (
+          <button 
+            onClick={clearCart}
+            className="text-red-500 hover:text-red-700 flex items-center text-sm"
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Clear Cart
+          </button>
+        )}
       </div>
       
       {/* Main Content */}

@@ -7,7 +7,7 @@ import {
   BarChart2,
   ShoppingCart,
   ArrowDown,
-  Home
+  CheckSquare
 } from "lucide-react";
 
 export default function BottomNavigation() {
@@ -20,13 +20,13 @@ export default function BottomNavigation() {
     return location === path;
   };
   
-  // Class for active links
-  const activeLinkClass = "flex flex-col items-center py-1 text-primary cursor-pointer";
+  // Class for active links - using the app's primary color
+  const activeLinkClass = "flex flex-col items-center py-1 text-black font-semibold cursor-pointer";
   // Class for inactive links
   const inactiveLinkClass = "flex flex-col items-center py-1 text-gray-500 hover:text-gray-700 cursor-pointer";
 
   return (
-    <div className="bg-white border-t py-2 px-4 grid grid-cols-6 gap-1 text-center">
+    <div className="bg-white border-t py-2 px-4 grid grid-cols-5 gap-1 text-center">
       <div 
         onClick={() => navigate("/whats-next")}
         className={isActive("/") || isActive("/whats-next") ? activeLinkClass : inactiveLinkClass}
@@ -39,7 +39,7 @@ export default function BottomNavigation() {
         onClick={() => navigate("/activities")}
         className={isActive("/activities") ? activeLinkClass : inactiveLinkClass}
       >
-        <ListChecks className="h-5 w-5" />
+        <CheckSquare className="h-5 w-5" />
         <span className="text-xs mt-1">Tasks</span>
       </div>
       
@@ -57,14 +57,6 @@ export default function BottomNavigation() {
       >
         <Calendar className="h-5 w-5" />
         <span className="text-xs mt-1">Calendar</span>
-      </div>
-      
-      <div 
-        onClick={() => navigate("/analytics")}
-        className={isActive("/analytics") ? activeLinkClass : inactiveLinkClass}
-      >
-        <BarChart2 className="h-5 w-5" />
-        <span className="text-xs mt-1">Analytics</span>
       </div>
       
       <div 
