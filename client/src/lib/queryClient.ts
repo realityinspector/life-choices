@@ -108,9 +108,19 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: Infinity,
       retry: false,
+      // Better handle aborted requests (e.g., when components unmount)
+      gcTime: 1000 * 60 * 5, // Keep cache for 5 minutes
+      throwOnError: (error) => {
+        // Don't throw for AbortError
+        return !(error instanceof Error && error.name === 'AbortError');
+      },
     },
     mutations: {
       retry: false,
+      throwOnError: (error) => {
+        // Don't throw for AbortError
+        return !(error instanceof Error && error.name === 'AbortError');
+      },
     },
   },
 });

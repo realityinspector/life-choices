@@ -12,6 +12,7 @@ interface UserContextType {
   updateUserData: (userData: UserData) => void;
   addActivity: (activity: ActivityInsert) => Promise<Activity | undefined>;
   updateActivity: (index: number, activity: ActivityInsert) => void;
+  updateActivityById: (id: number, activity: ActivityInsert) => Promise<Activity | undefined>;
   removeActivity: (index: number) => void;
   removeMultipleActivities: (activityIds: number[]) => Promise<boolean>;
   completeActivity: (id: number) => Promise<Activity | undefined>;
@@ -254,6 +255,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  /**
+   * Update an activity by index in the activities array
+   */
   const updateActivity = async (index: number, activity: ActivityInsert) => {
     const activityToUpdate = activities[index];
     const updatedActivity = { 
@@ -275,11 +279,84 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       updatedActivities[index] = updatedActivity;
       setActivities(updatedActivities);
     } catch (error) {
+      console.error("Error updating activity by index:", error);
       // Fallback to localStorage if API fails
       const updatedActivities = [...activities];
       updatedActivities[index] = updatedActivity;
       setActivities(updatedActivities);
       localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
+    }
+  };
+  
+  /**
+   * Update an activity directly by ID (used for toggle operations like exportToCalendar)
+   */
+  const updateActivityById = async (id: number, activity: ActivityInsert): Promise<Activity | undefined> => {
+    try {
+      // Find the activity in the current array
+      const index = activities.findIndex(a => a.id === id);
+      
+      if (index === -1) {
+        console.error(`Activity with ID ${id} not found`);
+        return undefined;
+      }
+      
+      const activityToUpdate = activities[index];
+      
+      // Create the updated activity object, maintaining fields that aren't part of ActivityInsert
+      const updatedActivity = { 
+        ...activity, 
+        id: activityToUpdate.id,
+        userId: activityToUpdate.userId,
+        lastCompleted: activityToUpdate.lastCompleted,
+        nextDue: activityToUpdate.nextDue,
+        completionCount: activityToUpdate.completionCount
+      } as Activity;
+      
+      // Call the API
+      const response = await apiRequest(`/api/activities/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedActivity)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update activity: ${response.status}`);
+      }
+      
+      // Update the local state
+      const updatedActivities = [...activities];
+      updatedActivities[index] = updatedActivity;
+      setActivities(updatedActivities);
+      
+      return updatedActivity;
+    } catch (error) {
+      console.error("Error updating activity by ID:", error);
+      
+      // Find the activity in the current array for fallback
+      const index = activities.findIndex(a => a.id === id);
+      
+      if (index === -1) {
+        return undefined;
+      }
+      
+      // Continue with localStorage fallback
+      const activityToUpdate = activities[index];
+      const updatedActivity = { 
+        ...activity, 
+        id: activityToUpdate.id,
+        userId: activityToUpdate.userId,
+        lastCompleted: activityToUpdate.lastCompleted,
+        nextDue: activityToUpdate.nextDue,
+        completionCount: activityToUpdate.completionCount
+      } as Activity;
+      
+      const updatedActivities = [...activities];
+      updatedActivities[index] = updatedActivity;
+      setActivities(updatedActivities);
+      localStorage.setItem('lifechoicesActivities', JSON.stringify(updatedActivities));
+      
+      return updatedActivity;
     }
   };
 
