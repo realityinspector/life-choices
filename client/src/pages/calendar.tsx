@@ -28,7 +28,7 @@ export default function CalendarPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
         <Header userData={userData} />
         <div className="flex-1 flex justify-center items-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
