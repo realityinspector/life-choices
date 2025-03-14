@@ -234,9 +234,9 @@ export function SwipeCard({
               onClick={() => onToggleCalendarExport?.(activity)}
               className="flex flex-col items-center justify-center py-3 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
             >
-              <Calendar size={20} className={activity.exportToCalendar ? "text-purple-500" : "text-gray-400"} />
+              <Calendar size={20} className={activity.exportToCalendar ?? false ? "text-purple-500" : "text-gray-400"} />
               <span className="text-xs mt-1 text-gray-600">
-                {activity.exportToCalendar ? "In Calendar" : "Add to Cal"}
+                {activity.exportToCalendar ?? false ? "In Calendar" : "Add to Cal"}
               </span>
             </button>
             
