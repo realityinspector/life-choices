@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Activity } from '@shared/schema';
-import { CheckCircle, X, ShoppingBag, Info } from 'lucide-react';
+import { CheckCircle, X, ShoppingBag, Info, Calendar } from 'lucide-react';
 
 interface SwipeCardProps {
   activity: Activity;
@@ -10,6 +10,7 @@ interface SwipeCardProps {
   onSkip?: (activity: Activity) => void;
   onAddToCart?: (activity: Activity) => void;
   onInfo?: (activity: Activity) => void;
+  onToggleCalendarExport?: (activity: Activity) => void;
   isActive?: boolean;
   userActivities?: Activity[]; // Add user activities to check if this activity exists
 }
@@ -20,6 +21,7 @@ export function SwipeCard({
   onSkip,
   onAddToCart,
   onInfo,
+  onToggleCalendarExport,
   isActive = true,
   userActivities = [],
 }: SwipeCardProps) {
@@ -211,12 +213,12 @@ export function SwipeCard({
           </div>
           
           {/* Action Buttons */}
-          <div className="grid grid-cols-3 gap-3 mt-auto">
+          <div className="grid grid-cols-4 gap-2 mt-auto">
             <button 
               onClick={() => onSkip?.(activity)}
               className="flex flex-col items-center justify-center py-3 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
             >
-              <X size={24} className="text-red-500" />
+              <X size={20} className="text-red-500" />
               <span className="text-xs mt-1 text-gray-600">Skip</span>
             </button>
             
@@ -224,8 +226,18 @@ export function SwipeCard({
               onClick={() => onInfo?.(activity)}
               className="flex flex-col items-center justify-center py-3 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
             >
-              <Info size={24} className="text-blue-500" />
+              <Info size={20} className="text-blue-500" />
               <span className="text-xs mt-1 text-gray-600">Info</span>
+            </button>
+            
+            <button 
+              onClick={() => onToggleCalendarExport?.(activity)}
+              className="flex flex-col items-center justify-center py-3 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
+            >
+              <Calendar size={20} className={activity.exportToCalendar ? "text-purple-500" : "text-gray-400"} />
+              <span className="text-xs mt-1 text-gray-600">
+                {activity.exportToCalendar ? "In Calendar" : "Add to Cal"}
+              </span>
             </button>
             
             <button 
@@ -236,7 +248,7 @@ export function SwipeCard({
               }}
               className="flex flex-col items-center justify-center py-3 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
             >
-              <CheckCircle size={24} className="text-green-500" />
+              <CheckCircle size={20} className="text-green-500" />
               <span className="text-xs mt-1 text-gray-600">Complete</span>
             </button>
           </div>

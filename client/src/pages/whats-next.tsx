@@ -19,7 +19,7 @@ declare global {
 }
 
 export default function WhatsNextPage() {
-  const { activities, getNextActivity, completeActivity, skipActivity, addActivitiesToCart, getCartActivities, addActivity } = useUser();
+  const { activities, getNextActivity, completeActivity, skipActivity, addActivitiesToCart, getCartActivities, addActivity, updateActivity } = useUser();
   const [currentActivity, setCurrentActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
@@ -265,6 +265,42 @@ export default function WhatsNextPage() {
     }, 1000); // Short delay to let the database update
   };
   
+  const handleToggleCalendarExport = async (activity: Activity) => {
+    try {
+      // Create a copy of the activity with the toggled exportToCalendar property
+      const updatedActivity = {
+        ...activity,
+        exportToCalendar: !activity.exportToCalendar,
+        // Ensure the frequencyUnit and durationUnit are properly typed
+        frequencyUnit: activity.frequencyUnit as 'day' | 'week' | 'month' | 'year',
+        durationUnit: activity.durationUnit as 'minute' | 'hour'
+      };
+      
+      // Update the activity
+      await updateActivity(activity.id, updatedActivity);
+      
+      // Fetch the updated activity to refresh the current view
+      const updated = await getNextActivity([]);
+      if (updated) {
+        setCurrentActivity(updated);
+      }
+      
+      // Show a toast notification
+      toast({
+        title: updatedActivity.exportToCalendar ? 'Added to Calendar' : 'Removed from Calendar',
+        description: `"${activity.name}" will ${updatedActivity.exportToCalendar ? 'now' : 'no longer'} be exported to your calendar.`,
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error updating calendar export setting:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update calendar export setting.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSkipSuggestion = () => {
     // Set loading state
     setLoading(true);
@@ -315,6 +351,7 @@ export default function WhatsNextPage() {
               onComplete={handleComplete}
               onSkip={handleSkip}
               onAddToCart={handleAddToCart}
+              onToggleCalendarExport={handleToggleCalendarExport}
               userActivities={activities}
               onInfo={(activity) => {
                 // Show detailed info about the activity
