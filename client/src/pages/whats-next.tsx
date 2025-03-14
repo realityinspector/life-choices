@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SAMPLE_ACTIVITIES, MORE_SAMPLE_ACTIVITIES } from '@shared/sample-activities';
+import Header from '@/components/header';
 
 // Add a declaration to extend Window interface for our recently seen activities
 declare global {
@@ -292,13 +293,11 @@ export default function WhatsNextPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Simple header */}
-      <div className="bg-white p-4 flex items-center justify-between border-b">
-        <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
-      </div>
+      {/* Use the consistent Header component */}
+      <Header />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center pt-6 px-4 relative">
+      <div className="flex-1 flex flex-col items-center pt-6 px-4 pb-16 relative">
         <h2 className="text-2xl font-bold mb-6 text-center">What's Next?</h2>
         
         <div className="w-full max-w-md h-[500px] relative flex items-center justify-center">
