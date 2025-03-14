@@ -4,6 +4,7 @@ import { ListChecks, Plus, Calendar, ShoppingCart, User, Loader2 } from 'lucide-
 import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import Activities from '@/components/activities';
+import Header from '@/components/header';
 
 export default function TasksPage() {
   const { userData } = useUser();
@@ -33,11 +34,8 @@ export default function TasksPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        {/* Simple header */}
-        <div className="bg-white p-4 flex items-center justify-between border-b">
-          <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
+        <Header userData={userData} />
         <div className="flex-1 flex justify-center items-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
@@ -46,11 +44,8 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Simple header */}
-      <div className="bg-white p-4 flex items-center justify-between border-b">
-        <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
+      <Header userData={userData} />
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
