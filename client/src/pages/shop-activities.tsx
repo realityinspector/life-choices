@@ -725,13 +725,16 @@ export default function ShopActivitiesPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Simple header */}
       <div className="bg-white p-4 flex items-center justify-between border-b">
-        <h1 className="text-xl font-bold text-teal-600">Life Choices</h1>
+        <h1 className="text-xl font-bold text-primary flex items-center">
+          <Triangle className="h-5 w-5 mr-2" />
+          ALL ONE THING
+        </h1>
         <div className="flex items-center">
           <Button 
             variant="outline" 
             size="icon" 
             onClick={() => setShowCart(!showCart)} 
-            className="relative bg-white hover:bg-gray-50"
+            className="relative bg-white hover:bg-gray-50 border-black"
           >
             <ShoppingCart className="h-5 w-5 text-primary" />
             {cartItems.length > 0 && (
@@ -747,11 +750,11 @@ export default function ShopActivitiesPage() {
         {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Store className="h-6 w-6 text-primary mr-2" />
-            Shop Activities
+            <Triangle className="h-6 w-6 text-primary mr-2" />
+            Community Activities
           </h1>
           <p className="text-gray-500 mt-1">
-            Browse and add life-enhancing activities to your routine
+            Explore activities shared by the community for co-working, co-learning, and co-existing
           </p>
         </div>
         
@@ -760,7 +763,7 @@ export default function ShopActivitiesPage() {
           <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
             <div className="bg-background w-full max-w-md h-full flex flex-col overflow-hidden">
               <div className="p-4 border-b flex items-center justify-between">
-                <h2 className="text-xl font-bold">Your Shopping Cart</h2>
+                <h2 className="text-xl font-bold">Your Activity Collection</h2>
                 <Button variant="ghost" size="icon" onClick={() => setShowCart(false)}>
                   &times;
                 </Button>
@@ -769,12 +772,12 @@ export default function ShopActivitiesPage() {
               <div className="flex-1 overflow-auto p-4">
                 {cartItems.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center">
-                    <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Your cart is empty</h3>
+                    <Triangle className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Your collection is empty</h3>
                     <p className="text-muted-foreground mb-6">
-                      Browse activities and add them to your cart
+                      Explore community activities and add them to your collection
                     </p>
-                    <Button onClick={() => setShowCart(false)}>Shop Activities</Button>
+                    <Button onClick={() => setShowCart(false)} className="border-black text-black bg-white hover:bg-gray-50">Explore Activities</Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
