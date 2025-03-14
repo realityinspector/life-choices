@@ -1,12 +1,13 @@
 import { useLocation } from "wouter";
 import { 
-  Home, 
   ListChecks, 
   Plus, 
   Calendar, 
-  ShoppingCart, 
   User,
-  BarChart2
+  BarChart2,
+  Share2,
+  Triangle,
+  Home
 } from "lucide-react";
 
 export default function BottomNavigation() {
@@ -30,7 +31,7 @@ export default function BottomNavigation() {
         onClick={() => navigate("/whats-next")}
         className={isActive("/") || isActive("/whats-next") ? activeLinkClass : inactiveLinkClass}
       >
-        <Home className="h-5 w-5" />
+        <Triangle className="h-5 w-5 transform rotate-180" />
         <span className="text-xs mt-1">Next</span>
       </div>
       
@@ -46,7 +47,7 @@ export default function BottomNavigation() {
         onClick={() => navigate("/shop-activities")}
         className={isActive("/shop-activities") ? activeLinkClass : inactiveLinkClass}
       >
-        <Plus className="h-5 w-5" />
+        <Triangle className="h-5 w-5" />
         <span className="text-xs mt-1">Add</span>
       </div>
       
@@ -62,8 +63,8 @@ export default function BottomNavigation() {
         onClick={() => navigate("/analytics")}
         className={isActive("/analytics") ? activeLinkClass : inactiveLinkClass}
       >
-        <BarChart2 className="h-5 w-5" />
-        <span className="text-xs mt-1">Forecast</span>
+        <Triangle className="h-5 w-5 transform rotate-90" />
+        <span className="text-xs mt-1">Community</span>
       </div>
       
       <div 

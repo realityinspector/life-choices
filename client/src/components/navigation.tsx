@@ -1,16 +1,15 @@
 import { Link, useLocation } from "wouter";
 import { 
-  CheckCircle2, 
   ListChecks, 
   Calendar, 
   User, 
   ShoppingCart, 
-  BarChart2, 
   Store, 
   Share2, 
   Home,
   LogOut,
-  Settings
+  Settings,
+  Triangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/user-context";
@@ -48,7 +47,7 @@ const Navigation = ({ currentPath }: NavigationProps) => {
     {
       label: "Next",
       path: "/",
-      icon: <CheckCircle2 className="h-4 w-4 mr-2" />,
+      icon: <Triangle className="h-4 w-4 mr-2 transform rotate-180" />,
     },
     {
       label: "Tasks",
@@ -63,12 +62,12 @@ const Navigation = ({ currentPath }: NavigationProps) => {
     {
       label: "Browse",
       path: "/shop-activities",
-      icon: <Store className="h-4 w-4 mr-2" />,
+      icon: <Triangle className="h-4 w-4 mr-2" />,
     },
     {
-      label: "Analytics",
+      label: "Community",
       path: "/analytics",
-      icon: <BarChart2 className="h-4 w-4 mr-2" />,
+      icon: <Triangle className="h-4 w-4 mr-2 transform rotate-90" />,
     },
     {
       label: "Profile",
