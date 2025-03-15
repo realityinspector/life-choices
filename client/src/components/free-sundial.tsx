@@ -35,7 +35,7 @@ const FreeSundial = () => {
             </div>
             <div className="flex space-x-4">
               <button
-                onClick={() => window.location.href = "/login"}
+                onClick={() => window.location.href = "/"}
                 className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Sign In
@@ -110,7 +110,7 @@ const FreeSundial = () => {
                     <div className="mt-4">
                       <button
                         className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        onClick={() => window.location.href = "/login"}
+                        onClick={() => window.location.href = "/"}
                       >
                         Create Free Account
                       </button>

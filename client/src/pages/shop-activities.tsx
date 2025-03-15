@@ -746,8 +746,8 @@ export default function ShopActivitiesPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <h1 className="text-2xl font-bold mb-4">Please log in to browse activities</h1>
-        <Button onClick={() => setLocation("/login")}>
-          Log In or Sign Up
+        <Button onClick={() => setLocation("/")}>
+          Go to Home
         </Button>
       </div>
     );
