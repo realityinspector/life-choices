@@ -51,7 +51,7 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
         completeSetup(userData);
         toast({
           title: "Login successful",
-          description: "Welcome back to Life Choices!",
+          description: "Welcome back to LIFE CHOICES by ALL ONE THING!",
         });
         
         // After successful login, immediately test if we can access a protected endpoint
@@ -187,7 +187,7 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
         completeSetup(userData);
         toast({
           title: "Registration successful",
-          description: "Welcome to Life Choices!",
+          description: "Welcome to LIFE CHOICES by ALL ONE THING!",
         });
         
         // After successful registration, immediately test if we can access a protected endpoint
@@ -332,9 +332,9 @@ const Login = () => {
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
-              Life Choices
+              LIFE CHOICES
             </h1>
-            <p className="text-gray-600 mt-2">Do what matters, one choice at a time</p>
+            <p className="text-gray-600 mt-2">Shape your timeline, design your future</p>
           </div>
 
           <Card className="shadow-lg border-0">
@@ -344,7 +344,7 @@ const Login = () => {
               </CardTitle>
               <CardDescription className="mb-4">
                 {activeTab === "login" 
-                  ? "Sign in to access your Life Choices app" 
+                  ? "Sign in to access your LIFE CHOICES app" 
                   : "Start making better choices every day"
                 }
               </CardDescription>

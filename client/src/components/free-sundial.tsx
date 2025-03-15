@@ -11,8 +11,7 @@ const FreeSundial = () => {
     email: null,
     age: 30,
     lifeExpectancy: 85,
-    sleepHours: 8,
-    isAdmin: false
+    sleepHours: 8
   });
 
   const [showSettings, setShowSettings] = useState(false);
