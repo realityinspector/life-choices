@@ -1,6 +1,106 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { UserData } from "@shared/schema";
-import { ListChecks, Share2, Calendar, ArrowRight, CheckCircle2, Triangle } from "lucide-react";
+import { ListChecks, Share2, Calendar, ArrowRight, CheckCircle2, Triangle, Clock, Sparkles } from "lucide-react";
+
+// Fractal animation component
+const FractalAnimation = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Set canvas dimensions
+    const setCanvasDimensions = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
+    
+    setCanvasDimensions();
+    window.addEventListener('resize', setCanvasDimensions);
+    
+    let hue = 0;
+    let branches = 3;
+    let scale = 0.55;
+    let maxDepth = 6;
+    let startAngle = 0;
+    let angle = Math.PI * 2 * 0.45;
+    let lineWidth = 15;
+    let frameCount = 0;
+    
+    const drawFractal = (x: number, y: number, length: number, angle: number, depth: number) => {
+      if (!ctx) return;
+      
+      ctx.beginPath();
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -length);
+      
+      const colorHue = (hue + depth * 30) % 360;
+      ctx.strokeStyle = `hsl(${colorHue}, 100%, ${40 + depth * 10}%)`;
+      ctx.lineWidth = lineWidth * (1 - depth / maxDepth);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      
+      if (depth < maxDepth) {
+        for (let i = 0; i < branches; i++) {
+          ctx.save();
+          ctx.translate(0, -length);
+          ctx.scale(scale, scale);
+          
+          const branchAngle = angle * (i + 1);
+          drawFractal(0, 0, length, branchAngle, depth + 1);
+          
+          ctx.restore();
+        }
+      }
+      
+      ctx.restore();
+    };
+    
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Center the fractal
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height;
+      
+      // Animate the starting angle
+      startAngle += 0.005;
+      frameCount++;
+      
+      // Pulse the size based on time
+      const sizePulse = Math.sin(frameCount * 0.02) * 10 + 70;
+      
+      // Draw the fractal
+      drawFractal(centerX, centerY, sizePulse, -Math.PI / 2 + Math.sin(startAngle) * 0.2, 0);
+      
+      // Change hue over time
+      hue += 0.5;
+      
+      requestAnimationFrame(animate);
+    };
+    
+    // Start animation
+    animate();
+    
+    return () => {
+      window.removeEventListener('resize', setCanvasDimensions);
+    };
+  }, []);
+  
+  return (
+    <canvas 
+      ref={canvasRef} 
+      className="absolute inset-0 w-full h-full opacity-20 z-0"
+    />
+  );
+};
 
 const LandingPage = () => {
   // Simplified userData without life expectancy focus
@@ -14,29 +114,34 @@ const LandingPage = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-900 via-purple-900 to-indigo-800 text-white relative overflow-hidden">
+      <FractalAnimation />
+      
+      <header className="relative z-10 border-b border-indigo-700 bg-opacity-30 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center">
-              <div className="text-black font-sans font-bold text-3xl flex items-center">
-                <span>ALL </span>
+              <div className="text-white font-sans font-bold text-3xl flex items-center">
+                <span className="mr-1">LIFE</span>
+                <span className="text-teal-400 mx-1">CHOICES</span>
+                <span className="text-sm font-light mt-2 ml-2">by</span>
+                <span className="ml-2">ALL </span>
                 <span className="relative mx-1">
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-b-[18px] border-solid border-black"></div>
+                    <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-b-[18px] border-solid border-teal-400"></div>
                   </div>
-                  ONE
+                  <span className="text-teal-400">ONE</span>
                 </span>
                 <span> THING</span>
               </div>
             </div>
             <div className="hidden md:block">
-              <p className="text-black font-medium">Co-work. Co-learn. Co-exist.</p>
+              <p className="text-teal-300 font-medium italic">Shape your timeline, design your future</p>
             </div>
             <div className="flex space-x-4">
               <button
                 onClick={() => window.location.href = "/login"}
-                className="inline-flex items-center justify-center px-4 py-2 border border-black text-sm font-medium rounded-md shadow-sm text-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                className="inline-flex items-center justify-center px-4 py-2 border border-teal-400 text-sm font-medium rounded-md shadow-sm text-white bg-transparent hover:bg-teal-900 hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all duration-300"
               >
                 Sign In
               </button>
@@ -138,29 +243,35 @@ const LandingPage = () => {
                 </div>
                 
                 <div className="w-full md:w-1/2 p-4">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Build community through shared activities</h2>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Shape Your Timeline, Design Your Future</h2>
                   <p className="text-lg text-gray-600 mb-6">
-                    ALL ONE THING helps you connect with others through shared activities that foster community and purpose. No complicated social networks, just meaningful interactions.
+                    LIFE CHOICES by ALL ONE THING helps you visualize and manage your time in a meaningful way. Navigate your life's timeline with purpose and clarity, making every moment count.
                   </p>
                   
-                  <div className="bg-black bg-opacity-5 rounded-lg p-4 mb-6 border border-black border-opacity-10">
-                    <h3 className="text-lg font-medium text-black">Community-First Experience</h3>
-                    <p className="mt-1 text-sm text-gray-700">
-                      Simple intuitive interface lets you quickly share activities, collaborate with others, and build meaningful connections.
+                  <div className="bg-teal-50 rounded-lg p-4 mb-6 border border-teal-200">
+                    <h3 className="text-lg font-medium text-teal-800 flex items-center">
+                      <Clock className="mr-2 h-5 w-5 text-teal-600" />
+                      Timeline Visualization
+                    </h3>
+                    <p className="mt-1 text-sm text-teal-700">
+                      Visualize your life as a beautiful fractal timeline. See how your choices and activities interconnect to form the tapestry of your existence.
                     </p>
                   </div>
                   
-                  <div className="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900">Get started with shared activities</h3>
-                    <p className="mt-1 text-sm text-gray-600">
-                      Received a shared activity? Add it to your account with one tap, or create a free account to start your own routines.
+                  <div className="mt-6 bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                    <h3 className="text-lg font-medium text-indigo-800 flex items-center">
+                      <Sparkles className="mr-2 h-5 w-5 text-indigo-600" />
+                      Fractal Time Management
+                    </h3>
+                    <p className="mt-1 text-sm text-indigo-700">
+                      Experience how small choices create profound ripple effects throughout your life. Our fractal approach helps you see patterns and make better decisions.
                     </p>
                     <div className="mt-4">
                       <button
-                        className="w-full inline-flex items-center justify-center px-4 py-2 border border-black text-sm font-medium rounded-md shadow-sm text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                        className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300"
                         onClick={() => window.location.href = "/login"}
                       >
-                        Create Free Account
+                        Begin Your Timeline Journey
                       </button>
                     </div>
                   </div>
@@ -171,60 +282,60 @@ const LandingPage = () => {
         </div>
 
         {/* Features Section */}
-        <div className="px-4 sm:px-0 mb-8">
-          <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">Key Features</h2>
+        <div className="px-4 sm:px-0 mb-8 relative z-10">
+          <h2 className="text-2xl font-bold text-center mb-8 text-white">Fractal Timeline Features</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
-              <div className="p-3 bg-white border border-black mb-4">
-                <Triangle className="h-8 w-8 text-black transform rotate-180" />
+            <div className="bg-gradient-to-br from-indigo-800 to-indigo-900 p-6 rounded-lg shadow-lg flex flex-col items-center text-center border border-indigo-600">
+              <div className="p-3 bg-teal-400 bg-opacity-20 rounded-full mb-4 backdrop-blur-sm">
+                <Clock className="h-8 w-8 text-teal-300" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Co-working</h3>
-              <p className="text-gray-600">Create collaborative professional spaces with activities designed for focused productivity and teamwork.</p>
+              <h3 className="font-bold text-lg mb-2 text-white">Time Visualization</h3>
+              <p className="text-indigo-200">See your life as a beautiful branching timeline, with each choice creating new fractal patterns in your journey through time.</p>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
-              <div className="p-3 bg-white border border-black mb-4">
-                <Triangle className="h-8 w-8 text-black" />
+            <div className="bg-gradient-to-br from-purple-800 to-purple-900 p-6 rounded-lg shadow-lg flex flex-col items-center text-center border border-purple-600">
+              <div className="p-3 bg-teal-400 bg-opacity-20 rounded-full mb-4 backdrop-blur-sm">
+                <Triangle className="h-8 w-8 text-teal-300" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Co-learning</h3>
-              <p className="text-gray-600">Engage in educational pursuits that foster knowledge sharing and experiential learning within the community.</p>
+              <h3 className="font-bold text-lg mb-2 text-white">Ripple Effects</h3>
+              <p className="text-purple-200">Understand how small decisions create profound ripple effects throughout your life's timeline, visualized through interactive fractal patterns.</p>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
-              <div className="p-3 bg-white border border-black mb-4">
-                <Triangle className="h-8 w-8 text-black transform rotate-90" />
+            <div className="bg-gradient-to-br from-blue-800 to-blue-900 p-6 rounded-lg shadow-lg flex flex-col items-center text-center border border-blue-600">
+              <div className="p-3 bg-teal-400 bg-opacity-20 rounded-full mb-4 backdrop-blur-sm">
+                <Sparkles className="h-8 w-8 text-teal-300" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Co-existing</h3>
-              <p className="text-gray-600">Build spaces where shared values and collective experiences strengthen community bonds and support well-being.</p>
+              <h3 className="font-bold text-lg mb-2 text-white">Life Patterns</h3>
+              <p className="text-blue-200">Discover recurring patterns in your life choices and optimize your time allocation for greater meaning, purpose and joy.</p>
             </div>
           </div>
         </div>
 
         {/* Call to Action */}
-        <div className="px-4 sm:px-0">
-          <div className="bg-[#F5F5F0] border border-black rounded-lg shadow-md overflow-hidden">
-            <div className="px-6 py-12 text-center">
-              <h2 className="text-3xl font-extrabold tracking-tight text-black sm:text-4xl">
-                Join a community that recognizes our shared consciousness
+        <div className="px-4 sm:px-0 relative z-10">
+          <div className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 rounded-lg shadow-xl overflow-hidden border border-teal-500">
+            <div className="px-6 py-12 text-center backdrop-blur-sm">
+              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+                Begin Your Fractal Timeline Journey
               </h2>
-              <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-700">
-                Build spaces where humanity can thrive together.
+              <p className="mt-4 max-w-2xl mx-auto text-xl text-teal-200">
+                Make every choice matter. Design your future with purpose and clarity.
               </p>
               <div className="mt-8">
                 <div className="inline-flex rounded-md shadow">
                   <a
                     href="/login"
-                    className="inline-flex items-center justify-center px-5 py-3 border border-black text-base font-medium rounded-md text-black bg-white hover:bg-gray-50"
+                    className="inline-flex items-center justify-center px-5 py-3 border border-teal-400 text-base font-medium rounded-md text-white bg-transparent hover:bg-teal-900 hover:bg-opacity-30 transition-all duration-300"
                   >
-                    Get Started
+                    Start Your Timeline
                   </a>
                 </div>
                 <div className="ml-3 inline-flex rounded-md shadow">
                   <a
                     href="/shop-activities"
-                    className="inline-flex items-center justify-center px-5 py-3 border border-black text-base font-medium rounded-md text-white bg-black hover:bg-gray-900"
+                    className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-900 bg-teal-400 hover:bg-teal-300 transition-all duration-300"
                   >
-                    Discover Community Activities
+                    Explore Life Choices
                   </a>
                 </div>
               </div>
@@ -233,22 +344,28 @@ const LandingPage = () => {
         </div>
       </main>
 
-      <footer className="bg-[#E8E6D9] shadow-inner">
+      <footer className="relative z-10 border-t border-indigo-700 mt-12 bg-black bg-opacity-30 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="text-black font-sans font-bold text-xl flex items-center mb-4 md:mb-0">
-              <span>ALL </span>
+            <div className="text-white font-sans font-bold text-xl flex items-center mb-4 md:mb-0">
+              <span className="mr-1">LIFE</span>
+              <span className="text-teal-400 mx-1">CHOICES</span>
+              <span className="text-sm font-light mt-1 ml-2">by</span>
+              <span className="ml-2">ALL </span>
               <span className="relative mx-1">
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[12px] border-solid border-black"></div>
+                  <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[12px] border-solid border-teal-400"></div>
                 </div>
-                ONE
+                <span className="text-teal-400">ONE</span>
               </span>
               <span> THING</span>
             </div>
-            <p className="text-center text-sm text-black">
-              Co-work. Co-learn. Co-exist. Your New Town Square.
+            <p className="text-center text-sm text-teal-100">
+              Shape your timeline. Design your future. Make better life choices.
             </p>
+          </div>
+          <div className="mt-4 text-center text-xs text-indigo-200 opacity-70">
+            © {new Date().getFullYear()} • Fractal Time Management • ALL ONE THING
           </div>
         </div>
       </footer>
