@@ -73,7 +73,7 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
           console.error('Error verifying authentication:', verifyError);
         }
         
-        setLocation("/whats-next");
+        setLocation("/");
       } else {
         const error = await response.json();
         console.error('Login failed with error:', error);
@@ -209,7 +209,7 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
           console.error('Error verifying authentication after registration:', verifyError);
         }
         
-        setLocation("/whats-next");
+        setLocation("/");
       } else {
         const error = await response.json();
         console.error('Registration failed with error:', error);
