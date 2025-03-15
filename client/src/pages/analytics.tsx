@@ -25,7 +25,7 @@ export default function AnalyticsPage() {
         <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg text-center">
           <h1 className="text-2xl font-bold mb-4">Login Required</h1>
           <p className="mb-6">Please log in to view your analytics.</p>
-          <Button onClick={() => navigate('/login')}>Go to Login</Button>
+          <Button onClick={() => navigate('/')}>Go to Home</Button>
         </div>
       </div>
     );

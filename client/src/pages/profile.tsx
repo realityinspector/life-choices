@@ -17,9 +17,9 @@ export default function ProfilePage() {
         <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg text-center">
           <h1 className="text-2xl font-bold mb-4">Login Required</h1>
           <p className="mb-6">Please log in to view your profile.</p>
-          <Link href="/login">
+          <Link href="/">
             <button className="bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded-lg">
-              Go to Login
+              Go to Home
             </button>
           </Link>
         </div>
@@ -33,7 +33,7 @@ export default function ProfilePage() {
       title: "Logged out",
       description: "You have been successfully logged out.",
     });
-    navigate("/login");
+    navigate("/");
   };
 
   return (

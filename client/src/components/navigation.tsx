@@ -33,7 +33,7 @@ const Navigation = ({ currentPath }: NavigationProps) => {
         title: "Logged out",
         description: "You have been successfully logged out",
       });
-      setLocation("/login");
+      setLocation("/");
     } catch (error) {
       console.error('Logout error:', error);
       toast({
