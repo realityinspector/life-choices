@@ -217,7 +217,7 @@ const LandingPage = () => {
             </div>
             <div className="flex space-x-4">
               <button
-                onClick={() => window.location.href = "/login"}
+                onClick={() => window.location.href = "/"}
                 className="inline-flex items-center justify-center px-4 py-2 border border-teal-400 text-sm font-medium rounded-md shadow-sm text-white bg-transparent hover:bg-teal-900 hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all duration-300"
               >
                 Sign In
@@ -370,7 +370,7 @@ const LandingPage = () => {
                     <div className="mt-4">
                       <button
                         className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300"
-                        onClick={() => window.location.href = "/login"}
+                        onClick={() => window.location.href = "/"}
                       >
                         Begin Your Timeline Journey
                       </button>
@@ -425,7 +425,7 @@ const LandingPage = () => {
               <div className="mt-8">
                 <div className="inline-flex rounded-md shadow">
                   <a
-                    href="/login"
+                    href="/"
                     className="inline-flex items-center justify-center px-5 py-3 border border-teal-400 text-base font-medium rounded-md text-white bg-transparent hover:bg-teal-900 hover:bg-opacity-30 transition-all duration-300"
                   >
                     Start Your Timeline

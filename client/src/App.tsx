@@ -40,7 +40,7 @@ function Router() {
 
   // If the user is not set up and not on a free route or admin route, redirect to login
   if (!isUserSetup && !isOnFreeRoute && !isAdminRoute) {
-    window.location.href = "/login";
+    window.location.href = "/";
     return null;
   }
 

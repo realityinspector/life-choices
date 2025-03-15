@@ -3,11 +3,16 @@ import { UserData } from "@shared/schema";
 import FreeSundialChart from "./ui/free-sundial-chart";
 
 const FreeSundial = () => {
+  // Create a complete UserData object with all required fields
   const [userData, setUserData] = useState<UserData>({
+    username: "guest",
+    password: "", // Not used for the demo
     name: "Guest",
+    email: null,
     age: 30,
     lifeExpectancy: 85,
-    sleepHours: 8
+    sleepHours: 8,
+    isAdmin: false
   });
 
   const [showSettings, setShowSettings] = useState(false);
@@ -27,11 +32,11 @@ const FreeSundial = () => {
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center">
               <div className="text-white font-serif font-bold text-3xl">
-                Sundial
+                LIFE CHOICES
               </div>
             </div>
             <div className="hidden md:block">
-              <p className="text-blue-100 italic">Map your life's journey through time</p>
+              <p className="text-blue-100 italic">Shape your timeline, design your future</p>
             </div>
             <div className="flex space-x-4">
               <button
@@ -55,9 +60,9 @@ const FreeSundial = () => {
                 </div>
                 <div className="w-full md:w-1/3 p-4">
                   <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                    <h3 className="text-lg font-medium text-blue-800">Your Life Sundial</h3>
+                    <h3 className="text-lg font-medium text-blue-800">Your Life Timeline</h3>
                     <p className="mt-1 text-sm text-blue-700">
-                      Visualize your life as a 24-hour clock. Adjust your settings to see how your life position changes.
+                      Visualize your life progress. Adjust your settings to see how your life position changes along the timeline.
                     </p>
                   </div>
                   
@@ -77,7 +82,7 @@ const FreeSundial = () => {
                         <input
                           type="number"
                           id="age"
-                          value={userData.age}
+                          value={userData.age ?? 30}
                           onChange={handleChange}
                           min="1"
                           max="120"
@@ -92,7 +97,7 @@ const FreeSundial = () => {
                         <input
                           type="number"
                           id="lifeExpectancy"
-                          value={userData.lifeExpectancy}
+                          value={userData.lifeExpectancy ?? 85}
                           onChange={handleChange}
                           min="1"
                           max="120"
@@ -105,7 +110,7 @@ const FreeSundial = () => {
                   <div className="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <h3 className="text-lg font-medium text-gray-900">Want more features?</h3>
                     <p className="mt-1 text-sm text-gray-600">
-                      Create an account to track activities, visualize your time allocation, and use the Time Machine to plan your future.
+                      Create an account to track activities, visualize your time allocation, and use the Timeline to plan your future.
                     </p>
                     <div className="mt-4">
                       <button
@@ -126,7 +131,7 @@ const FreeSundial = () => {
       <footer className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-inner">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <p className="text-center text-sm text-white">
-            Sundial: Life Time Management. Visualize and optimize your lifetime.
+            LIFE CHOICES by ALL ONE THING: Shape your timeline, design your future.
           </p>
         </div>
       </footer>

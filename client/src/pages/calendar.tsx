@@ -246,9 +246,9 @@ export default function CalendarPage() {
         <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg text-center">
           <h1 className="text-2xl font-bold mb-4">Login Required</h1>
           <p className="mb-6">Please log in to view your calendar.</p>
-          <Link href="/login">
+          <Link href="/">
             <button className="bg-teal-600 hover:bg-teal-700 text-white py-2 px-4 rounded-lg">
-              Go to Login
+              Go to Home
             </button>
           </Link>
         </div>
