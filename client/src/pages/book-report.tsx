@@ -7,14 +7,12 @@ import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BookOpen, ArrowLeft } from "lucide-react";
-import { useRouter } from "next/router";
 import { useLocation, useNavigate } from "wouter";
 
 export default function BookReportPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { userData } = useUser();
   const { currentBook, bookActivities } = useBook();
-  const navigate = useNavigate();
 
   // Fetch all activities with images
   const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
@@ -70,7 +68,7 @@ export default function BookReportPage() {
           <Button
             variant="ghost"
             className="mb-4"
-            onClick={() => router.push("/book")}
+            onClick={() => navigate("/book")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Books
