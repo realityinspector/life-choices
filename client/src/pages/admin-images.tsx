@@ -1053,13 +1053,57 @@ export default function AdminImagesPage() {
 
     // LLM description generation
   const handleGenerateLLMDescription = async (file: FileUploadState) => {
-    // Implement the LLM description generation logic here
-    // Use the OPENROUTER_API_KEY from Replit secrets
-    // Call the OpenRouter API with the image name and a system prompt
-    // Parse the JSON response and populate the activity fields
-    // Display the data in a modal for user verification
-    // Save, reject, or crud the reply
-    console.log('Generate LLM Description for:', file);
+    try {
+      toast({
+        title: "Generating Description",
+        description: "Using AI to analyze the image filename...",
+      });
+
+      console.log('Generate LLM Description Request:', {
+        filename: file.filename,
+        originalFilename: file.file.name
+      });
+
+      const res = await apiRequest('/api/admin-llm/generate-activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.filename,
+          originalFilename: file.file.name
+        }),
+      });
+
+      const data = await res.json();
+      console.log('LLM Generation Response:', data);
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to generate activity description');
+      }
+
+      if (data.activity) {
+        toast({
+          title: "Description Generated",
+          description: `Generated "${data.activity.name}" from image`,
+        });
+        
+        // Update the file state with the generated activity
+        setFiles(prev => prev.map(f => 
+          f === file ? { 
+            ...f, 
+            suggestedActivity: data.activity,
+            activityId: data.activity.id,
+            status: 'matched'
+          } : f
+        ));
+      }
+    } catch (error) {
+      console.error('LLM Generation Error:', error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate activity description",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

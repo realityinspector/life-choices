@@ -145,8 +145,10 @@ adminLLMRouter.post("/upload", upload.array("images", 500), async (req: Authenti
 adminLLMRouter.post("/generate-activity", async (req: AuthenticatedRequest, res) => {
   try {
     const { filename, originalFilename } = req.body;
+    console.log("LLM Activity Generation Request:", { filename, originalFilename });
     
     if (!originalFilename) {
+      console.log("LLM Generation Error: Original filename missing");
       return res.status(400).json({ error: "Original filename is required" });
     }
 
