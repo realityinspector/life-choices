@@ -8,12 +8,15 @@ const { Pool } = pkg;
 // Configure the PostgreSQL pool with enhanced connection settings
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection cannot be established
-  maxUses: 7500, // Recycle connections after 7500 queries
-  keepAlive: true, // Keep-alive connection to prevent network issues
-  keepAliveInitialDelayMillis: 1000 // Initial delay for keep-alive 
+  max: 10, // Reduce max connections to avoid overwhelming the database
+  idleTimeoutMillis: 60000, // Keep idle clients for longer
+  connectionTimeoutMillis: 20000, // Give more time to establish connection
+  maxUses: 5000, // Lower max uses to recycle connections more frequently
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000, // Increase initial delay
+  ssl: {
+    rejectUnauthorized: false // Required for some PostgreSQL providers
+  }
 });
 
 // Setup error handling for the connection pool
