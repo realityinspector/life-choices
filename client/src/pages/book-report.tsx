@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BookOpen, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/router";
+import { useLocation, useNavigate } from "wouter";
 
 export default function BookReportPage() {
   const router = useRouter();
   const { userData } = useUser();
   const { currentBook, bookActivities } = useBook();
+  const navigate = useNavigate();
 
   // Fetch all activities with images
   const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
@@ -51,7 +53,7 @@ export default function BookReportPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <h1 className="text-2xl font-bold mb-4">No book selected</h1>
-        <Button onClick={() => router.push("/book")}>
+        <Button onClick={() => navigate("/book")}>
           Go to Books
         </Button>
       </div>
@@ -125,7 +127,7 @@ export default function BookReportPage() {
             </p>
             <Button
               className="mt-4"
-              onClick={() => router.push("/book")}
+              onClick={() => navigate("/book")}
             >
               Add Activities
             </Button>
@@ -134,4 +136,4 @@ export default function BookReportPage() {
       </main>
     </div>
   );
-} 
+}
