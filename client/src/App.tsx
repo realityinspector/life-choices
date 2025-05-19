@@ -18,6 +18,7 @@ import CalendarPage from "@/pages/calendar";
 import AdminImagesPage from "@/pages/admin-images";
 import AdminLLMPage from "@/pages/admin-llm";
 import AdminBackupPage from "@/pages/admin-backup";
+import AdminCSVImportPage from "@/pages/admin-csv-import";
 import AdminDashboard from "@/pages/admin";
 import BottomNavigation from "@/components/bottom-navigation";
 
@@ -32,7 +33,7 @@ function Router() {
   const freeRoutes = ["/", "/login", "/shared-activity"];
   
   // Admin routes - these bypass normal user authentication
-  const adminRoutes = ["/admin", "/admin/images", "/admin/llm", "/admin/backup"];
+  const adminRoutes = ["/admin", "/admin/images", "/admin/llm", "/admin/backup", "/admin/csv-import"];
   const isAdminRoute = adminRoutes.some(route => location.startsWith(route));
 
   // Check if we're on a free route
@@ -109,6 +110,7 @@ function Router() {
       <Route path="/admin/images" component={AdminImagesPage} />
       <Route path="/admin/llm" component={AdminLLMPage} />
       <Route path="/admin/backup" component={AdminBackupPage} />
+      <Route path="/admin/csv-import" component={AdminCSVImportPage} />
       
       <Route component={NotFound} />
     </Switch>

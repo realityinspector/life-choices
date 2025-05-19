@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { storage } from "../storage";
 import { togetherAIService } from "../services/together-ai";
 import { Activity, ActivityInsert, InsertActivityImage } from "../../shared/schema";
+import csv from 'csv-parse';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -52,6 +53,24 @@ const upload = multer({
     fileSize: 20 * 1024 * 1024, // Increased to 20MB per file
     fieldSize: 20 * 1024 * 1024, // Also increase field size limit
   },
+});
+
+// Configure multer for CSV upload
+const csvUpload = multer({
+  storage: multer.diskStorage({
+    destination: './uploads',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.mimetype === 'application/vnd.ms-excel') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  }
 });
 
 export const adminLLMRouter = Router();
@@ -566,6 +585,103 @@ adminLLMRouter.delete("/image/:id", async (req: AuthenticatedRequest, res) => {
     res.status(500).json({ 
       error: "Failed to delete image",
       details: errorMessage
+    });
+  }
+});
+
+// Import activities from CSV
+adminLLMRouter.post("/import-csv", csvUpload.single('csv'), async (req: AuthenticatedRequest, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No CSV file uploaded" });
+  }
+
+  const results: { activityName: string; status: 'success' | 'failed'; error?: string; activity?: any }[] = [];
+  const parser = csv.parse({ columns: true, skip_empty_lines: true });
+
+  try {
+    // Read and parse CSV file
+    const records: { activity_name: string; activity_description: string }[] = [];
+    const fileContent = fs.readFileSync(req.file.path, 'utf-8');
+    
+    parser.on('readable', () => {
+      let record;
+      while ((record = parser.read()) !== null) {
+        records.push(record);
+      }
+    });
+
+    await new Promise((resolve, reject) => {
+      parser.on('end', resolve);
+      parser.on('error', reject);
+      parser.write(fileContent);
+      parser.end();
+    });
+
+    // Process each record
+    for (const record of records) {
+      try {
+        // Generate activity details using Together AI
+        const activityResponse = await togetherAIService.generateActivityFromFilename(record.activity_name);
+        
+        if (!activityResponse) {
+          throw new Error("Failed to generate activity details");
+        }
+
+        // Generate image using Together AI
+        const imageResponse = await togetherAIService.generateImageForActivity(activityResponse);
+        
+        if (!imageResponse) {
+          throw new Error("Failed to generate activity image");
+        }
+
+        // Create activity with user ID
+        const activityWithUser: ActivityInsert & { userId: number, nextDue: Date } = {
+          ...activityResponse,
+          userId: req.user!.id,
+          nextDue: new Date(),
+        };
+
+        // Save activity
+        const createdActivity = await storage.createActivity(activityWithUser);
+
+        // Associate image
+        const imageAssociation: InsertActivityImage = {
+          activityId: createdActivity.id,
+          filename: imageResponse.filename,
+          originalFilename: imageResponse.originalFilename,
+          path: imageResponse.path,
+          mimeType: imageResponse.mimeType
+        };
+
+        await storage.createActivityImage(imageAssociation);
+
+        results.push({
+          activityName: record.activity_name,
+          status: 'success',
+          activity: createdActivity
+        });
+      } catch (error) {
+        console.error(`Error processing record ${record.activity_name}:`, error);
+        results.push({
+          activityName: record.activity_name,
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Clean up uploaded file
+    fs.unlinkSync(req.file.path);
+
+    res.json({ 
+      message: `Processed ${results.length} records`,
+      results 
+    });
+  } catch (error) {
+    console.error('Error processing CSV:', error);
+    res.status(500).json({ 
+      error: "Failed to process CSV file",
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

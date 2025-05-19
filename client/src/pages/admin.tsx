@@ -69,6 +69,13 @@ export default function AdminDashboard() {
 
   const adminModules = [
     {
+      title: "CSV Import",
+      description: "Import activities from CSV with AI-generated images and details",
+      icon: <FileText className="h-8 w-8 text-yellow-500" />,
+      route: "/admin/csv-import",
+      badge: "New"
+    },
+    {
       title: "AI Image Generation",
       description: "Generate images for activities using AI models and process uploaded images",
       icon: <Cpu className="h-8 w-8 text-indigo-500" />,
