@@ -76,7 +76,7 @@ class TogetherAIError extends Error {
 export class TogetherAIService {
   private client: Together;
   private textModel = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
-  private imageModel = "stabilityai/stable-diffusion-xl-base-1.0";
+  private imageModel = "black-forest-labs/FLUX.1-schnell-Free";
   private uploadDir = "./uploads";
   private isInitialized = false;
 
@@ -810,9 +810,7 @@ Ensure each object contains all required properties and the array has ${filename
         return await this.client.images.create({
           model: this.imageModel,
           prompt: prompt,
-          width: 1024,
-          height: 1024,
-          steps: 40,
+          steps: 10,
           n: 1, // Generate single image for reliability
           seed: Math.floor(Math.random() * 1000000)
         });
