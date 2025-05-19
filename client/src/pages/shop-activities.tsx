@@ -27,7 +27,7 @@ if (typeof window !== 'undefined') {
     console.error("ALL ONE THING: Error message:", event.message);
     console.error("ALL ONE THING: Error at:", event.filename, "line:", event.lineno, "col:", event.colno);
   });
-  
+
   // Also catch unhandled promise rejections
   window.addEventListener('unhandledrejection', (event) => {
     console.error("ALL ONE THING: UNHANDLED PROMISE REJECTION", event.reason);
@@ -65,12 +65,12 @@ const ActivityCard = ({
   const [sharePrivacy, setSharePrivacy] = useState<"private" | "link" | "public">("private");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const { toast } = useToast();
-  
+
   // Find images for this activity
   const activityImagesForActivity = activityImages.filter(img => 
     img.activityId === (activity as Activity).id
   );
-  
+
   const getImpactColor = (impact: number | undefined) => {
     if (!impact) return "bg-gray-500";
     if (impact >= 8) return "bg-green-500";
@@ -90,16 +90,16 @@ const ActivityCard = ({
       });
       return;
     }
-    
+
     const shareableUrl = `https://lifechoices.app/share/${activity.name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 8)}`;
     setShareUrl(shareableUrl);
-    
+
     toast({
       title: sharePrivacy === "public" ? "Activity shared publicly" : "Share link generated",
       description: "You can now share this activity with others",
     });
   };
-  
+
   const copyToClipboard = () => {
     if (shareUrl) {
       navigator.clipboard.writeText(shareUrl);
@@ -112,16 +112,16 @@ const ActivityCard = ({
 
   // Important: In the shop interface, we want to identify which activities the user has personally
   // added to their tasks vs. which activities are system-provided and available for selection.
-  
+
   // Most direct fix possible: Override the activityExists flag for now
   const { userData: currentUser } = useUser();
-  
+
   // EMERGENCY FIX: The shop view should always allow adding activities
   // This is the simplest, most direct approach to ensure the shop works
-  
+
   // For shop view, always show "Add" buttons, never "Already in Tasks"
   const activityExists = false;
-  
+
   // Keep a placeholder for the existing activity lookup in case we need it in other parts of the code
   const existingActivity = userActivities.find(a => {
     if ('id' in activity && 'id' in a && activity.id !== undefined && a.id !== undefined) {
@@ -129,7 +129,7 @@ const ActivityCard = ({
     }
     return activity.name.toLowerCase() === a.name.toLowerCase();
   });
-  
+
   // Helper function to convert Activity to ActivityInsert safely
   const toActivityInsert = (act: any): ActivityInsert => {
     return {
@@ -149,24 +149,24 @@ const ActivityCard = ({
 
   const handleExportToCalendar = () => {
     if (!existingActivity) return;
-    
+
     // Create a calendar event URL
     const eventTitle = encodeURIComponent(existingActivity.name);
     const eventDescription = encodeURIComponent(`${existingActivity.category} activity - Life Impact: ${existingActivity.lifeImpact}`);
     const startDate = new Date();
     const endDate = new Date(startDate.getTime() + (existingActivity.duration * (existingActivity.durationUnit === 'hour' ? 60 : 1) * 60 * 1000));
-    
+
     // Format dates for calendar URLs
     const formatDate = (date: Date) => {
       return date.toISOString().replace(/-|:|\.\d+/g, "");
     };
-    
+
     // Google Calendar URL
     const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&details=${eventDescription}&dates=${formatDate(startDate)}/${formatDate(endDate)}`;
-    
+
     // Open in a new tab
     window.open(googleCalendarUrl, '_blank');
-    
+
     toast({
       title: "Calendar Link Generated",
       description: "Event has been created and can be added to your calendar",
@@ -177,7 +177,7 @@ const ActivityCard = ({
     <>
       <Card className={`overflow-hidden h-full flex flex-col ${isRecommended ? "border-primary border-2" : ""} ${activityExists ? "border-green-400" : ""}`}>
         <div className={`h-1.5 ${getImpactColor(activity.lifeImpact)}`} />
-        
+
         {/* Show image if available */}
         {activityImagesForActivity.length > 0 && (
           <div className="relative aspect-video overflow-hidden">
@@ -188,7 +188,7 @@ const ActivityCard = ({
             />
           </div>
         )}
-        
+
         <CardHeader className="pb-2 pt-3">
           <div className="flex justify-between items-start">
             <CardTitle className="text-base flex items-center">
@@ -279,7 +279,7 @@ const ActivityCard = ({
               )}
             </>
           )}
-          
+
           {/* WHATS-NEXT VIEW: Show Complete/Skip buttons for existing activities */}
           {window.location.pathname === '/whats-next' && activityExists && (
             <>
@@ -316,7 +316,7 @@ const ActivityCard = ({
           )}
         </CardFooter>
       </Card>
-      
+
       {/* Share Modal */}
       {showShareModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -327,7 +327,7 @@ const ActivityCard = ({
                 &times;
               </Button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <h4 className="font-medium mb-2">Privacy Settings</h4>
@@ -347,7 +347,7 @@ const ActivityCard = ({
                     </div>
                     {sharePrivacy === 'private' && <Check className="h-5 w-5 text-primary" />}
                   </div>
-                  
+
                   <div 
                     className={`p-3 border rounded-md cursor-pointer flex justify-between items-center ${sharePrivacy === 'link' ? 'border-primary bg-primary/5' : ''}`}
                     onClick={() => setSharePrivacy('link')}
@@ -363,7 +363,7 @@ const ActivityCard = ({
                     </div>
                     {sharePrivacy === 'link' && <Check className="h-5 w-5 text-primary" />}
                   </div>
-                  
+
                   <div 
                     className={`p-3 border rounded-md cursor-pointer flex justify-between items-center ${sharePrivacy === 'public' ? 'border-primary bg-primary/5' : ''}`}
                     onClick={() => setSharePrivacy('public')}
@@ -381,7 +381,7 @@ const ActivityCard = ({
                   </div>
                 </div>
               </div>
-              
+
               {shareUrl && (
                 <div>
                   <h4 className="font-medium mb-2">Share Link</h4>
@@ -403,7 +403,7 @@ const ActivityCard = ({
                   </div>
                 </div>
               )}
-              
+
               <div className="pt-2 flex justify-end space-x-2">
                 <Button variant="outline" size="sm" onClick={() => setShowShareModal(false)}>
                   Cancel
@@ -443,19 +443,19 @@ const getRecommendationReason = (
 ): string => {
   // Check if the user already has activities in this category
   const userCategories = new Set(currentActivities.map(a => a.category));
-  
+
   // Get current categories and activity names
   const averageImpact = currentActivities.length > 0 
     ? currentActivities.reduce((sum, a) => sum + (a.lifeImpact || 0), 0) / currentActivities.length
     : 0;
-    
+
   // Calculate total time allocated per week
   const weeklyTimeAllocation = currentActivities.reduce((total, activity) => {
     let weeklyTime = activity.duration;
     if (activity.durationUnit === "hour") {
       weeklyTime *= 60; // Convert to minutes
     }
-    
+
     // Convert to weekly frequency
     if (activity.frequencyUnit === "day") {
       weeklyTime *= (activity.frequency * 7);
@@ -466,31 +466,31 @@ const getRecommendationReason = (
     } else if (activity.frequencyUnit === "year") {
       weeklyTime *= (activity.frequency / 52);
     }
-    
+
     return total + weeklyTime;
   }, 0);
-  
+
   // Calculate available weekly time (excluding sleep) in minutes
   const availableWeeklyTime = (24 * 7 - (userData.sleepHours || 8) * 7) * 60;
   const timePercentage = (weeklyTimeAllocation / availableWeeklyTime) * 100;
-  
+
   // New category
   if (!userCategories.has(activity.category)) {
     return `Adds a new ${activity.category} category to your routine`;
   }
-  
+
   // High impact activity
   if (activity.lifeImpact > averageImpact + 2) {
     return `Higher impact than your average activities`;
   }
-  
+
   // Balance time commitments
   if (timePercentage < 30 && (activity.duration <= 30 && activity.durationUnit === "minute")) {
     return `Quick activity that fits your schedule`;
   } else if (timePercentage > 70 && (activity.frequency <= 2 && activity.frequencyUnit === "week")) {
     return `Low-frequency activity for your busy schedule`;
   }
-  
+
   // Based on user's age - handle potential null values
   if (userData.age !== null && userData.age !== undefined) {
     const age = userData.age;
@@ -502,7 +502,7 @@ const getRecommendationReason = (
       return `Beneficial for wellbeing at your life stage`;
     }
   }
-  
+
   // Fallback
   return "Complements your current lifestyle";
 };
@@ -529,7 +529,7 @@ export default function ShopActivitiesPage() {
   const [cartItems, setCartItems] = useState<ActivityInsert[]>([]);
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
-  
+
   // Fetch all activities with images for the shop (no user filtering)
   const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
     queryKey: ['/api/activities/shop/with-images'],
@@ -550,24 +550,24 @@ export default function ShopActivitiesPage() {
     // Add staleTime to reduce duplicate requests
     staleTime: 30000 // 30 seconds
   });
-  
+
   // Extract all images for easier reference
   const allActivityImages = activitiesWithImages.flatMap(a => a.images);
-  
+
   useEffect(() => {
     // Load cart items when the component mounts
     setCartItems(getCartActivities());
   }, [getCartActivities]);
-  
+
   // Process sample activities to ensure they have description and completed fields
   const enhancedSampleActivities = completeActivityData(
     SAMPLE_ACTIVITIES.map(a => ({ ...a, description: "", completed: false }))
   );
-  
+
   const enhancedMoreSampleActivities = completeActivityData(
     MORE_SAMPLE_ACTIVITIES.map(a => ({ ...a, description: "", completed: false }))
   );
-  
+
   // Fetch all activities from database for the shop (no user filtering)
   const { data: databaseActivities = [] } = useQuery<Activity[]>({
     queryKey: ['/api/activities/shop'],
@@ -588,7 +588,7 @@ export default function ShopActivitiesPage() {
     // Add staleTime to reduce duplicate requests
     staleTime: 30000 // 30 seconds
   });
-  
+
   // Process database activities to match the expected format
   const enhancedDatabaseActivities = databaseActivities.map(activity => {
     // Ensure frequency unit is the correct type
@@ -598,13 +598,13 @@ export default function ShopActivitiesPage() {
                            activity.frequencyUnit === "year") 
       ? activity.frequencyUnit 
       : "week"; // Default to week if invalid
-    
+
     // Ensure duration unit is the correct type
     const durationUnit = (activity.durationUnit === "minute" || 
                           activity.durationUnit === "hour") 
       ? activity.durationUnit 
       : "minute"; // Default to minute if invalid
-    
+
     return {
       ...activity,
       frequencyUnit,
@@ -613,7 +613,7 @@ export default function ShopActivitiesPage() {
       completed: false // Add completed field if it doesn't exist
     };
   });
-  
+
   // Debug to console the user's activities and the database activities for comparison
   useEffect(() => {
     if (window.location.pathname === '/shop-activities') {
@@ -636,39 +636,39 @@ export default function ShopActivitiesPage() {
       !enhancedDatabaseActivities.some(db => db.name === sample.name)
     )
   ];
-  
+
   // Filter activities based on search and category
   const filteredActivities = allActivities.filter(activity => {
     // Convert search query to lowercase for case-insensitive matching
     const query = searchQuery.toLowerCase();
-    
+
     // Check various fields for matches
     const nameMatch = activity.name.toLowerCase().includes(query);
     const descriptionMatch = activity.description?.toLowerCase().includes(query) ?? false;
     const categoryMatch = activity.category.toLowerCase().includes(query);
-    
+
     // Check emoji field for keywords (we store search keywords here)
     const emojiMatch = activity.emoji?.toLowerCase().includes(query) ?? false;
-    
+
     // Check for specific matches in name parts (e.g., "raft" in "Rafting Adventure")
     let namePartMatch = false;
     if (query.length >= 3) { // Only check for meaningful parts (3+ characters)
       const nameParts = activity.name.toLowerCase().split(/\s+|[-_]/); // Split by spaces and common separators
       namePartMatch = nameParts.some(part => part.startsWith(query) || part.includes(query));
     }
-    
+
     const matchesSearch = searchQuery === "" || 
                           nameMatch || 
                           descriptionMatch || 
                           categoryMatch || 
                           namePartMatch || 
                           emojiMatch;
-                          
+
     const matchesCategory = selectedCategory === null || activity.category === selectedCategory;
-    
+
     return matchesSearch && matchesCategory;
   });
-  
+
   // Generate recommended activities for the user
   const recommendedActivities = userData && activities 
     ? allActivities
@@ -676,16 +676,16 @@ export default function ShopActivitiesPage() {
       .sort(() => Math.random() - 0.5) // Shuffle
       .slice(0, 6) // Take the first 6
     : [];
-  
+
   const handleAddActivity = (activity: ActivityInsert) => {
     addActivity(activity);
-    
+
     toast({
       title: "Activity Added",
       description: `${activity.name} has been added to your activities.`
     });
   };
-  
+
   const handleAddToCart = (activity: ActivityInsert) => {
     if (cartItems.some(item => item.name === activity.name)) {
       toast({
@@ -695,44 +695,44 @@ export default function ShopActivitiesPage() {
       });
       return;
     }
-    
+
     addActivitiesToCart([activity]);
     setCartItems(prev => [...prev, activity]);
-    
+
     toast({
       title: "Added to Cart",
       description: `${activity.name} has been added to your cart.`
     });
   };
-  
+
   const handleCheckout = () => {
     toast({
       title: "Checkout Complete",
       description: `${cartItems.length} activities have been added to your routine.`
     });
-    
+
     // Add all cart items to the user's activities
     cartItems.forEach(activity => {
       addActivity(activity);
     });
-    
+
     // Clear the cart
     setCartItems([]);
     addActivitiesToCart([]);
-    
+
     // Close the cart drawer
     setShowCart(false);
   };
-  
+
   const handleCompleteActivity = (activity: Activity) => {
     completeUserActivity(activity.id);
-    
+
     toast({
       title: "Activity Completed",
       description: `You've completed ${activity.name} for today.`
     });
   };
-  
+
   const handleSkipActivity = (activity: Activity) => {
     // This would typically update the activity's next due date
     // For now, we'll just show a toast
@@ -741,7 +741,7 @@ export default function ShopActivitiesPage() {
       description: `${activity.name} will be rescheduled for later.`
     });
   };
-  
+
   if (!userData) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
@@ -771,7 +771,7 @@ export default function ShopActivitiesPage() {
           )}
         </Button>
       </div>
-      
+
       <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="mb-6">
@@ -782,7 +782,7 @@ export default function ShopActivitiesPage() {
             Explore activities for your personal growth and well-being
           </p>
         </div>
-        
+
         {/* Shopping Cart Drawer */}
         {showCart && (
           <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
@@ -793,7 +793,7 @@ export default function ShopActivitiesPage() {
                   &times;
                 </Button>
               </div>
-              
+
               <div className="flex-1 overflow-auto p-4">
                 {cartItems.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center">
@@ -814,7 +814,7 @@ export default function ShopActivitiesPage() {
                         if (impact >= 3) return "bg-yellow-500";
                         return "bg-gray-500";
                       };
-                      
+
                       return (
                         <Card key={i} className="overflow-hidden">
                           <div className={`h-1.5 ${getImpactColor(item.lifeImpact)}`} />
@@ -834,7 +834,7 @@ export default function ShopActivitiesPage() {
                   </div>
                 )}
               </div>
-              
+
               {cartItems.length > 0 && (
                 <div className="p-4 border-t">
                   <Button 
@@ -862,7 +862,7 @@ export default function ShopActivitiesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           {/* Simplified Categories */}
           <div className="bg-white p-3 rounded-lg shadow-sm">
             <div className="flex flex-wrap gap-2">
@@ -912,7 +912,7 @@ export default function ShopActivitiesPage() {
                   />
                 ))}
               </div>
-              
+
               {filteredActivities.length === 0 && (
                 <div className="text-center p-10 bg-muted rounded-lg">
                   <Search className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
@@ -975,7 +975,7 @@ export default function ShopActivitiesPage() {
                       that might enhance your life balance and overall impact.
                     </p>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {recommendedActivities.map((activity, index) => (
                       <ActivityCard 
@@ -1007,7 +1007,7 @@ export default function ShopActivitiesPage() {
           </Tabs>
         </div>
       </main>
-      
+
       {/* Navigation removed as we use centralized bottom navigation */}
     </div>
   );
