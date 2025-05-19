@@ -487,60 +487,72 @@ adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest
       });
     }
 
-    // Just take the first activity that needs an image
-    const activity = activitiesWithoutImages[0];
+    const results = [];
+    
+    for (const activity of activitiesWithoutImages) {
+      try {
+        console.log(`Generating image for activity: ${activity.name} (ID: ${activity.id})`);
 
-    console.log(`Generating image for activity: ${activity.name} (ID: ${activity.id})`);
+        // Convert Activity to ActivityInsert format
+        const activityInsert: ActivityInsert = {
+          name: activity.name,
+          category: activity.category,
+          frequency: activity.frequency,
+          frequencyUnit: activity.frequencyUnit as "day" | "week" | "month" | "year",
+          duration: activity.duration,
+          durationUnit: activity.durationUnit as "minute" | "hour",
+          lifeImpact: activity.lifeImpact,
+          color: activity.color,
+          priority: activity.priority,
+          emoji: activity.emoji,
+          exportToCalendar: activity.exportToCalendar,
+          clusterId: activity.clusterId
+        };
 
-    // Convert Activity to ActivityInsert format
-    const activityInsert: ActivityInsert = {
-      name: activity.name,
-      category: activity.category,
-      frequency: activity.frequency,
-      frequencyUnit: activity.frequencyUnit as "day" | "week" | "month" | "year",
-      duration: activity.duration,
-      durationUnit: activity.durationUnit as "minute" | "hour",
-      lifeImpact: activity.lifeImpact,
-      color: activity.color,
-      priority: activity.priority,
-      emoji: activity.emoji,
-      exportToCalendar: activity.exportToCalendar,
-      clusterId: activity.clusterId
-    };
+        // Generate an image for the activity
+        const imageData = await togetherAIService.generateImageForActivity(activityInsert);
+        if (!imageData) {
+          results.push({
+            success: false,
+            activity: activity.name,
+            error: "Failed to generate image"
+          });
+          continue;
+        }
 
-    // Generate an image for the activity
-    const imageData = await togetherAIService.generateImageForActivity(activityInsert);
-    if (!imageData) {
-      return res.status(500).json({ 
-        error: `Failed to generate image for activity: ${activity.name} (ID: ${activity.id})`,
-        remaining: activitiesWithoutImages.length - 1
-      });
+        // Associate the image with the activity
+        const imageAssociation: InsertActivityImage = {
+          activityId: activity.id,
+          filename: imageData.filename,
+          originalFilename: imageData.originalFilename,
+          path: imageData.path,
+          mimeType: imageData.mimeType
+        };
+
+        const savedImage = await storage.createActivityImage(imageAssociation);
+        console.log(`Image generated and associated with activity: ${activity.name} (ID: ${activity.id})`);
+
+        results.push({
+          success: true,
+          activity: activity.name,
+          image: savedImage.filename
+        });
+
+      } catch (error) {
+        console.error(`Error processing activity ${activity.name}:`, error);
+        results.push({
+          success: false,
+          activity: activity.name,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
     }
 
-    // Associate the image with the activity
-    const imageAssociation: InsertActivityImage = {
-      activityId: activity.id,
-      filename: imageData.filename,
-      originalFilename: imageData.originalFilename,
-      path: imageData.path,
-      mimeType: imageData.mimeType
-    };
-
-    const savedImage = await storage.createActivityImage(imageAssociation);
-    console.log(`Image generated and associated with activity: ${activity.name} (ID: ${activity.id})`);
-
     res.json({
-      message: "Image generated for activity successfully",
-      activity: {
-        id: activity.id,
-        name: activity.name,
-        category: activity.category
-      },
-      image: {
-        id: savedImage.id,
-        filename: savedImage.filename
-      },
-      remaining: activitiesWithoutImages.length - 1
+      message: `Processed ${results.length} activities`,
+      results,
+      completed: results.length,
+      total: activitiesWithoutImages.length
     });
   } catch (err: unknown) {
     console.error("Error generating image:", err);
