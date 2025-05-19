@@ -596,7 +596,7 @@ adminLLMRouter.post("/import-csv", csvUpload.single('csv'), async (req: Authenti
   }
 
   const results: { activityName: string; status: 'success' | 'failed'; error?: string; activity?: any }[] = [];
-  const parser = csv.parse({ columns: true, skip_empty_lines: true });
+  const parser = parse({ columns: true, skip_empty_lines: true });
 
   try {
     // Read and parse CSV file
