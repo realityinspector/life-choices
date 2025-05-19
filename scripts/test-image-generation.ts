@@ -1,3 +1,4 @@
+
 import { togetherAIService } from "../server/services/together-ai";
 import { storage } from "../server/storage";
 import { ActivityInsert } from "../shared/schema";
@@ -28,7 +29,7 @@ async function checkAndListActivitiesNeedingImages(): Promise<ActivityToProcess[
   // Get all activities that have images
   const activitiesWithImages = await storage.getActivitiesWithImages();
   const activitiesWithImagesIds = new Set(
-    activitiesWithImages.map((img) => img.activityId),
+    activitiesWithImages.map((img) => img.id),
   );
   console.log(`${activitiesWithImages.length} activities already have images`);
 
@@ -59,15 +60,15 @@ async function generateImageForActivity(activity: ActivityToProcess): Promise<bo
       name: activity.name,
       category: activity.category,
       frequency: activity.frequency,
-      frequencyUnit: activity.frequencyUnit,
+      frequencyUnit: activity.frequencyUnit as "day" | "week" | "month" | "year",
       duration: activity.duration,
-      durationUnit: activity.durationUnit,
+      durationUnit: activity.durationUnit as "minute" | "hour",
       lifeImpact: activity.lifeImpact,
       color: activity.color,
       priority: activity.priority,
       emoji: activity.emoji,
       exportToCalendar: activity.exportToCalendar,
-      clusterId: activity.clusterId,
+      clusterId: activity.clusterId
     };
 
     // Generate image
@@ -98,71 +99,58 @@ async function generateImageForActivity(activity: ActivityToProcess): Promise<bo
   }
 }
 
-async function processActivitiesWithImages(activitiesToProcess: ActivityToProcess[]) {
-  console.log("\n=== STEP 2: Generating images for activities ===");
-
-  if (activitiesToProcess.length === 0) {
-    console.log("No activities need images. All done!");
-    return;
-  }
-
-  console.log(`Starting image generation for ${activitiesToProcess.length} activities...`);
-
-  let successCount = 0;
-  let errorCount = 0;
-  const errors: { id: number; name: string; error: string }[] = [];
-
-  // Process activities one at a time
-  for (let i = 0; i < activitiesToProcess.length; i++) {
-    const activity = activitiesToProcess[i];
-
+async function generateImagesForMissingActivities() {
+  try {
+    // Find all activities without images
+    const activitiesNeedingImages = await checkAndListActivitiesNeedingImages();
+    
     console.log(
-      `\n=== Processing activity ${i + 1}/${activitiesToProcess.length} ===`,
+      `Starting image generation for ${activitiesNeedingImages.length} activities missing images...`,
     );
 
-    const success = await generateImageForActivity(activity);
-    if (success) {
-      successCount++;
-    } else {
-      errorCount++;
-      errors.push({ 
-        id: activity.id, 
-        name: activity.name, 
-        error: "Failed to generate image" 
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: { id: number; name: string; error: string }[] = [];
+
+    // Process activities one at a time
+    for (const activity of activitiesNeedingImages) {
+      console.log(
+        `\n=== Processing activity ${successCount + errorCount + 1}/${activitiesNeedingImages.length} ===`,
+      );
+      
+      const success = await generateImageForActivity(activity);
+      if (success) {
+        successCount++;
+      } else {
+        errorCount++;
+        errors.push({ 
+          id: activity.id, 
+          name: activity.name, 
+          error: "Failed to generate image" 
+        });
+      }
+
+      // Add delay between activities to be respectful to the API
+      if (successCount + errorCount < activitiesNeedingImages.length) {
+        console.log("Waiting 2 seconds before next activity...");
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+
+    // Summary
+    console.log("\n=== SUMMARY ===");
+    console.log(`Total activities processed: ${activitiesNeedingImages.length}`);
+    console.log(`Successful: ${successCount}`);
+    console.log(`Errors: ${errorCount}`);
+
+    if (errors.length > 0) {
+      console.log("\nActivities with errors:");
+      errors.forEach(({ id, name, error }) => {
+        console.log(`  - Activity ${id} ("${name}"): ${error}`);
       });
     }
 
-    // Add delay between activities to be respectful to the API
-    if (i < activitiesToProcess.length - 1) {
-      console.log("Waiting 2 seconds before next activity...");
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-  }
-
-  // Summary
-  console.log("\n=== FINAL SUMMARY ===");
-  console.log(`Total activities processed: ${activitiesToProcess.length}`);
-  console.log(`Successful: ${successCount}`);
-  console.log(`Errors: ${errorCount}`);
-
-  if (errors.length > 0) {
-    console.log("\nActivities with errors:");
-    errors.forEach(({ id, name, error }) => {
-      console.log(`  - Activity ${id} ("${name}"): ${error}`);
-    });
-  }
-
-  console.log("\nImage generation complete!");
-}
-
-async function generateImagesForMissingActivities() {
-  try {
-    // Step 1: Check all activities and create list of those needing images
-    const activitiesNeedingImages = await checkAndListActivitiesNeedingImages();
-
-    // Step 2: Process each activity to generate and associate images
-    await processActivitiesWithImages(activitiesNeedingImages);
-
+    console.log("\nImage generation complete!");
   } catch (error) {
     console.error("Fatal error:", error);
   } finally {
