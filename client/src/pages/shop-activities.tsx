@@ -182,9 +182,15 @@ const ActivityCard = ({
         {activityImagesForActivity.length > 0 && (
           <div className="relative aspect-video overflow-hidden">
             <img 
-              src={activityImagesForActivity[0].path} 
+              src={activityImagesForActivity[0].path}
               alt={activity.name}
               className="object-cover w-full h-full"
+              onError={(e) => {
+                // Hide the image container if load fails
+                const target = e.target as HTMLImageElement;
+                target.parentElement?.style.setProperty('display', 'none');
+                console.debug(`Image failed to load for activity ${activity.name}:`, activityImagesForActivity[0].path);
+              }}
             />
           </div>
         )}
