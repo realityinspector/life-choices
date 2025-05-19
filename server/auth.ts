@@ -65,12 +65,12 @@ export function setupAuth(app: Express) {
         if (!user) {
           return done(null, false, { message: "Incorrect username or password" });
         }
-        
+
         // In a real app, we would use comparePasswords for hashed passwords
         if (user.password !== password) {
           return done(null, false, { message: "Incorrect username or password" });
         }
-        
+
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -81,7 +81,7 @@ export function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, done) => {
     done(null, user.id);
   });
-  
+
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
@@ -94,7 +94,7 @@ export function setupAuth(app: Express) {
   app.post("/api/register", async (req, res, next) => {
     try {
       const { username, password, name, age, lifeExpectancy, sleepHours } = req.body;
-      
+
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
@@ -124,7 +124,7 @@ export function setupAuth(app: Express) {
     passport.authenticate("local", (err: Error | null, user: UserType | false, info: { message: string } | undefined) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: info?.message || "Authentication failed" });
-      
+
       req.login(user, (err) => {
         if (err) return next(err);
         return res.json(user);
@@ -140,7 +140,16 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    console.log('Auth Debug:', {
+      isAuthenticated: req.isAuthenticated(),
+      session: req.session,
+      user: req.user,
+      cookies: req.headers.cookie
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
     res.json(req.user);
   });
 }
