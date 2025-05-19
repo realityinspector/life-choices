@@ -201,7 +201,11 @@ const ActivityCard = ({
           )}
           {isAdmin && (
             <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 break-all">
-              {activityImagesForActivity.length > 0 ? activityImagesForActivity[0].path : 'No image path'}
+              {activityImagesForActivity.length > 0 ? 
+                (activityImagesForActivity[0].path.startsWith('/home/runner/workspace') ? 
+                  activityImagesForActivity[0].path.replace('/home/runner/workspace', '') : 
+                  activityImagesForActivity[0].path) : 
+                'No image path'}
             </div>
           )}
         </div>
