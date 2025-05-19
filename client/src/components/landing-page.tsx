@@ -5,14 +5,14 @@ import { ListChecks, Share2, Calendar, ArrowRight, CheckCircle2, Triangle, Clock
 // Fractal timeline background component
 const FractalAnimation = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
+
     // Set canvas dimensions to match parent container
     const setCanvasDimensions = () => {
       const parent = canvas.parentElement;
@@ -24,25 +24,25 @@ const FractalAnimation = () => {
         canvas.height = window.innerHeight;
       }
     };
-    
+
     setCanvasDimensions();
-    
+
     // Add listener for window resize
     const handleResize = () => {
       setCanvasDimensions();
     };
-    
+
     window.addEventListener('resize', handleResize);
-    
+
     // Animation parameters
     let animationFrameId: number;
     let points: { x: number; y: number; vx: number; vy: number; life: number; size: number; hue: number }[] = [];
     let time = 0;
-    
+
     // Create timeline points
     const createPoints = () => {
       const totalPoints = Math.floor(canvas.width / 60); // Density of points
-      
+
       for (let i = 0; i < totalPoints; i++) {
         points.push({
           x: Math.random() * canvas.width,
@@ -55,10 +55,10 @@ const FractalAnimation = () => {
         });
       }
     };
-    
+
     // Initialize points
     createPoints();
-    
+
     // Draw connection lines between points (timeline connections)
     const drawConnections = () => {
       for (let i = 0; i < points.length; i++) {
@@ -66,12 +66,12 @@ const FractalAnimation = () => {
           const dx = points[i].x - points[j].x;
           const dy = points[i].y - points[j].y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          
+
           if (distance < 150) { // Max distance for connection
             ctx.beginPath();
             ctx.moveTo(points[i].x, points[i].y);
             ctx.lineTo(points[j].x, points[j].y);
-            
+
             // Gradient based on distance
             const opacity = 1 - distance / 150;
             const hue = (points[i].hue + points[j].hue) / 2;
@@ -82,13 +82,13 @@ const FractalAnimation = () => {
         }
       }
     };
-    
+
     // Draw fractal circles at each point
     const drawFractalPoints = () => {
       for (let i = 0; i < points.length; i++) {
         const point = points[i];
         const size = point.size + Math.sin(time * 0.05 + i) * 1;
-        
+
         // Draw outer glow
         const gradient = ctx.createRadialGradient(
           point.x, point.y, 0,
@@ -96,12 +96,12 @@ const FractalAnimation = () => {
         );
         gradient.addColorStop(0, `hsla(${point.hue}, 80%, 60%, 0.4)`);
         gradient.addColorStop(1, `hsla(${point.hue}, 80%, 60%, 0)`);
-        
+
         ctx.beginPath();
         ctx.arc(point.x, point.y, size * 3, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
-        
+
         // Draw center point
         ctx.beginPath();
         ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
@@ -109,34 +109,34 @@ const FractalAnimation = () => {
         ctx.fill();
       }
     };
-    
+
     // Animation loop
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       // Update time
       time += 1;
-      
+
       // Update points
       for (let i = 0; i < points.length; i++) {
         const point = points[i];
-        
+
         // Move points
         point.x += point.vx;
         point.y += point.vy;
-        
+
         // Boundary checks
         if (point.x < 0 || point.x > canvas.width) {
           point.vx = -point.vx;
         }
-        
+
         if (point.y < 0 || point.y > canvas.height) {
           point.vy = -point.vy;
         }
-        
+
         // Update life
         point.life -= 0.1;
-        
+
         // Recycle dead points
         if (point.life <= 0) {
           points[i] = {
@@ -150,27 +150,27 @@ const FractalAnimation = () => {
           };
         }
       }
-      
+
       // Draw connections first (background)
       drawConnections();
-      
+
       // Draw points on top
       drawFractalPoints();
-      
+
       // Continue animation
       animationFrameId = requestAnimationFrame(animate);
     };
-    
+
     // Start animation
     animate();
-    
+
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
-  
+
   return (
     <canvas 
       ref={canvasRef} 
@@ -193,7 +193,7 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-900 via-purple-900 to-indigo-800 text-white relative overflow-hidden">
       <FractalAnimation />
-      
+
       <header className="relative z-10 border-b border-indigo-700 bg-opacity-30 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
@@ -217,7 +217,7 @@ const LandingPage = () => {
             </div>
             <div className="flex space-x-4">
               <button
-                onClick={() => window.location.href = "/"}
+                onClick={() => window.location.href = "/login"}
                 className="inline-flex items-center justify-center px-4 py-2 border border-teal-400 text-sm font-medium rounded-md shadow-sm text-white bg-transparent hover:bg-teal-900 hover:bg-opacity-30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all duration-300"
               >
                 Sign In
@@ -251,14 +251,14 @@ const LandingPage = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Timeline View */}
                       <div className="p-4">
                         <div className="text-lg font-semibold mb-2 flex items-center">
                           <span>Life Timeline</span>
                           <div className="ml-2 px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full text-xs">Today</div>
                         </div>
-                        
+
                         {/* Current Moment Highlight */}
                         <div className="bg-gradient-to-r from-indigo-500 to-teal-400 p-4 rounded-lg shadow mb-3">
                           <div className="text-white font-medium">Present Moment</div>
@@ -277,7 +277,7 @@ const LandingPage = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Timeline Navigation */}
                         <div className="flex space-x-2 overflow-x-auto py-2 mb-4">
                           <div className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm whitespace-nowrap">Timeline</div>
@@ -285,12 +285,12 @@ const LandingPage = () => {
                           <div className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm whitespace-nowrap">Future</div>
                           <div className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm whitespace-nowrap">Choices</div>
                         </div>
-                        
+
                         {/* Timeline Branches */}
                         <div className="relative">
                           {/* Timeline connector */}
                           <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-500 via-purple-500 to-teal-500"></div>
-                          
+
                           {/* Timeline items */}
                           <div className="space-y-4 pl-12 relative">
                             <div className="relative">
@@ -300,7 +300,7 @@ const LandingPage = () => {
                                 <div className="text-sm text-indigo-500">Future • High Impact Choice</div>
                               </div>
                             </div>
-                            
+
                             <div className="relative">
                               <div className="absolute left-[-24px] top-1 w-4 h-4 rounded-full bg-purple-500 border-2 border-white"></div>
                               <div className="bg-white p-3 rounded-lg shadow-sm border border-purple-100">
@@ -308,7 +308,7 @@ const LandingPage = () => {
                                 <div className="text-sm text-purple-500">Ongoing • Personal Growth</div>
                               </div>
                             </div>
-                            
+
                             <div className="relative">
                               <div className="absolute left-[-24px] top-1 w-4 h-4 rounded-full bg-teal-500 border-2 border-white"></div>
                               <div className="bg-white p-3 rounded-lg shadow-sm border border-teal-100">
@@ -319,7 +319,7 @@ const LandingPage = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Bottom Navigation */}
                       <div className="mt-auto bg-gradient-to-r from-indigo-900 to-indigo-800 border-t border-indigo-700 flex justify-around p-3">
                         <div className="flex flex-col items-center text-teal-400">
@@ -342,13 +342,13 @@ const LandingPage = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="w-full md:w-1/2 p-4">
                   <h2 className="text-3xl font-bold text-gray-900 mb-4">Shape Your Timeline, Design Your Future</h2>
                   <p className="text-lg text-gray-600 mb-6">
                     LIFE CHOICES by ALL ONE THING helps you visualize and manage your time in a meaningful way. Navigate your life's timeline with purpose and clarity, making every moment count.
                   </p>
-                  
+
                   <div className="bg-teal-50 rounded-lg p-4 mb-6 border border-teal-200">
                     <h3 className="text-lg font-medium text-teal-800 flex items-center">
                       <Clock className="mr-2 h-5 w-5 text-teal-600" />
@@ -358,7 +358,7 @@ const LandingPage = () => {
                       Visualize your life as a beautiful fractal timeline. See how your choices and activities interconnect to form the tapestry of your existence.
                     </p>
                   </div>
-                  
+
                   <div className="mt-6 bg-indigo-50 rounded-lg p-4 border border-indigo-200">
                     <h3 className="text-lg font-medium text-indigo-800 flex items-center">
                       <Sparkles className="mr-2 h-5 w-5 text-indigo-600" />
@@ -393,7 +393,7 @@ const LandingPage = () => {
               <h3 className="font-bold text-lg mb-2 text-white">Time Visualization</h3>
               <p className="text-indigo-200">See your life as a beautiful branching timeline, with each choice creating new fractal patterns in your journey through time.</p>
             </div>
-            
+
             <div className="bg-gradient-to-br from-purple-800 to-purple-900 p-6 rounded-lg shadow-lg flex flex-col items-center text-center border border-purple-600">
               <div className="p-3 bg-teal-400 bg-opacity-20 rounded-full mb-4 backdrop-blur-sm">
                 <Triangle className="h-8 w-8 text-teal-300" />
@@ -401,7 +401,7 @@ const LandingPage = () => {
               <h3 className="font-bold text-lg mb-2 text-white">Ripple Effects</h3>
               <p className="text-purple-200">Understand how small decisions create profound ripple effects throughout your life's timeline, visualized through interactive fractal patterns.</p>
             </div>
-            
+
             <div className="bg-gradient-to-br from-blue-800 to-blue-900 p-6 rounded-lg shadow-lg flex flex-col items-center text-center border border-blue-600">
               <div className="p-3 bg-teal-400 bg-opacity-20 rounded-full mb-4 backdrop-blur-sm">
                 <Sparkles className="h-8 w-8 text-teal-300" />
