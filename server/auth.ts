@@ -62,18 +62,24 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log("Authenticating user:", username);
         const user = await storage.getUserByUsername(username);
+        
         if (!user) {
+          console.log("User not found:", username);
           return done(null, false, { message: "Incorrect username or password" });
         }
 
         // In a real app, we would use comparePasswords for hashed passwords
         if (user.password !== password) {
+          console.log("Invalid password for user:", username);
           return done(null, false, { message: "Incorrect username or password" });
         }
 
+        console.log("Authentication successful for user:", username);
         return done(null, user);
       } catch (err) {
+        console.error("Authentication error:", err);
         return done(err);
       }
     }),
@@ -122,12 +128,25 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log("Login attempt:", { username: req.body.username });
+    
     passport.authenticate("local", (err: Error | null, user: UserType | false, info: { message: string } | undefined) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: info?.message || "Authentication failed" });
+      if (err) {
+        console.error("Login error:", err);
+        return next(err);
+      }
+      
+      if (!user) {
+        console.log("Authentication failed:", info?.message);
+        return res.status(401).json({ message: info?.message || "Authentication failed" });
+      }
 
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Session error:", err);
+          return next(err);
+        }
+        console.log("Login successful for user:", user.username);
         return res.json(user);
       });
     })(req, res, next);
