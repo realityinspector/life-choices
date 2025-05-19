@@ -26,17 +26,21 @@ async function checkAndListActivitiesNeedingImages(): Promise<ActivityToProcess[
   const activities = await storage.getActivities();
   console.log(`Found ${activities.length} total activities`);
 
-  // Get all activities that have images
+  // Get all activity images and their associated activities
   const activityImages = await storage.getActivityImages();
-  const activitiesWithImagesIds = new Set(
-    activityImages.map((img) => img.activityId)
-  );
+  
+  // Create a map of activity IDs to their images
+  const activityImageMap: { [key: number]: number } = {};
+  activityImages.forEach(img => {
+    if (img.activityId) {
+      activityImageMap[img.activityId] = (activityImageMap[img.activityId] || 0) + 1;
+    }
+  });
+  
   console.log(`${activityImages.length} activity images found`);
 
   // Filter activities without images
-  const activitiesNeedingImages = activities.filter(
-    (activity) => !activitiesWithImagesIds.has(activity.id)
-  );
+  const activitiesNeedingImages = activities.filter(activity => !activityImageMap[activity.id]);
 
   console.log(`${activitiesNeedingImages.length} activities need images`);
 
