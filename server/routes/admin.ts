@@ -5,7 +5,6 @@ import path from "path";
 import fs from "fs";
 import { Together } from "together-ai";
 import { ActivityImage, InsertActivityImage, Activity } from "../../shared/schema";
-import { getAllSampleActivities } from "../../shared/sample-activities";
 import { importActivities } from "../../scripts/import-activities";
 import { db } from "../db";
 import { activities } from "../../shared/schema";
@@ -178,11 +177,8 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
     // Get all activities from database
     const dbActivities = await storage.getActivities();
 
-    // Get all sample activities
-    const sampleActivities = getAllSampleActivities();
-
     // Combine both sets of activities
-    const activities = [...dbActivities, ...sampleActivities];
+    const activities = [...dbActivities];
     const activityNames = activities.map(a => a.name);
 
     if (activityNames.length === 0) {
@@ -194,7 +190,7 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    console.log(`Found ${activityNames.length} activities for matching (${dbActivities.length} from DB, ${sampleActivities.length} samples)`);
+    console.log(`Found ${activityNames.length} activities for matching (${dbActivities.length} from DB)`);
 
     // Extract likely words from filename
     // Remove extension, convert camelCase/PascalCase to spaces, replace underscores and dashes
@@ -476,18 +472,6 @@ adminRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid activity ID" });
-    }
-
-    // Check if this is a sample activity
-    if (id >= 1000) {
-      const sampleActivities = getAllSampleActivities();
-      const sampleActivity = sampleActivities.find(a => a.id === id);
-      
-      if (sampleActivity) {
-        return res.status(403).json({ message: "Cannot delete sample activities" });
-      } else {
-        return res.status(404).json({ message: "Sample activity not found" });
-      }
     }
 
     // Handle regular database activity
