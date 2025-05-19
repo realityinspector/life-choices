@@ -192,6 +192,11 @@ const ActivityCard = ({
                 console.debug(`Image failed to load for activity ${activity.name}:`, activityImagesForActivity[0].path);
               }}
             />
+            {isAdmin && (
+              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 break-all">
+                {activityImagesForActivity[0].path}
+              </div>
+            )}
           </div>
         )}
 
