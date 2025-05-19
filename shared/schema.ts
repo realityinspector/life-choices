@@ -281,7 +281,7 @@ export const bookActivities = pgTable('book_activities', {
 });
 
 // Add unique constraint to prevent duplicate activities in a book
-export const bookActivitiesUniqueConstraint = uniqueIndex('book_activities_unique').on(bookActivities.bookId, bookActivities.activityId);
+export const bookActivitiesUniqueConstraint = uniqueIndex('book_activities_unique_idx').on(bookActivities, ['bookId', 'activityId']);
 
 // Book types
 export type Book = typeof books.$inferSelect;
