@@ -413,22 +413,35 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
       return res.status(400).json({ error: "Invalid activity ID format" });
     }
 
-    // Get the activity from all activities without user filtering
-    console.log("Attempting to find activity with ID:", parsedId);
-    let activity = await storage.getActivity(parsedId);
-    console.log("Initial activity lookup result:", activity ? `Found: ${activity.name} (ID: ${activity.id})` : "Not found");
+    // Get all activities and find match by name and approximate creation time
+    console.log("Attempting to find activity...");
+    const allActivities = await storage.getActivities();
+    console.log("Total activities in database:", allActivities.length);
+    
+    // First try exact ID match
+    let activity = allActivities.find(a => a.id === parsedId);
+    
+    // If not found by ID, try matching by name
+    if (!activity) {
+      // Get the target activity's expected creation time window
+      const targetActivity = allActivities.find(a => a.id === parsedId);
+      if (targetActivity) {
+        const targetName = targetActivity.name;
+        const targetTime = new Date(targetActivity.createdAt || Date.now()).getTime();
+        
+        // Look for activities with matching name created within 5 minutes
+        activity = allActivities.find(a => {
+          const timeMatch = Math.abs(new Date(a.createdAt || Date.now()).getTime() - targetTime) < 300000; // 5 minutes
+          return a.name === targetName && timeMatch;
+        });
+      }
+    }
+    
+    console.log("Lookup result:", activity ? `Found: ${activity.name} (ID: ${activity.id})` : "Not found");
     
     if (!activity) {
-      console.log("Activity not found in first lookup, trying all activities...");
-      const allActivities = await storage.getActivities();
-      console.log("Total activities in database:", allActivities.length);
-      activity = allActivities.find(a => a.id === parsedId);
-      console.log("Secondary lookup result:", activity ? `Found: ${activity.name} (ID: ${activity.id})` : "Not found");
-      
-      if (!activity) {
-        console.log("ERROR: Activity not found in either lookup attempt");
-        return res.status(404).json({ error: "Activity not found" });
-      }
+      console.log("ERROR: Activity not found in lookup attempt");
+      return res.status(404).json({ error: "Activity not found" });
     }
 
     // Check if the activity already has images
