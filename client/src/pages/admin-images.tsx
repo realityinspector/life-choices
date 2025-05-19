@@ -268,6 +268,49 @@ export default function AdminImagesPage() {
   const [autoSaveAfterMatch, setAutoSaveAfterMatch] = useState(true);
   const [searchActive, setSearchActive] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [showBatchSettings, setShowBatchSettings] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isProcessingMissing, setIsProcessingMissing] = useState(false);
+
+  // Function to process all missing entries with LLM
+  const handleProcessMissingEntries = async () => {
+    const missingEntries = files.filter(f => !f.activityId || f.status === 'failed');
+    if (missingEntries.length === 0) {
+      toast({
+        title: 'No Missing Entries',
+        description: 'All files have been associated with activities.'
+      });
+      return;
+    }
+
+    setIsProcessingMissing(true);
+    const processed = [];
+
+    try {
+      for (const file of missingEntries) {
+        // Generate LLM description and create activity
+        await handleGenerateLLMDescription(file);
+        processed.push(file.file.name);
+      }
+
+      toast({
+        title: 'Processing Complete',
+        description: `Successfully processed ${processed.length} missing entries.`
+      });
+
+      // Refresh the file list
+      setFiles(prev => prev.filter(f => !processed.includes(f.file.name)));
+    } catch (error) {
+      console.error('Error processing missing entries:', error);
+      toast({
+        title: 'Processing Error',
+        description: 'Failed to process some missing entries.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessingMissing(false);
+    }
+  };
 
   // Fetch activities for dropdown selection (including both database activities and shop catalog)
   const { data: activities = [] } = useQuery<Activity[]>({
@@ -1504,6 +1547,20 @@ export default function AdminImagesPage() {
                 >
                   {importActivitiesMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                   Import Activities from CSV
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-medium">Process Missing Entries with LLM</h3>
+                <p className="text-sm text-gray-500">
+                  Automatically generate activity descriptions and associate images for missing entries using AI.
+                </p>
+                <Button
+                  onClick={handleProcessMissingEntries}
+                  disabled={isProcessingMissing}
+                  className="flex gap-2"
+                >
+                  {isProcessingMissing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  Process All Missing with LLM
                 </Button>
               </div>
             </CardContent>

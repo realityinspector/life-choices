@@ -383,32 +383,50 @@ adminRouter.post("/batch-associate", async (req: AuthenticatedRequest, res) => {
     }
 
     const results = [];
+    const errors = [];
+
     for (const assoc of associations) {
       const { activityId, filename, originalFilename, path, mimeType } = assoc;
       
       if (!activityId || !filename || !originalFilename || !path || !mimeType) {
-        continue; // Skip invalid entries
+        errors.push({ filename, error: "Missing required fields" });
+        continue;
       }
 
-      const imageData: InsertActivityImage = {
-        activityId,
-        filename,
-        originalFilename,
-        path,
-        mimeType
-      };
+      // Verify activity exists before creating association
+      const activity = await storage.getActivity(activityId);
+      if (!activity) {
+        errors.push({ filename, error: `Activity ID ${activityId} not found` });
+        continue;
+      }
 
-      const savedImage = await storage.createActivityImage(imageData);
-      results.push(savedImage);
+      try {
+        const imageData: InsertActivityImage = {
+          activityId,
+          filename,
+          originalFilename,
+          path,
+          mimeType
+        };
+
+        const savedImage = await storage.createActivityImage(imageData);
+        results.push(savedImage);
+      } catch (err) {
+        errors.push({ filename, error: "Failed to save image association" });
+      }
     }
 
     res.json({ 
       message: `Successfully associated ${results.length} images with activities`,
-      results
+      results,
+      errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
     console.error("Error in batch association:", error);
-    res.status(500).json({ error: "Failed to associate images with activities" });
+    res.status(500).json({ 
+      error: "Failed to associate images with activities",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
