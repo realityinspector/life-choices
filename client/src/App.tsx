@@ -20,6 +20,8 @@ import AdminLLMPage from "@/pages/admin-llm";
 import AdminBackupPage from "@/pages/admin-backup";
 import AdminCSVImportPage from "@/pages/admin-csv-import";
 import AdminDashboard from "@/pages/admin";
+import AdminActivitiesPage from "@/pages/admin-activities";
+import AdminActivityFormPage from "@/pages/admin-activity-form";
 import BottomNavigation from "@/components/bottom-navigation";
 
 // Set the document title
@@ -107,6 +109,8 @@ function Router() {
       
       {/* Admin routes - accessible with or without normal user setup */}
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/activities" component={AdminActivitiesPage} />
+      <Route path="/admin/activities/:id" component={AdminActivityFormPage} />
       <Route path="/admin/images" component={AdminImagesPage} />
       <Route path="/admin/llm" component={AdminLLMPage} />
       <Route path="/admin/backup" component={AdminBackupPage} />
