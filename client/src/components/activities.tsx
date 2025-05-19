@@ -345,7 +345,6 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="grid grid-cols-1 gap-6">
-        {/* Activity List */}
         <div>
           <div className="bg-white shadow rounded-lg p-6">
             <div className="space-y-4 mb-6">
@@ -353,28 +352,30 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
                 <div className="flex items-center">
                   <h2 className="text-lg font-medium text-gray-900">Your Activities</h2>
                   {isBulkDeleteMode && (
-                  <>
-                    <div className="ml-3 px-2 py-1 bg-gray-100 rounded-md text-sm font-medium text-gray-600">
-                      {getSelectedActivityIds().length} selected
-                    </div>
-                    <div className="ml-3 flex space-x-2">
-                      <button 
-                        onClick={selectAllActivities}
-                        className="text-xs text-primary-600 hover:text-primary-900 font-medium"
-                      >
-                        Select All
-                      </button>
-                      <span className="text-gray-300">|</span>
-                      <button 
-                        onClick={deselectAllActivities}
-                        className="text-xs text-gray-600 hover:text-gray-900 font-medium"
-                      >
-                        Deselect All
-                      </button>
-                    </div>
-                  </>
-                )}
+                    <>
+                      <div className="ml-3 px-2 py-1 bg-gray-100 rounded-md text-sm font-medium text-gray-600">
+                        {getSelectedActivityIds().length} selected
+                      </div>
+                      <div className="ml-3 flex space-x-2">
+                        <button 
+                          onClick={selectAllActivities}
+                          className="text-xs text-primary-600 hover:text-primary-900 font-medium"
+                        >
+                          Select All
+                        </button>
+                        <span className="text-gray-300">|</span>
+                        <button 
+                          onClick={deselectAllActivities}
+                          className="text-xs text-gray-600 hover:text-gray-900 font-medium"
+                        >
+                          Deselect All
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
+
               <div className="flex space-x-2">
                 {isBulkDeleteMode ? (
                   <>
@@ -478,111 +479,100 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
                   .map((activity, index) => (
                     <div key={index} className={`relative bg-white border ${selectedActivities[activity.id] ? 'border-primary-500 ring-2 ring-primary-500' : 'border-gray-200'} rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200`}>
                       <div className={`h-2 bg-${activity.color}-500`}></div>
-                    {isBulkDeleteMode && (
-                      <div className="absolute top-3 left-3 z-10">
-                        <div 
-                          onClick={() => toggleActivitySelection(activity)}
-                          className={`h-6 w-6 rounded-md border-2 flex items-center justify-center cursor-pointer ${
-                            selectedActivities[activity.id] 
-                              ? 'bg-primary-500 border-primary-600 text-white' 
-                              : 'border-gray-300 bg-white'
-                          }`}
-                        >
-                          {selectedActivities[activity.id] && <Check className="h-4 w-4" />}
-                        </div>
-                      </div>
-                    )} 
-                          onClick={() => toggleActivitySelection(activity)}
-                          className={`h-6 w-6 rounded-md border-2 flex items-center justify-center cursor-pointer ${
-                            selectedActivities[activity.id] 
-                              ? 'bg-primary-500 border-primary-600 text-white' 
-                              : 'border-gray-300 bg-white'
-                          }`}
-                        >
-                          {selectedActivities[activity.id] && <Check className="h-4 w-4" />}
-                        </div>
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className={`text-lg font-medium text-gray-900 ${isBulkDeleteMode ? 'ml-6' : ''}`}>{activity.name}</h3>
-                        <span className="text-xs font-medium text-gray-500">{activity.category}</span>
-                      </div>
-                      
-                      <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-500">Frequency</p>
-                          <p className="font-medium text-gray-900">
-                            {`${activity.frequency} ${activity.frequencyUnit}${activity.frequency > 1 ? 's' : ''}`}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Duration</p>
-                          <p className="font-medium text-gray-900">
-                            {`${activity.duration} ${activity.durationUnit}${activity.duration > 1 ? 's' : ''}`}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Life Impact</p>
-                          <p className={`font-medium ${
-                            activity.lifeImpact > 0 ? 'text-green-600' : 
-                            activity.lifeImpact < 0 ? 'text-red-600' : 
-                            'text-gray-600'
-                          }`}>
-                            {activity.lifeImpact > 0 ? `+${activity.lifeImpact} years` : 
-                             activity.lifeImpact < 0 ? `${activity.lifeImpact} years` : 
-                             'Neutral'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Lifetime Hours</p>
-                          <p className="font-medium text-gray-900">
-                            {calculateLifetimeHours(userData, activity).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4 flex justify-end space-x-2">
-                        {isBulkDeleteMode ? (
-                          <button 
+                      {isBulkDeleteMode && (
+                        <div className="absolute top-3 left-3 z-10">
+                          <div 
                             onClick={() => toggleActivitySelection(activity)}
-                            className={`inline-flex items-center px-3 py-1.5 border shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                            className={`h-6 w-6 rounded-md border-2 flex items-center justify-center cursor-pointer ${
                               selectedActivities[activity.id] 
-                                ? 'border-primary-500 text-primary-700 bg-primary-50 hover:bg-primary-100 focus:ring-primary-500' 
-                                : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-gray-500'
+                                ? 'bg-primary-500 border-primary-600 text-white' 
+                                : 'border-gray-300 bg-white'
                             }`}
                           >
-                            {selectedActivities[activity.id] ? (
-                              <>
-                                <Check className="h-4 w-4 mr-1" />
-                                Selected
-                              </>
-                            ) : (
-                              'Select'
-                            )}
-                          </button>
-                        ) : (
-                          <>
+                            {selectedActivities[activity.id] && <Check className="h-4 w-4" />}
+                          </div>
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className={`text-lg font-medium text-gray-900 ${isBulkDeleteMode ? 'ml-6' : ''}`}>{activity.name}</h3>
+                          <span className="text-xs font-medium text-gray-500">{activity.category}</span>
+                        </div>
+                        
+                        <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-500">Frequency</p>
+                            <p className="font-medium text-gray-900">
+                              {`${activity.frequency} ${activity.frequencyUnit}${activity.frequency > 1 ? 's' : ''}`}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Duration</p>
+                            <p className="font-medium text-gray-900">
+                              {`${activity.duration} ${activity.durationUnit}${activity.duration > 1 ? 's' : ''}`}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Life Impact</p>
+                            <p className={`font-medium ${
+                              activity.lifeImpact > 0 ? 'text-green-600' : 
+                              activity.lifeImpact < 0 ? 'text-red-600' : 
+                              'text-gray-600'
+                            }`}>
+                              {activity.lifeImpact > 0 ? `+${activity.lifeImpact} years` : 
+                               activity.lifeImpact < 0 ? `${activity.lifeImpact} years` : 
+                               'Neutral'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Lifetime Hours</p>
+                            <p className="font-medium text-gray-900">
+                              {calculateLifetimeHours(userData, activity).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 flex justify-end space-x-2">
+                          {isBulkDeleteMode ? (
                             <button 
-                              onClick={() => editActivity(index)} 
-                              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                              onClick={() => toggleActivitySelection(activity)}
+                              className={`inline-flex items-center px-3 py-1.5 border shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                selectedActivities[activity.id] 
+                                  ? 'border-primary-500 text-primary-700 bg-primary-50 hover:bg-primary-100 focus:ring-primary-500' 
+                                  : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-gray-500'
+                              }`}
                             >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
+                              {selectedActivities[activity.id] ? (
+                                <>
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Selected
+                                </>
+                              ) : (
+                                'Select'
+                              )}
                             </button>
-                            <button 
-                              onClick={() => handleRemoveActivity(index)} 
-                              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
-                            </button>
-                          </>
-                        )}
+                          ) : (
+                            <>
+                              <button 
+                                onClick={() => editActivity(index)} 
+                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => handleRemoveActivity(index)} 
+                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))
               ) : (
                 <div className="col-span-2 text-center py-12">
                   <Clock className="h-12 w-12 mx-auto text-gray-400" />
