@@ -167,25 +167,38 @@ adminLLMRouter.post("/generate-activity", async (req: AuthenticatedRequest, res)
       }
 
       // Add imageData to response for saving later
+      // Create activity with all required fields
+      const activity = {
+        ...activityData,
+        frequency: activityData.frequency || 1,
+        frequencyUnit: activityData.frequencyUnit || "week",
+        duration: activityData.duration || 30,
+        durationUnit: activityData.durationUnit || "minute",
+        lifeImpact: activityData.lifeImpact || 5,
+        priority: activityData.priority || 3,
+        exportToCalendar: false,
+        clusterId: null,
+        userId: req.user!.id,
+      };
+
+      // Create the activity in the database
+      const createdActivity = await storage.createActivity(activity);
+
+      // Associate image with new activity
+      const imageData = {
+        activityId: createdActivity.id,
+        filename,
+        originalFilename,
+        path: `uploads/${filename}`,
+        mimeType: 'image/jpeg'
+      };
+
+      const savedImage = await storage.createActivityImage(imageData);
+
       res.json({ 
-        message: "Activity generated successfully", 
-        activity: {
-          ...activityData,
-          // Ensure default values for required fields
-          frequency: activityData.frequency || 1,
-          frequencyUnit: activityData.frequencyUnit || "week",
-          duration: activityData.duration || 30,
-          durationUnit: activityData.durationUnit || "minute",
-          lifeImpact: activityData.lifeImpact || 5,
-          priority: activityData.priority || 3
-        },
-        image: {
-          id: null,
-          filename,
-          originalFilename,
-          path: `uploads/${filename}`,
-          mimeType: 'image/jpeg'
-        }
+        message: "Activity generated and image associated successfully", 
+        activity: createdActivity,
+        image: savedImage
       });
   } catch (err: unknown) {
     console.error("Error generating activity:", err);
