@@ -1082,20 +1082,27 @@ export default function AdminImagesPage() {
       }
 
       if (data.activity) {
-        toast({
-          title: "Description Generated",
-          description: `Generated "${data.activity.name}" from image`,
+        // Save the activity and image
+        await associateImageMutation.mutateAsync({
+          activityId: data.activity.id,
+          filename: file.filename || '',
+          originalFilename: file.file.name,
+          path: file.path || '',
+          mimeType: file.file.type
         });
 
-        // Update the file state with the generated activity
-        setFiles(prev => prev.map(f => 
-          f === file ? { 
-            ...f, 
-            suggestedActivity: data.activity,
-            activityId: data.activity.id,
-            status: 'matched'
-          } : f
-        ));
+        // Update file state
+        setFiles(prev => prev.filter(f => f !== file));
+
+        // Show edit form dialog
+        setEditingImageId(data.image.id);
+        setSelectedActivity(data.activity);
+        setIsEditDialogOpen(true);
+
+        toast({
+          title: "Activity Created",
+          description: `Created "${data.activity.name}" - now you can edit the details`,
+        });
       }
     } catch (error) {
       console.error('LLM Generation Error:', error);
