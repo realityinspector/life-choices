@@ -43,14 +43,16 @@ export function setupAuth(app: Express) {
   const isDevelopment = process.env.NODE_ENV !== 'production';
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "REDACTED_SET_SESSION_SECRET_ENV",
-    resave: false,
+    resave: true,
     saveUninitialized: true,
     store: storage.sessionStore,
+    name: 'connect.sid',
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-      secure: !isDevelopment,
-      sameSite: isDevelopment ? 'lax' : 'none'
+      secure: false,
+      sameSite: 'lax',
+      path: '/'
     }
   };
 

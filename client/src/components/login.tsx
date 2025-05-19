@@ -36,9 +36,10 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({ username, password }),
-        credentials: 'include'  // This is important for cookies to work
+        credentials: 'same-origin'
       });
       
       if (response.ok) {
