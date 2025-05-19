@@ -145,22 +145,9 @@ adminRouter.get("/activities", async (req: AuthenticatedRequest, res) => {
       .from(activities)
       .orderBy(activities.id);
 
-    // Get all sample activities 
-    const sampleActivities = getAllSampleActivities();
+    console.log("Admin activities fetch:", dbActivities.length, "activities found (samples excluded)");
 
-    // Combine both sets of activities, ensuring no ID conflicts
-    const allActivities = [
-      ...dbActivities,
-      ...sampleActivities.map(activity => ({
-        ...activity,
-        id: activity.id + 1000 // Offset sample activity IDs to avoid conflicts
-      }))
-    ];
-
-    console.log("Admin activities fetch:", allActivities.length, "activities found",
-                `(${dbActivities.length} from database, ${sampleActivities.length} samples)`);
-
-    res.json(allActivities);
+    res.json(dbActivities);
   } catch (error) {
     console.error("Error fetching activities:", error);
     res.status(500).json({ error: "Failed to fetch activities" });
