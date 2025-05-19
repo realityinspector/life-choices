@@ -17,6 +17,14 @@ async function updateDb() {
         created_at TIMESTAMP DEFAULT NOW() NOT NULL
       );
     `);
+
+    console.log("Making userId nullable in activities table...");
+    
+    // Make userId nullable in activities table
+    await db.execute(sql`
+      ALTER TABLE activities 
+      ALTER COLUMN user_id DROP NOT NULL;
+    `);
     
     console.log("Database updated successfully");
     

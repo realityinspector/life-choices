@@ -88,7 +88,7 @@ export type InsertUser = typeof users.$inferInsert;
 // Activity schema
 export const activities = pgTable("activities", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   category: text("category").notNull(),
   frequency: integer("frequency").notNull(),
