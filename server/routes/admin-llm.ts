@@ -396,6 +396,7 @@ adminLLMRouter.get("/unprocessed-images", async (req: AuthenticatedRequest, res)
 adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) => {
   try {
     const { activityId } = req.body;
+    console.log("LLM Image Generation Request:", { activityId });
 
     if (!activityId) {
       return res.status(400).json({ error: "Activity ID is required" });
@@ -403,15 +404,20 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
 
     // Ensure activityId is a number and handle potential string input
     const parsedId = typeof activityId === 'string' ? parseInt(activityId, 10) : activityId;
-    
+
     if (isNaN(parsedId)) {
       return res.status(400).json({ error: "Invalid activity ID format" });
     }
 
-    // Get the activity
-    const activity = await storage.getActivity(parsedId);
+    // Get the activity from either admin activities or user activities
+    let activity = await storage.getActivity(parsedId);
     if (!activity) {
-      return res.status(404).json({ error: "Activity not found" });
+      // Try getting from admin activities
+      const adminActivities = await storage.getActivities();
+      activity = adminActivities.find(a => a.id === parsedId);
+      if (!activity) {
+        return res.status(404).json({ error: "Activity not found" });
+      }
     }
 
     // Check if the activity already has images
@@ -495,7 +501,7 @@ adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest
     }
 
     const results = [];
-    
+
     for (const activity of activitiesWithoutImages) {
       try {
         console.log(`Generating image for activity: ${activity.name} (ID: ${activity.id})`);
