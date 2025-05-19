@@ -60,11 +60,16 @@ authRouter.post("/register", async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Check if this is the first user
+    const userCount = await db.select().from(users).execute();
+    const isFirstUser = userCount.length === 0;
+
     // Create user
     const [newUser] = await db.insert(users).values({
       username,
       password: hashedPassword,
       name,
+      isAdmin: isFirstUser, // Set admin flag for first user
     }).returning();
 
     // Log in the new user
