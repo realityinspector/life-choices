@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { storage } from "../storage";
 import { togetherAIService } from "../services/together-ai";
 import { Activity, ActivityInsert, InsertActivityImage } from "../../shared/schema";
-import csv from 'csv-parse';
+import { parse } from 'csv-parse';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
