@@ -491,6 +491,17 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
                           {selectedActivities[activity.id] && <Check className="h-4 w-4" />}
                         </div>
                       </div>
+                    )} 
+                          onClick={() => toggleActivitySelection(activity)}
+                          className={`h-6 w-6 rounded-md border-2 flex items-center justify-center cursor-pointer ${
+                            selectedActivities[activity.id] 
+                              ? 'bg-primary-500 border-primary-600 text-white' 
+                              : 'border-gray-300 bg-white'
+                          }`}
+                        >
+                          {selectedActivities[activity.id] && <Check className="h-4 w-4" />}
+                        </div>
+                      </div>
                     )}
                     <div className="p-4">
                       <div className="flex items-center justify-between">
