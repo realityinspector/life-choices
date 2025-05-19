@@ -5,7 +5,7 @@ async function throwIfResNotOk(res: Response, ignoreStatuses?: number[]) {
   if (ignoreStatuses?.includes(res.status)) {
     return;
   }
-  
+
   if (!res.ok) {
     try {
       const text = await res.text();
@@ -30,10 +30,14 @@ export async function apiRequest(
   try {
     const res = await fetch(url, {
       method: options?.method || 'GET',
-      headers: options?.headers || {},
+      headers: options?.headers || {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
       body: options?.body,
       credentials: "include",
-      signal: options?.signal
+      signal: options?.signal,
+      mode: 'cors'
     });
 
     // Only throw for non-OK responses that aren't in the ignoreStatuses list
@@ -44,7 +48,7 @@ export async function apiRequest(
     if (error instanceof Error && error.name === 'AbortError') {
       throw error;
     }
-    
+
     // Re-throw other errors with more context
     if (error instanceof Error) {
       error.message = `API Request Error (${url}): ${error.message}`;
@@ -78,7 +82,7 @@ export const getQueryFn: <T>(options: {
 
       // For other non-OK responses, throw an error
       await throwIfResNotOk(res);
-      
+
       // Parse and return the JSON response
       return await res.json();
     } catch (error) {
@@ -87,12 +91,12 @@ export const getQueryFn: <T>(options: {
         console.log('Request was aborted');
         throw error;
       }
-      
+
       // Add context to other errors
       if (error instanceof Error) {
         console.error(`Query Error (${queryKey[0]}):`, error);
       }
-      
+
       throw error;
     }
   };

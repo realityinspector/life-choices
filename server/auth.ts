@@ -48,12 +48,12 @@ export function setupAuth(app: Express) {
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+      secure: true,
+      sameSite: 'none'
     }
   };
 
-  app.set("trust proxy", 1);
+  app.set("trust proxy", true);
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
