@@ -40,8 +40,28 @@ export default function AdminActivities() {
     }
   });
 
+  const [selectedActivities, setSelectedActivities] = useState<number[]>([]);
+  
   // Create a Set of activity IDs that have images
   const activitiesWithImages = new Set(activityImages.map(img => img.activityId));
+
+  // Handle checkbox selection
+  const toggleSelection = (id: number) => {
+    setSelectedActivities(prev => 
+      prev.includes(id) 
+        ? prev.filter(actId => actId !== id)
+        : [...prev, id]
+    );
+  };
+
+  // Handle bulk selection
+  const toggleAllSelection = () => {
+    if (selectedActivities.length === activities.length) {
+      setSelectedActivities([]);
+    } else {
+      setSelectedActivities(activities.map(a => a.id));
+    }
+  };
 
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
@@ -97,18 +117,34 @@ export default function AdminActivities() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>
+                  <input 
+                    type="checkbox"
+                    checked={selectedActivities.length === activities.length}
+                    onChange={toggleAllSelection}
+                    className="h-4 w-4"
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Frequency</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Impact</TableHead>
-                 <TableHead>Has Image</TableHead>
+                <TableHead>Has Image</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {activities.map((activity) => (
                 <TableRow key={activity.id}>
+                  <TableCell>
+                    <input 
+                      type="checkbox"
+                      checked={selectedActivities.includes(activity.id)}
+                      onChange={() => toggleSelection(activity.id)}
+                      className="h-4 w-4"
+                    />
+                  </TableCell>
                   <TableCell>{activity.name}</TableCell>
                   <TableCell>{activity.category}</TableCell>
                   <TableCell>{activity.frequency} {activity.frequencyUnit}</TableCell>
