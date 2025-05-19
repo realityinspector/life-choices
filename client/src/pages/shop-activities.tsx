@@ -273,7 +273,7 @@ const ActivityCard = ({
                     </Button>
                   </div>
                   <Button 
-                    className="w-full text-xs h-8" 
+                    className="w-full text-xs h-8 text-black" 
                     size="sm"
                     variant="ghost"
                     onClick={() => setShowShareModal(true)}
@@ -310,7 +310,7 @@ const ActivityCard = ({
                 </Button>
               </div>
               <Button 
-                className="w-full text-xs h-8" 
+                className="w-full text-xs h-8 text-black" 
                 size="sm"
                 variant="ghost"
                 onClick={handleExportToCalendar}
@@ -805,7 +805,7 @@ export default function ShopActivitiesPage() {
                   <div className="h-full flex flex-col items-center justify-center text-center">
                     <h2 className="text-3xl font-bold mb-4">LIFE CHOICES</h2>
                     <h3 className="text-lg font-medium mb-2">Your collection is empty</h3>
-                    <p className="text-muted-foreground mb-6">
+                    <p className="text-mutedforeground mb-6">
                       Explore our activities and add them to your collection
                     </p>
                     <Button onClick={() => setShowCart(false)} className="border-black text-black bg-white hover:bg-gray-50">Explore Activities</Button>
