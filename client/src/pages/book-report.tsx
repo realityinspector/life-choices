@@ -7,10 +7,10 @@ import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BookOpen, ArrowLeft } from "lucide-react";
-import { useLocation, useNavigate } from "wouter";
+import { useLocation } from "wouter";
 
 export default function BookReportPage() {
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const { userData } = useUser();
   const { currentBook, bookActivities } = useBook();
 
