@@ -476,8 +476,8 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
                     return sortDirection === 'asc' ? comparison : -comparison;
                   })
                   .map((activity, index) => (
-                  <div key={index} className={`relative bg-white border ${selectedActivities[activity.id] ? 'border-primary-500 ring-2 ring-primary-500' : 'border-gray-200'} rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200`}>
-                    <div className={`h-2 bg-${activity.color}-500`}></div>
+                    <div key={index} className={`relative bg-white border ${selectedActivities[activity.id] ? 'border-primary-500 ring-2 ring-primary-500' : 'border-gray-200'} rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200`}>
+                      <div className={`h-2 bg-${activity.color}-500`}></div>
                     {isBulkDeleteMode && (
                       <div className="absolute top-3 left-3 z-10">
                         <div 
