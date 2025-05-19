@@ -256,7 +256,7 @@ export default function AdminImagesPage() {
   const [files, setFiles] = useState<FileUploadState[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isMatching, setIsMatching] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(isUploading);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [searchQuery, setSearchQuery] = useState('');
@@ -981,7 +981,7 @@ export default function AdminImagesPage() {
         title: 'Selection Required',
         description: 'Please select an activity for this image.',
         variant: 'destructive',
-      });
+            });
       return;
     }
 
@@ -1077,33 +1077,31 @@ export default function AdminImagesPage() {
       const data = await res.json();
       console.log('LLM Generation Response:', data);
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to generate activity description');
-      }
+      if (data.activity && data.image && file.filename && file.path) {
+      // Save the activity and image
+      await associateImageMutation.mutateAsync({
+        activityId: data.activity.id,
+        filename: file.filename,
+        originalFilename: file.file.name,
+        path: file.path,
+        mimeType: file.file.type || 'image/jpeg'
+      });
 
-      if (data.activity) {
-        // Save the activity and image
-        await associateImageMutation.mutateAsync({
-          activityId: data.activity.id,
-          filename: file.filename || '',
-          originalFilename: file.file.name,
-          path: file.path || '',
-          mimeType: file.file.type
-        });
+      // Update file state
+      setFiles(prev => prev.filter(f => f !== file));
 
-        // Update file state
-        setFiles(prev => prev.filter(f => f !== file));
+      // Show edit form dialog
+      setEditingImageId(data.image.id);
+      setSelectedActivity(data.activity);
+      setIsEditDialogOpen(true);
 
-        // Show edit form dialog
-        setEditingImageId(data.image.id);
-        setSelectedActivity(data.activity);
-        setIsEditDialogOpen(true);
-
-        toast({
-          title: "Activity Created",
-          description: `Created "${data.activity.name}" - now you can edit the details`,
-        });
-      }
+      toast({
+        title: "Activity Created",
+        description: `Created "${data.activity.name}" - now you can edit the details`,
+      });
+    } else {
+      throw new Error("Missing required data from LLM response");
+    }
     } catch (error) {
       console.error('LLM Generation Error:', error);
       toast({
