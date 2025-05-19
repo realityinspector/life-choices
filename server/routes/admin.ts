@@ -64,6 +64,14 @@ function isAuthenticated(req: Request): boolean {
 
 export const adminRouter = Router();
 
+// Middleware to check if user is authenticated
+const requireAuth = (req: AuthenticatedRequest, res: Response, next: any) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  next();
+};
+
 // Generate activity description using LLM
 adminRouter.post("/generate-description", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
