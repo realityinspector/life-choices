@@ -1,127 +1,19 @@
 import { Router } from "express";
-import { storage } from "../storage";
-import { llmService } from "../services/llm";
+import { db } from "../db";
+import { llmConversations, llmMessages, systemPrompts } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
-import { systemPromptSchema, llmConversationSchema, llmMessageSchema } from "@shared/schema";
+import { auth } from "../auth";
 
-export const llmRouter = Router();
+const llmRouter = Router();
 
-// Middleware to check if user is authenticated
-const requireAuth = (req: any, res: any, next: any) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  next();
-};
-
-// Validate system prompt request
-const systemPromptRequestSchema = systemPromptSchema.extend({});
-
-// Validate send message request
-const sendMessageRequestSchema = z.object({
-  message: z.string().min(1, "Message is required"),
-  conversationId: z.number().nullable().optional(),
-  systemPromptId: z.number().nullable().optional(),
-});
-
-// Get system prompts
-llmRouter.get("/prompts", requireAuth, async (req, res) => {
+// Get all conversations for the current user
+llmRouter.get("/conversations", auth, async (req, res) => {
   try {
-    const prompts = await storage.getSystemPrompts();
-    res.json(prompts);
-  } catch (error) {
-    console.error("Error fetching system prompts:", error);
-    res.status(500).json({ message: "Failed to fetch system prompts" });
-  }
-});
-
-// Get a specific system prompt
-llmRouter.get("/prompts/:id", requireAuth, async (req, res) => {
-  try {
-    const promptId = parseInt(req.params.id);
-    if (isNaN(promptId)) {
-      return res.status(400).json({ message: "Invalid prompt ID" });
-    }
-    
-    const prompt = await storage.getSystemPrompt(promptId);
-    if (!prompt) {
-      return res.status(404).json({ message: "System prompt not found" });
-    }
-    
-    res.json(prompt);
-  } catch (error) {
-    console.error("Error fetching system prompt:", error);
-    res.status(500).json({ message: "Failed to fetch system prompt" });
-  }
-});
-
-// Create a system prompt
-llmRouter.post("/prompts", requireAuth, async (req, res) => {
-  try {
-    const promptData = systemPromptRequestSchema.parse(req.body);
-    const prompt = await storage.createSystemPrompt(promptData);
-    res.status(201).json(prompt);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid prompt data", errors: error.errors });
-    }
-    console.error("Error creating system prompt:", error);
-    res.status(500).json({ message: "Failed to create system prompt" });
-  }
-});
-
-// Update a system prompt
-llmRouter.put("/prompts/:id", requireAuth, async (req, res) => {
-  try {
-    const promptId = parseInt(req.params.id);
-    if (isNaN(promptId)) {
-      return res.status(400).json({ message: "Invalid prompt ID" });
-    }
-    
-    const promptData = systemPromptRequestSchema.parse(req.body);
-    const updatedPrompt = await storage.updateSystemPrompt(promptId, promptData);
-    
-    if (!updatedPrompt) {
-      return res.status(404).json({ message: "System prompt not found" });
-    }
-    
-    res.json(updatedPrompt);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid prompt data", errors: error.errors });
-    }
-    console.error("Error updating system prompt:", error);
-    res.status(500).json({ message: "Failed to update system prompt" });
-  }
-});
-
-// Delete a system prompt
-llmRouter.delete("/prompts/:id", requireAuth, async (req, res) => {
-  try {
-    const promptId = parseInt(req.params.id);
-    if (isNaN(promptId)) {
-      return res.status(400).json({ message: "Invalid prompt ID" });
-    }
-    
-    // Check if prompt exists
-    const prompt = await storage.getSystemPrompt(promptId);
-    if (!prompt) {
-      return res.status(404).json({ message: "System prompt not found" });
-    }
-    
-    await storage.deleteSystemPrompt(promptId);
-    res.status(204).send();
-  } catch (error) {
-    console.error("Error deleting system prompt:", error);
-    res.status(500).json({ message: "Failed to delete system prompt" });
-  }
-});
-
-// Get conversations for the current user
-llmRouter.get("/conversations", requireAuth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const conversations = await storage.getLLMConversations(userId);
+    const conversations = await db.query.llmConversations.findMany({
+      where: eq(llmConversations.userId, req.user!.id),
+      orderBy: (conversations, { desc }) => [desc(conversations.updatedAt)],
+    });
     res.json(conversations);
   } catch (error) {
     console.error("Error fetching conversations:", error);
@@ -129,76 +21,49 @@ llmRouter.get("/conversations", requireAuth, async (req, res) => {
   }
 });
 
-// Get a specific conversation
-llmRouter.get("/conversations/:id", requireAuth, async (req, res) => {
+// Create a new conversation
+llmRouter.post("/conversations", auth, async (req, res) => {
   try {
-    const conversationId = parseInt(req.params.id);
-    if (isNaN(conversationId)) {
-      return res.status(400).json({ message: "Invalid conversation ID" });
-    }
-    
-    const conversation = await storage.getLLMConversation(conversationId);
-    if (!conversation) {
-      return res.status(404).json({ message: "Conversation not found" });
-    }
-    
-    // Check if the conversation belongs to the current user
-    if (conversation.userId !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to access this conversation" });
-    }
-    
-    res.json(conversation);
+    const { title } = z.object({
+      title: z.string().min(1),
+    }).parse(req.body);
+
+    const [newConversation] = await db.insert(llmConversations).values({
+      userId: req.user!.id,
+      title,
+    }).returning();
+
+    res.status(201).json(newConversation);
   } catch (error) {
-    console.error("Error fetching conversation:", error);
-    res.status(500).json({ message: "Failed to fetch conversation" });
+    console.error("Error creating conversation:", error);
+    res.status(500).json({ message: "Failed to create conversation" });
   }
 });
 
-// Delete a conversation
-llmRouter.delete("/conversations/:id", requireAuth, async (req, res) => {
+// Get conversation messages
+llmRouter.get("/conversations/:id/messages", auth, async (req, res) => {
   try {
-    const conversationId = parseInt(req.params.id);
-    if (isNaN(conversationId)) {
-      return res.status(400).json({ message: "Invalid conversation ID" });
-    }
-    
-    const conversation = await storage.getLLMConversation(conversationId);
-    if (!conversation) {
-      return res.status(404).json({ message: "Conversation not found" });
-    }
-    
-    // Check if the conversation belongs to the current user
-    if (conversation.userId !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to delete this conversation" });
-    }
-    
-    await storage.deleteLLMConversation(conversationId);
-    res.status(204).send();
-  } catch (error) {
-    console.error("Error deleting conversation:", error);
-    res.status(500).json({ message: "Failed to delete conversation" });
-  }
-});
+    const { id } = z.object({
+      id: z.string(),
+    }).parse(req.params);
 
-// Get messages for a conversation
-llmRouter.get("/conversations/:id/messages", requireAuth, async (req, res) => {
-  try {
-    const conversationId = parseInt(req.params.id);
-    if (isNaN(conversationId)) {
-      return res.status(400).json({ message: "Invalid conversation ID" });
-    }
-    
-    const conversation = await storage.getLLMConversation(conversationId);
+    // Check if conversation belongs to user
+    const [conversation] = await db.select().from(llmConversations).where(
+      and(
+        eq(llmConversations.id, parseInt(id)),
+        eq(llmConversations.userId, req.user!.id)
+      )
+    );
+
     if (!conversation) {
       return res.status(404).json({ message: "Conversation not found" });
     }
-    
-    // Check if the conversation belongs to the current user
-    if (conversation.userId !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to access this conversation" });
-    }
-    
-    const messages = await storage.getLLMMessages(conversationId);
+
+    const messages = await db.query.llmMessages.findMany({
+      where: eq(llmMessages.conversationId, parseInt(id)),
+      orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+    });
+
     res.json(messages);
   } catch (error) {
     console.error("Error fetching messages:", error);
@@ -206,47 +71,59 @@ llmRouter.get("/conversations/:id/messages", requireAuth, async (req, res) => {
   }
 });
 
-// Send a message to the LLM
-llmRouter.post("/messages", requireAuth, async (req, res) => {
+// Add message to conversation
+llmRouter.post("/conversations/:id/messages", auth, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { message, conversationId, systemPromptId } = sendMessageRequestSchema.parse(req.body);
-    
-    // If conversationId is provided, check if it exists and belongs to the user
-    if (conversationId) {
-      const conversation = await storage.getLLMConversation(conversationId);
-      if (!conversation) {
-        return res.status(404).json({ message: "Conversation not found" });
-      }
-      
-      if (conversation.userId !== userId) {
-        return res.status(403).json({ message: "Not authorized to access this conversation" });
-      }
-    }
-    
-    // Get API status
-    const hasApiKey = llmService.hasApiKey();
-    
-    // Process the message
-    const result = await llmService.sendMessage(
-      userId,
-      conversationId || null,
-      message,
-      systemPromptId || undefined
+    const { id } = z.object({
+      id: z.string(),
+    }).parse(req.params);
+
+    const { role, content, systemPromptId } = z.object({
+      role: z.enum(["system", "user", "assistant"]),
+      content: z.string(),
+      systemPromptId: z.number().optional(),
+    }).parse(req.body);
+
+    // Check if conversation belongs to user
+    const [conversation] = await db.select().from(llmConversations).where(
+      and(
+        eq(llmConversations.id, parseInt(id)),
+        eq(llmConversations.userId, req.user!.id)
+      )
     );
-    
-    res.json({
-      ...result,
-      apiStatus: {
-        available: hasApiKey,
-        fallbackMode: !hasApiKey
-      }
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: "Invalid message data", errors: error.errors });
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
     }
-    console.error("Error sending message:", error);
-    res.status(500).json({ message: "Failed to send message" });
+
+    const [newMessage] = await db.insert(llmMessages).values({
+      conversationId: parseInt(id),
+      role,
+      content,
+      systemPromptId,
+    }).returning();
+
+    // Update conversation's updatedAt timestamp
+    await db.update(llmConversations)
+      .set({ updatedAt: new Date() })
+      .where(eq(llmConversations.id, parseInt(id)));
+
+    res.status(201).json(newMessage);
+  } catch (error) {
+    console.error("Error adding message:", error);
+    res.status(500).json({ message: "Failed to add message" });
   }
 });
+
+// Get system prompts
+llmRouter.get("/system-prompts", auth, async (req, res) => {
+  try {
+    const prompts = await db.query.systemPrompts.findMany();
+    res.json(prompts);
+  } catch (error) {
+    console.error("Error fetching system prompts:", error);
+    res.status(500).json({ message: "Failed to fetch system prompts" });
+  }
+});
+
+export default llmRouter;

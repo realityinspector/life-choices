@@ -23,6 +23,9 @@ import AdminDashboard from "@/pages/admin";
 import AdminActivitiesPage from "@/pages/admin-activities";
 import AdminActivityFormPage from "@/pages/admin-activity-form";
 import BottomNavigation from "@/components/bottom-navigation";
+import BookPage from "@/pages/book";
+import BookReportPage from "@/pages/book-report";
+import { BookProvider } from "@/context/book-context";
 
 // Set the document title
 document.title = "LIFE CHOICES | Shape your timeline, design your future";
@@ -116,6 +119,9 @@ function Router() {
       <Route path="/admin/backup" component={AdminBackupPage} />
       <Route path="/admin/csv-import" component={AdminCSVImportPage} />
       
+      <Route path="/book" component={BookPage} />
+      <Route path="/book-report" component={BookReportPage} />
+      
       <Route component={NotFound} />
     </Switch>
   );
@@ -144,14 +150,14 @@ function AppContent() {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider>
-        <AppContent />
+        <BookProvider>
+          <AppContent />
+        </BookProvider>
       </UserProvider>
     </QueryClientProvider>
   );
 }
-
-export default App;

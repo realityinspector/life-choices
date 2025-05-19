@@ -12,11 +12,47 @@ import { adminLLMRouter } from "./routes/admin-llm";
 import { adminBackupRouter } from "./routes/admin-backup";
 import path from "path";
 import express from "express";
+import bookRouter from "./routes/book";
+import { Router } from 'express';
+import authRouter from './routes/auth';
+import userRouter from './routes/user';
+import activityImageRouter from './routes/activity-image';
+import llmRouter from './routes/llm';
+import backupRouter from './routes/backup';
+import csvImportRouter from './routes/csv-import';
 
 // Type guard to check if user is authenticated
 function isAuthenticated(req: Request): boolean {
   return req.isAuthenticated();
 }
+
+const router = Router();
+
+// Auth routes
+router.use('/api/auth', authRouter);
+
+// User routes
+router.use('/api/users', userRouter);
+
+// Activity routes
+router.use('/api/activities', activityRouter);
+
+// Activity image routes
+router.use('/api/activity-images', activityImageRouter);
+
+// LLM routes
+router.use('/api/llm', llmRouter);
+
+// Backup routes
+router.use('/api/backup', backupRouter);
+
+// CSV import routes
+router.use('/api/csv-import', csvImportRouter);
+
+// Book routes
+router.use('/api/books', bookRouter);
+
+export default router;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -61,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/admin', requireAdmin, adminRouter);
   app.use('/api/admin-llm', requireAdmin, adminLLMRouter);
   app.use('/api/admin-backup', requireAdmin, adminBackupRouter);
-
+  app.use("/api/books", bookRouter);
 
   // Admin check route
   app.get('/api/user/admin-check', requireAuth, async (req, res) => {

@@ -7,7 +7,8 @@ import {
   BarChart2,
   ShoppingCart,
   ArrowDown,
-  CheckSquare
+  CheckSquare,
+  BookOpen
 } from "lucide-react";
 
 export default function BottomNavigation() {
@@ -17,6 +18,7 @@ export default function BottomNavigation() {
   const isActive = (path: string) => {
     if (path === "/" && location === "/") return true;
     if (path === "/" && location === "/whats-next") return true;
+    if (path === "/book" && (location === "/book" || location === "/book-report")) return true;
     return location === path;
   };
   
@@ -26,7 +28,7 @@ export default function BottomNavigation() {
   const inactiveLinkClass = "flex flex-col items-center py-1 text-gray-500 hover:text-gray-700 cursor-pointer";
 
   return (
-    <div className="bg-white border-t py-2 px-4 grid grid-cols-5 gap-1 text-center">
+    <div className="bg-white border-t py-2 px-4 grid grid-cols-6 gap-1 text-center">
       <div 
         onClick={() => navigate("/whats-next")}
         className={isActive("/") || isActive("/whats-next") ? activeLinkClass : inactiveLinkClass}
@@ -49,6 +51,14 @@ export default function BottomNavigation() {
       >
         <Plus className="h-5 w-5" />
         <span className="text-xs mt-1">Add</span>
+      </div>
+      
+      <div 
+        onClick={() => navigate("/book")}
+        className={isActive("/book") ? activeLinkClass : inactiveLinkClass}
+      >
+        <BookOpen className="h-5 w-5" />
+        <span className="text-xs mt-1">Book</span>
       </div>
       
       <div 

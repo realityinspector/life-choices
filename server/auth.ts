@@ -1,11 +1,16 @@
 import passport from "passport";
 import passportLocal from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as UserType, InsertUser } from "@shared/schema";
+import { Strategy as LocalStrategy } from "passport-local";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcrypt";
 
 // Use CommonJS-style import for passport-local
 const { Strategy: LocalStrategy } = passportLocal;
@@ -20,6 +25,9 @@ declare global {
       age: number;
       lifeExpectancy: number;
       sleepHours: number;
+    }
+    interface Request {
+      user?: any;
     }
   }
 }
@@ -64,39 +72,34 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        console.log("Authenticating user:", username);
-        const user = await storage.getUserByUsername(username);
+        const [user] = await db.select().from(users).where(eq(users.username, username));
         
         if (!user) {
-          console.log("User not found:", username);
-          return done(null, false, { message: "Incorrect username or password" });
+          return done(null, false, { message: "Invalid credentials" });
         }
 
-        // In a real app, we would use comparePasswords for hashed passwords
-        if (user.password !== password) {
-          console.log("Invalid password for user:", username);
-          return done(null, false, { message: "Incorrect username or password" });
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
+          return done(null, false, { message: "Invalid credentials" });
         }
 
-        console.log("Authentication successful for user:", username);
         return done(null, user);
-      } catch (err) {
-        console.error("Authentication error:", err);
-        return done(err);
+      } catch (error) {
+        return done(error);
       }
-    }),
+    })
   );
 
-  passport.serializeUser((user: Express.User, done) => {
+  passport.serializeUser((user: any, done) => {
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const user = await storage.getUser(id);
+      const [user] = await db.select().from(users).where(eq(users.id, id));
       done(null, user);
-    } catch (err) {
-      done(err);
+    } catch (error) {
+      done(error);
     }
   });
 
@@ -175,3 +178,30 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 }
+
+// Authentication middleware
+export const auth = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  next();
+};
+
+// Session configuration
+export const sessionConfig: session.SessionOptions = {
+  secret: process.env.SESSION_SECRET || "REDACTED_SET_SESSION_SECRET_ENV",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  },
+};
+
+// Initialize passport middleware
+export const initializePassport = (app: any) => {
+  app.use(session(sessionConfig));
+  app.use(passport.initialize());
+  app.use(passport.session());
+};

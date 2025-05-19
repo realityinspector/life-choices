@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, real, json, varchar, timestamp, date, time, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, real, json, varchar, timestamp, date, time, decimal, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -261,3 +261,30 @@ export const activityImageSchema = createInsertSchema(activityImages).omit({
 
 export type ActivityImage = typeof activityImages.$inferSelect;
 export type InsertActivityImage = typeof activityImages.$inferInsert;
+
+// Book tables
+export const books = pgTable('books', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const bookActivities = pgTable('book_activities', {
+  id: serial('id').primaryKey(),
+  bookId: integer('book_id').notNull().references(() => books.id),
+  activityId: integer('activity_id').notNull().references(() => activities.id),
+  orderIndex: integer('order_index').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Add unique constraint to prevent duplicate activities in a book
+export const bookActivitiesUniqueConstraint = uniqueIndex('book_activities_unique').on(bookActivities.bookId, bookActivities.activityId);
+
+// Book types
+export type Book = typeof books.$inferSelect;
+export type InsertBook = typeof books.$inferInsert;
+export type BookActivity = typeof bookActivities.$inferSelect;
+export type InsertBookActivity = typeof bookActivities.$inferInsert;
