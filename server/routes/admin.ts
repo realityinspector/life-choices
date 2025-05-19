@@ -8,7 +8,7 @@ import { ActivityImage, InsertActivityImage, Activity } from "../../shared/schem
 import { getAllSampleActivities } from "../../shared/sample-activities";
 import { importActivities } from "../../scripts/import-activities";
 import { db } from "../db";
-import { activities } from "../../db/schema";
+import { activities } from "../../shared/schema";
 
 // Set up storage for uploaded files
 const uploadDir = path.join(process.cwd(), "uploads");
