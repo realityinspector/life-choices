@@ -225,8 +225,13 @@ export default function AdminActivities() {
                               const res = await apiRequest('/api/admin-llm/generate-image', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ activityId: activity.id }),
+                                body: JSON.stringify({ 
+                                  activityId: parseInt(activity.id.toString(), 10)
+                                }),
                               });
+                              if (!res.ok) {
+                                throw new Error(`Failed to generate image: ${res.status}`);
+                              }
                               const data = await res.json();
                               if (data.image) {
                                 toast({
