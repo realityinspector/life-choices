@@ -58,8 +58,8 @@ const requireAdminAuth = (req: AuthenticatedRequest, res: Response, next: any) =
     return res.status(401).json({ message: "Unauthorized" });
   }
   
-  // Check if user is admin
-  if (!req.user?.isAdmin) {
+  // Check if user is admin (all users with ID 1 are considered admins in this app)
+  if (req.user?.id !== 1) {
     return res.status(403).json({ message: "Forbidden: Admin access required" });
   }
   

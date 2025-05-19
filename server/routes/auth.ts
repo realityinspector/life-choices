@@ -60,49 +60,12 @@ authRouter.post("/register", async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Check if this is the first user
-    const userCount = await db.select().from(users).execute();
-    const isFirstUser = userCount.length === 0;
-
     // Create user
     const [newUser] = await db.insert(users).values({
       username,
       password: hashedPassword,
       name,
-      isAdmin: isFirstUser, // Set admin flag for first user
     }).returning();
-
-    // Create initial sample activities for the new user
-    const sampleActivities = [
-      {
-        userId: newUser.id,
-        name: "Morning Exercise",
-        category: "Health",
-        frequency: 7,
-        frequencyUnit: "day",
-        duration: 30,
-        durationUnit: "minute",
-        lifeImpact: 8,
-        color: "#4CAF50",
-        priority: 1,
-        emoji: "🏃"
-      },
-      {
-        userId: newUser.id,
-        name: "Reading",
-        category: "Personal Development",
-        frequency: 1,
-        frequencyUnit: "day",
-        duration: 30,
-        durationUnit: "minute",
-        lifeImpact: 7,
-        color: "#2196F3",
-        priority: 2,
-        emoji: "📚"
-      }
-    ];
-
-    await db.insert(activities).values(sampleActivities);
 
     // Log in the new user
     req.login(newUser, (err) => {
