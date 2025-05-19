@@ -255,7 +255,7 @@ export default function AdminImagesPage() {
   const [files, setFiles] = useState<FileUploadState[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isMatching, setIsMatching] = useState(false);
-  const [isUploading, setIsUploading] = useState(isUploading);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [searchQuery, setSearchQuery] = useState('');
@@ -985,7 +985,7 @@ export default function AdminImagesPage() {
     }
 
     const image = activityImages.find(img => img.id === editingImageId);
-    if (!image) return;```python
+    if (!image) return;
 
     try {
       await associateImageMutation.mutateAsync({
@@ -1343,14 +1343,14 @@ export default function AdminImagesPage() {
               <CardTitle className="flex items-center justify-between">
                 <span>Manage Activity Images</span>
                 <div className="flex items-center space-x-2">
-                  <div className={`relative transition-all duration-300 ${searchActive ? 'w-64' : 'w-9'}`}>
+                  <div className={"relative transition-all duration-300 " + (searchActive ? 'w-64' : 'w-9')}>
                     <Input 
                       ref={searchInputRef}
                       type="text" 
                       placeholder="Search by filename..." 
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className={`pl-8 pr-2 transition-all duration-300 ${searchActive ? 'opacity-100' : 'opacity-0'}`}
+                      className={"pl-8 pr-2 transition-all duration-300 " + (searchActive ? 'opacity-100' : 'opacity-0')}
                       onBlur={() => searchQuery === '' && toggleSearchFocus(false)}
                     />
                     <Button 
