@@ -617,56 +617,86 @@ adminLLMRouter.post("/import-csv", csvUpload.single('csv'), async (req: Authenti
       parser.end();
     });
 
-    // Process each record
-    for (const record of records) {
-      try {
-        // Generate activity details using Together AI
-        const activityResponse = await togetherAIService.generateActivityFromFilename(record.activity_name);
-        
-        if (!activityResponse) {
-          throw new Error("Failed to generate activity details");
+    console.log(`Starting to process ${records.length} records`);
+
+    // Process each record with retries
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
+      console.log(`Processing record ${i + 1}/${records.length}: ${record.activity_name}`);
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`Generate activity for ${record.activity_name} - Attempt ${attempt}/3`);
+          
+          // Generate activity details using Together AI
+          const activityResponse = await togetherAIService.generateActivityFromFilename(record.activity_name);
+          
+          if (!activityResponse) {
+            throw new Error("Failed to generate activity details");
+          }
+
+          console.log(`Generate image for ${record.activity_name} - Attempt ${attempt}/3`);
+          
+          // Generate image using Together AI with timeout
+          const imagePromise = togetherAIService.generateImageForActivity(activityResponse);
+          const imageResponse = await Promise.race([
+            imagePromise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Image generation timeout")), 60000))
+          ]);
+          
+          if (!imageResponse) {
+            throw new Error("Failed to generate activity image");
+          }
+
+          // Create activity with user ID
+          const activityWithUser: ActivityInsert & { userId: number, nextDue: Date } = {
+            ...activityResponse,
+            userId: req.user!.id,
+            nextDue: new Date(),
+          };
+
+          // Save activity
+          const createdActivity = await storage.createActivity(activityWithUser);
+          console.log(`Activity created: ${createdActivity.name} (ID: ${createdActivity.id})`);
+
+          // Associate image
+          const imageAssociation: InsertActivityImage = {
+            activityId: createdActivity.id,
+            filename: imageResponse.filename,
+            originalFilename: imageResponse.originalFilename,
+            path: imageResponse.path,
+            mimeType: imageResponse.mimeType
+          };
+
+          await storage.createActivityImage(imageAssociation);
+          console.log(`Image associated with activity: ${imageResponse.filename}`);
+
+          results.push({
+            activityName: record.activity_name,
+            status: 'success',
+            activity: createdActivity
+          });
+
+          // Success - break retry loop
+          break;
+        } catch (error) {
+          console.error(`Error processing record ${record.activity_name} (Attempt ${attempt}/3):`, error);
+          if (attempt === 3) {
+            results.push({
+              activityName: record.activity_name,
+              status: 'failed',
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          } else {
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
         }
+      }
 
-        // Generate image using Together AI
-        const imageResponse = await togetherAIService.generateImageForActivity(activityResponse);
-        
-        if (!imageResponse) {
-          throw new Error("Failed to generate activity image");
-        }
-
-        // Create activity with user ID
-        const activityWithUser: ActivityInsert & { userId: number, nextDue: Date } = {
-          ...activityResponse,
-          userId: req.user!.id,
-          nextDue: new Date(),
-        };
-
-        // Save activity
-        const createdActivity = await storage.createActivity(activityWithUser);
-
-        // Associate image
-        const imageAssociation: InsertActivityImage = {
-          activityId: createdActivity.id,
-          filename: imageResponse.filename,
-          originalFilename: imageResponse.originalFilename,
-          path: imageResponse.path,
-          mimeType: imageResponse.mimeType
-        };
-
-        await storage.createActivityImage(imageAssociation);
-
-        results.push({
-          activityName: record.activity_name,
-          status: 'success',
-          activity: createdActivity
-        });
-      } catch (error) {
-        console.error(`Error processing record ${record.activity_name}:`, error);
-        results.push({
-          activityName: record.activity_name,
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
+      // Send progress update
+      if ((i + 1) % 5 === 0 || i === records.length - 1) {
+        console.log(`Progress: ${i + 1}/${records.length} records processed`);
       }
     }
 
