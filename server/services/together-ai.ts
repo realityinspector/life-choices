@@ -121,7 +121,7 @@ Respond with a valid JSON object containing all the required properties.`;
    * Generate random hex color if not provided
    */
   private generateRandomColor(): string {
-    return '#' + Math.floor(Math.random()*16777215).toString(16);
+    return '#' + Math.floor(Math.random() * 16777215).toString(16);
   }
 
   /**
