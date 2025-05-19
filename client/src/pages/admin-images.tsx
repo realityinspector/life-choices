@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Activity, ActivityImage } from '@shared/schema';
 import { Loader2, CheckCircle2, XCircle, Unlink, FileImage, Upload, Search, 
          Save, Edit, Filter, AlertCircle, Check, X, ChevronsUpDown, ChevronDown, 
-         ArrowLeft } from 'lucide-react';
+         ArrowLeft, Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -1218,14 +1218,58 @@ export default function AdminImagesPage() {
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={handleUploadFiles}
-                    disabled={isUploading || files.length === 0 || files.every(f => f.status === 'uploaded')}
-                    className="flex gap-2 items-center"
-                  >
-                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    Upload Files
-                  </Button>
+                <Button
+                  onClick={handleUploadFiles}
+                  disabled={isUploading || files.length === 0 || files.every(f => f.status === 'uploaded')}
+                  className="flex gap-2 items-center"
+                >
+                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Upload Files
+                </Button>
+
+                <Button
+                  onClick={async () => {
+                    const unprocessedFiles = files.filter(f => f.status === 'uploaded' || f.status === 'failed');
+                    if (unprocessedFiles.length === 0) {
+                      toast({
+                        title: 'No Files to Process',
+                        description: 'Please upload some files first.',
+                      });
+                      return;
+                    }
+
+                    setIsProcessingMissing(true);
+                    let processedCount = 0;
+
+                    try {
+                      for (const file of unprocessedFiles) {
+                        if (file.filename && file.path) {
+                          await handleGenerateLLMDescription(file);
+                          processedCount++;
+                        }
+                      }
+
+                      toast({
+                        title: 'LLM Processing Complete',
+                        description: `Successfully processed ${processedCount} files with LLM.`,
+                      });
+                    } catch (error) {
+                      console.error('Error in batch LLM processing:', error);
+                      toast({
+                        title: 'Processing Error',
+                        description: 'Failed to complete LLM processing for all files.',
+                        variant: 'destructive',
+                      });
+                    } finally {
+                      setIsProcessingMissing(false);
+                    }
+                  }}
+                  disabled={isProcessingMissing || files.length === 0 || files.every(f => f.status === 'matched')}
+                  className="flex gap-2 items-center"
+                >
+                  {isProcessingMissing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  Process All with LLM
+                </Button>
 
                   <Button
                     onClick={matchFilesWithActivities}
