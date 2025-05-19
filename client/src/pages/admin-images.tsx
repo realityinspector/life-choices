@@ -267,7 +267,7 @@ export default function AdminImagesPage() {
   const [editingImageId, setEditingImageId] = useState<number | null>(null);
   const [autoSaveAfterMatch, setAutoSaveAfterMatch] = useState(true);
   const [searchActive, setSearchActive] = useState(false);
-  const [searchInputRef, setSearchInputRef] = useState(searchInputRef);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch activities for dropdown selection (including both database activities and shop catalog)
   const { data: activities = [] } = useQuery<Activity[]>({
