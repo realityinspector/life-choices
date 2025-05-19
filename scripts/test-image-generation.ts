@@ -27,11 +27,11 @@ async function checkAndListActivitiesNeedingImages(): Promise<ActivityToProcess[
   console.log(`Found ${activities.length} total activities`);
 
   // Get all activities that have images
-  const activitiesWithImages = await storage.getActivitiesWithImages();
+  const activityImages = await storage.getActivityImages();
   const activitiesWithImagesIds = new Set(
-    activitiesWithImages.map((img) => img.id),
+    activityImages.map((img) => img.activityId)
   );
-  console.log(`${activitiesWithImages.length} activities already have images`);
+  console.log(`${activityImages.length} activity images found`);
 
   // Filter activities without images
   const activitiesNeedingImages = activities.filter(
