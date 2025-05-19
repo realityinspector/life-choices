@@ -6,16 +6,20 @@ import * as schema from "@shared/schema";
 const { Pool } = pkg;
 
 // Configure the PostgreSQL pool with enhanced connection settings
+// Configure the PostgreSQL pool with enhanced settings for Neon's pooler
+const databaseUrl = process.env.DATABASE_URL;
+const poolUrl = databaseUrl?.replace('.us-east-2', '-pooler.us-east-2');
+
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 10, // Reduce max connections to avoid overwhelming the database
-  idleTimeoutMillis: 60000, // Keep idle clients for longer
-  connectionTimeoutMillis: 20000, // Give more time to establish connection
-  maxUses: 5000, // Lower max uses to recycle connections more frequently
+  connectionString: poolUrl,
+  max: 5, // Reduce max connections to prevent overwhelming the pooler
+  idleTimeoutMillis: 30000, // Lower idle timeout for serverless environment
+  connectionTimeoutMillis: 5000, // Shorter connection timeout
+  maxUses: 1000, // Recycle connections more frequently
   keepAlive: true,
-  keepAliveInitialDelayMillis: 10000, // Increase initial delay
+  keepAliveInitialDelayMillis: 5000,
   ssl: {
-    rejectUnauthorized: false // Required for some PostgreSQL providers
+    rejectUnauthorized: false
   }
 });
 
