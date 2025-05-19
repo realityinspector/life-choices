@@ -16,7 +16,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Link } from "wouter";
-import { ArrowLeft, Pencil, Trash } from "lucide-react";
+import { ArrowLeft, Pencil, Trash, ImageIcon } from "lucide-react";
 
 export default function AdminActivities() {
   const { toast } = useToast();
@@ -97,6 +97,54 @@ export default function AdminActivities() {
           </p>
         </div>
         <div className="flex gap-2">
+          {selectedActivities.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const activitiesWithoutImages = selectedActivities.filter(
+                  id => !activitiesWithImages.has(id)
+                );
+                
+                if (activitiesWithoutImages.length === 0) {
+                  toast({
+                    title: 'Info',
+                    description: 'All selected activities already have images',
+                  });
+                  return;
+                }
+
+                try {
+                  await Promise.all(
+                    activitiesWithoutImages.map(async (activityId) => {
+                      const res = await apiRequest('/api/admin-llm/generate-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ activityId }),
+                      });
+                      return res.json();
+                    })
+                  );
+                  
+                  toast({
+                    title: 'Success',
+                    description: `Generated images for ${activitiesWithoutImages.length} activities`,
+                  });
+                  
+                  // Refresh activity images
+                  queryClient.invalidateQueries({ queryKey: ['/api/admin/activity-images'] });
+                  setSelectedActivities([]);
+                } catch (error) {
+                  toast({
+                    title: 'Error',
+                    description: 'Failed to generate some images',
+                    variant: 'destructive',
+                  });
+                }
+              }}
+            >
+              Generate Images ({selectedActivities.length})
+            </Button>
+          )}
           <Button variant="outline" asChild>
             <Link href="/admin">
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -162,6 +210,38 @@ export default function AdminActivities() {
                           <Pencil className="h-4 w-4" />
                         </Link>
                       </Button>
+                      {!activitiesWithImages.has(activity.id) && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={async () => {
+                            try {
+                              const res = await apiRequest('/api/admin-llm/generate-image', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ activityId: activity.id }),
+                              });
+                              const data = await res.json();
+                              if (data.image) {
+                                toast({
+                                  title: 'Success',
+                                  description: `Generated image for ${activity.name}`,
+                                });
+                                // Refresh activities and images
+                                queryClient.invalidateQueries({ queryKey: ['/api/admin/activity-images'] });
+                              }
+                            } catch (error) {
+                              toast({
+                                title: 'Error',
+                                description: 'Failed to generate image',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button 
                         variant="outline" 
                         size="icon"
