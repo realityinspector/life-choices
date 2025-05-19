@@ -36,3 +36,51 @@ async function updateDb() {
 }
 
 updateDb();
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { pool } from "../server/db";
+import * as schema from "../shared/schema";
+
+// Initialize drizzle
+const db = drizzle(pool, { schema });
+
+async function main() {
+  console.log("Starting database migration...");
+  
+  try {
+    // Create books table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS books (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log("Created books table");
+
+    // Create book_activities table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS book_activities (
+        id SERIAL PRIMARY KEY,
+        book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(book_id, activity_id)
+      );
+    `);
+    console.log("Created book_activities table");
+
+    console.log("Migration completed successfully");
+  } catch (error) {
+    console.error("Migration failed:", error);
+    process.exit(1);
+  }
+
+  await pool.end();
+}
+
+main();
