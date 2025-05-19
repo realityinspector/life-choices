@@ -478,3 +478,30 @@ adminRouter.post("/import-activities", async (req: AuthenticatedRequest, res) =>
     res.status(500).json({ error: "Failed to import activities from CSV", details: error });
   }
 });
+
+// Delete activity
+adminRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  try {
+    const id = parseInt(req.params.id);
+
+    // If ID is >= 1000, it's a sample activity which can't be deleted
+    if (id >= 1000) {
+      return res.status(403).json({ message: "Cannot delete sample activities" });
+    }
+
+    const activity = await storage.getActivity(id);
+    if (!activity) {
+      return res.status(404).json({ message: "Activity not found" });
+    }
+
+    await storage.deleteActivity(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting activity:', error);
+    res.status(500).json({ message: "Failed to delete activity" });
+  }
+});
