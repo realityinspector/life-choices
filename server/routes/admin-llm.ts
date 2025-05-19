@@ -62,10 +62,10 @@ const requireAuth = (req: AuthenticatedRequest, res: Response, next: any) => {
     // Get username from request user object
     const username = req.user && typeof req.user === 'object' ? 
                     (req.user as {username?: string}).username || '' : '';
-    
+
     // List of admin usernames - this should match the list in routes.ts
     const adminUsers = ['realityinspector'];
-    
+
     if (adminUsers.includes(username)) {
       return next();
     }
@@ -100,7 +100,7 @@ adminLLMRouter.post("/upload", upload.array("images", 500), async (req: Authenti
     }
 
     console.log(`Successfully uploaded ${req.files.length} files`);
-    
+
     const uploadedFiles = req.files.map((file: any) => ({
       filename: file.filename,
       originalFilename: file.originalname,
@@ -114,7 +114,7 @@ adminLLMRouter.post("/upload", upload.array("images", 500), async (req: Authenti
     });
   } catch (err: unknown) {
     console.error("Error uploading files:", err);
-    
+
     // Handle specific Multer errors
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
@@ -131,7 +131,7 @@ adminLLMRouter.post("/upload", upload.array("images", 500), async (req: Authenti
         });
       }
     }
-    
+
     // Default error handling
     const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
     res.status(500).json({ 
@@ -146,7 +146,7 @@ adminLLMRouter.post("/generate-activity", async (req: AuthenticatedRequest, res)
   try {
     const { filename, originalFilename } = req.body;
     console.log("LLM Activity Generation Request:", { filename, originalFilename });
-    
+
     if (!originalFilename) {
       console.log("LLM Generation Error: Original filename missing");
       return res.status(400).json({ error: "Original filename is required" });
@@ -154,22 +154,39 @@ adminLLMRouter.post("/generate-activity", async (req: AuthenticatedRequest, res)
 
     // Generate activity using Together AI
     const activityData = await togetherAIService.generateActivityFromFilename(originalFilename);
-    
-    if (!activityData) {
-      return res.status(500).json({ error: "Failed to generate activity data" });
-    }
 
-    // Add imageData to response for saving later
-    res.json({ 
-      message: "Activity generated successfully", 
-      activity: activityData,
-      imageData: {
-        filename,
-        originalFilename,
-        path: `uploads/${filename}`,
-        mimeType: 'image/jpeg' // This should be dynamically determined
+    console.log("LLM Response for", filename + ":", activityData);
+
+      // Validate required fields
+      if (!activityData || !activityData.name || !activityData.category) {
+        return res.status(400).json({
+          error: "Invalid activity data from LLM",
+          details: "Missing required fields in LLM response",
+          received: activityData
+        });
       }
-    });
+
+      // Add imageData to response for saving later
+      res.json({ 
+        message: "Activity generated successfully", 
+        activity: {
+          ...activityData,
+          // Ensure default values for required fields
+          frequency: activityData.frequency || 1,
+          frequencyUnit: activityData.frequencyUnit || "week",
+          duration: activityData.duration || 30,
+          durationUnit: activityData.durationUnit || "minute",
+          lifeImpact: activityData.lifeImpact || 5,
+          priority: activityData.priority || 3
+        },
+        image: {
+          id: null,
+          filename,
+          originalFilename,
+          path: `uploads/${filename}`,
+          mimeType: 'image/jpeg'
+        }
+      });
   } catch (err: unknown) {
     console.error("Error generating activity:", err);
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -184,7 +201,7 @@ adminLLMRouter.post("/generate-activity", async (req: AuthenticatedRequest, res)
 adminLLMRouter.post("/create-activity-with-image", async (req: AuthenticatedRequest, res) => {
   try {
     const { activity, imageData } = req.body;
-    
+
     if (!activity || !imageData) {
       return res.status(400).json({ error: "Activity and image data are required" });
     }
@@ -192,7 +209,7 @@ adminLLMRouter.post("/create-activity-with-image", async (req: AuthenticatedRequ
     // Add user ID and current date as next due date
     // Remove any ID property if it exists to avoid primary key conflicts
     const { id, ...activityWithoutId } = activity as any;
-    
+
     const activityWithUser: ActivityInsert & { userId: number, nextDue: Date } = {
       ...activityWithoutId,
       userId: req.user!.id,
@@ -205,7 +222,7 @@ adminLLMRouter.post("/create-activity-with-image", async (req: AuthenticatedRequ
 
     // Associate image with the new activity
     const { filename, originalFilename, path, mimeType } = imageData;
-    
+
     if (filename && originalFilename && path && mimeType) {
       const imageAssociation: InsertActivityImage = {
         activityId: createdActivity.id,
@@ -237,17 +254,17 @@ adminLLMRouter.post("/create-activity-with-image", async (req: AuthenticatedRequ
 adminLLMRouter.post("/batch-process", async (req: AuthenticatedRequest, res) => {
   try {
     const { images, batchSize = 1 } = req.body;
-    
+
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "No images provided for batch processing" });
     }
 
     const results = [];
     const filenames = images.map(img => img.originalFilename);
-    
+
     // Generate activities in batches
     const generatedActivities = await togetherAIService.generateActivitiesFromFilenames(filenames, batchSize);
-    
+
     // Create activities and associate images
     for (let i = 0; i < images.length; i++) {
       const activityData = generatedActivities[i];
@@ -264,19 +281,19 @@ adminLLMRouter.post("/batch-process", async (req: AuthenticatedRequest, res) => 
         // Add user ID and current date as next due date
         // Remove any ID property if it exists to avoid primary key conflicts
         const { id, ...activityWithoutId } = activityData as any;
-        
+
         const activityWithUser: ActivityInsert & { userId: number, nextDue: Date } = {
           ...activityWithoutId,
           userId: req.user!.id,
           nextDue: new Date(),
         };
-        
+
         // Create the activity
         const createdActivity = await storage.createActivity(activityWithUser);
-        
+
         // Associate image with the new activity
         const { filename, originalFilename, path, mimeType } = images[i];
-        
+
         if (filename && originalFilename && path && mimeType) {
           const imageAssociation: InsertActivityImage = {
             activityId: createdActivity.id,
@@ -285,10 +302,10 @@ adminLLMRouter.post("/batch-process", async (req: AuthenticatedRequest, res) => 
             path,
             mimeType
           };
-          
+
           await storage.createActivityImage(imageAssociation);
         }
-        
+
         results.push({
           originalFilename: images[i].originalFilename,
           status: "success",
@@ -325,10 +342,10 @@ adminLLMRouter.get("/unprocessed-images", async (req: AuthenticatedRequest, res)
     // Get all images from the database
     const associatedImages = await storage.getActivityImages();
     const associatedFilenames = new Set(associatedImages.map(img => img.filename));
-    
+
     // This is a placeholder since we're not reading the filesystem directly
     // A real implementation would check the uploads directory and filter out associated images
-    
+
     res.json({ 
       message: "Unprocessed images fetched successfully", 
       unprocessedImages: [] // This would be populated with actual data
@@ -347,17 +364,17 @@ adminLLMRouter.get("/unprocessed-images", async (req: AuthenticatedRequest, res)
 adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) => {
   try {
     const { activityId } = req.body;
-    
+
     if (!activityId) {
       return res.status(400).json({ error: "Activity ID is required" });
     }
-    
+
     // Get the activity
     const activity = await storage.getActivity(parseInt(activityId));
     if (!activity) {
       return res.status(404).json({ error: "Activity not found" });
     }
-    
+
     // Check if the activity already has images
     const existingImages = await storage.getActivityImages(activity.id);
     if (existingImages.length > 0) {
@@ -366,7 +383,7 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
         imageCount: existingImages.length 
       });
     }
-    
+
     // Convert Activity to ActivityInsert format
     const activityInsert: ActivityInsert = {
       name: activity.name,
@@ -382,13 +399,13 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
       exportToCalendar: activity.exportToCalendar,
       clusterId: activity.clusterId
     };
-    
+
     // Generate an image for the activity
     const imageData = await togetherAIService.generateImageForActivity(activityInsert);
     if (!imageData) {
       return res.status(500).json({ error: "Failed to generate image for activity" });
     }
-    
+
     // Associate the image with the activity
     const imageAssociation: InsertActivityImage = {
       activityId: activity.id,
@@ -397,10 +414,10 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
       path: imageData.path,
       mimeType: imageData.mimeType
     };
-    
+
     const savedImage = await storage.createActivityImage(imageAssociation);
     console.log("Saved generated image association:", savedImage);
-    
+
     res.json({
       message: "Image generated and associated successfully",
       activity,
@@ -422,27 +439,27 @@ adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest
     // Get all activities with images
     const activitiesWithImages = await storage.getActivitiesWithImages();
     const activitiesWithImagesIds = new Set(activitiesWithImages.map(a => a.id));
-    
+
     // Get all activities
     const allActivities = await storage.getActivities();
-    
+
     // Find activities without images
     const activitiesWithoutImages = allActivities.filter(activity => 
       !activitiesWithImagesIds.has(activity.id)
     );
-    
+
     if (activitiesWithoutImages.length === 0) {
       return res.json({ 
         message: "No activities without images found",
         count: 0
       });
     }
-    
+
     // Just take the first activity that needs an image
     const activity = activitiesWithoutImages[0];
-    
+
     console.log(`Generating image for activity: ${activity.name} (ID: ${activity.id})`);
-    
+
     // Convert Activity to ActivityInsert format
     const activityInsert: ActivityInsert = {
       name: activity.name,
@@ -458,7 +475,7 @@ adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest
       exportToCalendar: activity.exportToCalendar,
       clusterId: activity.clusterId
     };
-    
+
     // Generate an image for the activity
     const imageData = await togetherAIService.generateImageForActivity(activityInsert);
     if (!imageData) {
@@ -467,7 +484,7 @@ adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest
         remaining: activitiesWithoutImages.length - 1
       });
     }
-    
+
     // Associate the image with the activity
     const imageAssociation: InsertActivityImage = {
       activityId: activity.id,
@@ -476,10 +493,10 @@ adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest
       path: imageData.path,
       mimeType: imageData.mimeType
     };
-    
+
     const savedImage = await storage.createActivityImage(imageAssociation);
     console.log(`Image generated and associated with activity: ${activity.name} (ID: ${activity.id})`);
-    
+
     res.json({
       message: "Image generated for activity successfully",
       activity: {
@@ -508,24 +525,24 @@ adminLLMRouter.delete("/image/:id", async (req: AuthenticatedRequest, res) => {
   try {
     const imageId = parseInt(req.params.id);
     const deleteActivity = req.query.deleteActivity === "true";
-    
+
     if (isNaN(imageId)) {
       return res.status(400).json({ error: "Invalid image ID" });
     }
-    
+
     const image = await storage.getActivityImage(imageId);
     if (!image) {
       return res.status(404).json({ error: "Image not found" });
     }
-    
+
     // If requested, delete the associated activity first
     if (deleteActivity && image.activityId) {
       await storage.deleteActivity(image.activityId);
     }
-    
+
     // Delete the image association
     await storage.deleteActivityImage(imageId);
-    
+
     res.json({ 
       message: "Image deleted successfully",
       activityDeleted: deleteActivity && !!image.activityId
