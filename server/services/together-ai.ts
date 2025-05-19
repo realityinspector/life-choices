@@ -3,15 +3,37 @@ import { ActivityInsert } from "../../shared/schema";
 import fs from "fs";
 import path from "path";
 import { Buffer } from "buffer";
+import { promisify } from "util";
 
-// Define the structure of the LLM response for activity generation
+// Make fs operations async
+const writeFile = promisify(fs.writeFile);
+const mkdir = promisify(fs.mkdir);
+const exists = promisify(fs.exists);
+
+// Define valid categories with type safety
+const VALID_CATEGORIES = [
+  "Work", "Health", "Leisure", "Education", "Family", "Social", 
+  "Personal Growth", "Spiritual", "Travel", "Chores", "Hobby", 
+  "Exercise", "Nutrition", "Other"
+] as const;
+
+type ActivityCategory = typeof VALID_CATEGORIES[number];
+
+// Define valid frequency and duration units
+const VALID_FREQUENCY_UNITS = ["day", "week", "month", "year"] as const;
+const VALID_DURATION_UNITS = ["minute", "hour"] as const;
+
+type FrequencyUnit = typeof VALID_FREQUENCY_UNITS[number];
+type DurationUnit = typeof VALID_DURATION_UNITS[number];
+
+// Enhanced interfaces with validation
 interface ActivityGenerationResponse {
   name: string;
-  category: string;
+  category: ActivityCategory;
   frequency: number;
-  frequencyUnit: "day" | "week" | "month" | "year";
+  frequencyUnit: FrequencyUnit;
   duration: number;
-  durationUnit: "minute" | "hour";
+  durationUnit: DurationUnit;
   lifeImpact: number; // -10 to 10
   emoji?: string;
   description?: string;
@@ -19,7 +41,6 @@ interface ActivityGenerationResponse {
   priority?: number; // 1-5
 }
 
-// Stability AI image generation response
 interface ImageGenerationResponse {
   filename: string;
   originalFilename: string;
@@ -27,106 +48,387 @@ interface ImageGenerationResponse {
   mimeType: string;
 }
 
+interface ProcessingResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  retryable?: boolean;
+}
+
+interface BatchProcessingOptions {
+  batchSize?: number;
+  maxRetries?: number;
+  retryDelay?: number;
+  concurrency?: number;
+}
+
+class TogetherAIError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly retryable: boolean = false
+  ) {
+    super(message);
+    this.name = "TogetherAIError";
+  }
+}
+
 export class TogetherAIService {
   private client: Together;
   private textModel = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
   private imageModel = "stabilityai/stable-diffusion-xl-base-1.0";
+  private uploadDir = "./uploads";
+  private isInitialized = false;
+
+  // Default configuration
+  private readonly defaultBatchSize = 5;
+  private readonly defaultMaxRetries = 3;
+  private readonly defaultRetryDelay = 1000;
+  private readonly defaultConcurrency = 2;
 
   constructor() {
-    const apiKey = process.env.TOGETHER_API_KEY;
-    if (!apiKey) {
-      console.error("TOGETHER_API_KEY not found in environment variables");
-    }
-    this.client = new Together({
-      apiKey: apiKey || ''
-    });
+    this.initializeClient();
+    this.ensureUploadDirectory();
   }
 
   /**
-   * Create system prompt for generating activity details from image filename
+   * Initialize the Together AI client with error handling
    */
-  private generateSystemPrompt(): string {
-    return `You are an AI assistant that helps create detailed activities based on image filenames. 
-The filenames describe activities people do in their lives.
-
-For each filename, create a structured activity with these attributes:
-- name: A clear, descriptive title (max 40 chars)
-- category: Choose from [Work, Health, Leisure, Education, Family, Social, Personal Growth, Spiritual, Travel, Chores, Hobby, Exercise, Nutrition, Other]
-- frequency: How often the activity typically occurs (number)
-- frequencyUnit: Unit for frequency [day, week, month, year]
-- duration: How long the activity typically takes (number)
-- durationUnit: Unit for duration [minute, hour]
-- lifeImpact: Impact on quality of life from -10 (very negative) to 10 (very positive)
-- emoji: A single appropriate emoji (optional)
-- description: A brief description of the activity
-- color: A hex color code that visually represents this activity
-- priority: Importance level from 1 (low) to 5 (high)
-
-Analyze the filename carefully. It may include camelCase or snake_case formatting with rich context.
-For example:
-- "morningYoga.jpg" → A regular yoga practice in the morning
-- "visitGrandparents.jpg" → A family visit activity
-- "deep_work_focus.jpg" → A productivity technique
-
-Use reasonable defaults for frequency and duration based on the activity type.`;
-  }
-
-  /**
-   * Generate a prompt for the model based on filename
-   */
-  private generateUserPrompt(filename: string): string {
-    // Process the filename to make it more readable
-    const processedFilename = filename
-      .replace(/\.[^/.]+$/, "") // Remove extension
-      .replace(/([a-z])([A-Z])/g, "$1 $2") // Convert camelCase to spaces
-      .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2") // Convert PascalCase to spaces
-      .replace(/[_-]/g, " "); // Replace underscores and dashes with spaces
-
-    return `Generate activity details for the image filename: "${processedFilename}"
-
-Respond with a valid JSON object containing all the required properties.`;
-  }
-
-  /**
-   * Parse the LLM response into a structured activity
-   */
-  private parseLLMResponse(response: string): ActivityGenerationResponse | null {
+  private initializeClient(): void {
     try {
-      // Find JSON in the response (might be surrounded by other text)
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch || !jsonMatch[0]) {
-        console.error("No JSON found in LLM response");
-        return null;
+      const apiKey = process.env.TOGETHER_API_KEY;
+      if (!apiKey) {
+        console.warn("TOGETHER_API_KEY not found in environment variables. Service will be limited.");
+        return;
       }
 
-      const json = JSON.parse(jsonMatch[0]);
+      this.client = new Together({
+        apiKey: apiKey
+      });
+      this.isInitialized = true;
+      console.log("TogetherAI service initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize TogetherAI client:", error);
+      throw new TogetherAIError(
+        "Failed to initialize TogetherAI client",
+        "INIT_ERROR",
+        false
+      );
+    }
+  }
 
-      // Validate required fields
-      const requiredFields = ['name', 'category', 'frequency', 'frequencyUnit', 'duration', 'durationUnit', 'lifeImpact'];
+  /**
+   * Ensure upload directory exists
+   */
+  private async ensureUploadDirectory(): Promise<void> {
+    try {
+      const uploadExists = await exists(this.uploadDir);
+      if (!uploadExists) {
+        await mkdir(this.uploadDir, { recursive: true });
+        console.log(`Created upload directory: ${this.uploadDir}`);
+      }
+    } catch (error) {
+      console.error("Failed to create upload directory:", error);
+    }
+  }
+
+  /**
+   * Check if the service is properly initialized
+   */
+  private ensureInitialized(): void {
+    if (!this.isInitialized || !this.client) {
+      throw new TogetherAIError(
+        "TogetherAI service is not properly initialized. Check API key.",
+        "NOT_INITIALIZED",
+        false
+      );
+    }
+  }
+
+  /**
+   * Create system prompt for generating activity details
+   */
+  private generateSystemPrompt(): string {
+    const categories = VALID_CATEGORIES.join(", ");
+    const frequencyUnits = VALID_FREQUENCY_UNITS.join(", ");
+    const durationUnits = VALID_DURATION_UNITS.join(", ");
+
+    return `You are an AI assistant that creates detailed activities from image filenames. 
+The filenames describe activities people engage in.
+
+For each filename, create a structured activity with these attributes:
+- name: Clear, descriptive title (maximum 40 characters)
+- category: Must be one of [${categories}]
+- frequency: Positive number representing how often the activity occurs
+- frequencyUnit: Must be one of [${frequencyUnits}]
+- duration: Positive number representing activity duration
+- durationUnit: Must be one of [${durationUnits}]
+- lifeImpact: Integer from -10 (very negative) to 10 (very positive)
+- emoji: Single appropriate emoji (optional)
+- description: Brief activity description (optional)
+- color: Hex color code starting with # (optional)
+- priority: Integer from 1 (low) to 5 (high) (optional, defaults to 3)
+
+Rules:
+1. Always respond with valid JSON
+2. Use realistic frequency/duration values for the activity type
+3. Ensure all required fields are present
+4. Keep names concise but descriptive
+
+Example response format:
+{
+  "name": "Morning Yoga",
+  "category": "Exercise",
+  "frequency": 5,
+  "frequencyUnit": "week",
+  "duration": 30,
+  "durationUnit": "minute",
+  "lifeImpact": 8,
+  "emoji": "🧘",
+  "description": "Daily yoga practice to start the day",
+  "color": "#4CAF50",
+  "priority": 4
+}`;
+  }
+
+  /**
+   * Process filename for better readability
+   */
+  private processFilename(filename: string): string {
+    try {
+      return filename
+        .replace(/\.[^/.]+$/, "") // Remove file extension
+        .replace(/([a-z])([A-Z])/g, "$1 $2") // camelCase to spaces
+        .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2") // PascalCase to spaces  
+        .replace(/[_-]/g, " ") // Replace underscores/dashes with spaces
+        .replace(/\s+/g, " ") // Normalize multiple spaces
+        .trim();
+    } catch (error) {
+      console.warn(`Error processing filename "${filename}":`, error);
+      return filename;
+    }
+  }
+
+  /**
+   * Generate prompt for a single filename
+   */
+  private generateUserPrompt(filename: string): string {
+    const processedFilename = this.processFilename(filename);
+    return `Generate activity details for the image filename: "${processedFilename}"
+
+Respond with a valid JSON object containing all required properties.`;
+  }
+
+  /**
+   * Generate batch prompt for multiple filenames
+   */
+  private generateBatchUserPrompt(filenames: string[]): string {
+    const processedFilenames = filenames.map((filename, index) => {
+      const processed = this.processFilename(filename);
+      return `${index + 1}. "${processed}"`;
+    });
+
+    return `Generate activity details for these image filenames:
+${processedFilenames.join('\n')}
+
+Respond with a valid JSON array containing one object for each filename in the same order.
+Format: [{"name": "...", "category": "...", ...}, {"name": "...", "category": "...", ...}]
+
+Ensure each object contains all required properties and the array has ${filenames.length} items.`;
+  }
+
+  /**
+   * Validate activity generation response
+   */
+  private validateActivityResponse(data: any): ActivityGenerationResponse | null {
+    try {
+      // Check required fields
+      const requiredFields = [
+        'name', 'category', 'frequency', 'frequencyUnit', 
+        'duration', 'durationUnit', 'lifeImpact'
+      ];
+
       for (const field of requiredFields) {
-        if (json[field] === undefined) {
+        if (data[field] === undefined || data[field] === null) {
           console.error(`Missing required field: ${field}`);
           return null;
         }
       }
 
-      return json as ActivityGenerationResponse;
+      // Validate types and ranges
+      if (typeof data.name !== 'string' || data.name.length === 0 || data.name.length > 40) {
+        console.error(`Invalid name: ${data.name}`);
+        return null;
+      }
+
+      if (!VALID_CATEGORIES.includes(data.category)) {
+        console.error(`Invalid category: ${data.category}`);
+        return null;
+      }
+
+      if (!VALID_FREQUENCY_UNITS.includes(data.frequencyUnit)) {
+        console.error(`Invalid frequency unit: ${data.frequencyUnit}`);
+        return null;
+      }
+
+      if (!VALID_DURATION_UNITS.includes(data.durationUnit)) {
+        console.error(`Invalid duration unit: ${data.durationUnit}`);
+        return null;
+      }
+
+      if (typeof data.frequency !== 'number' || data.frequency <= 0) {
+        console.error(`Invalid frequency: ${data.frequency}`);
+        return null;
+      }
+
+      if (typeof data.duration !== 'number' || data.duration <= 0) {
+        console.error(`Invalid duration: ${data.duration}`);
+        return null;
+      }
+
+      if (typeof data.lifeImpact !== 'number' || data.lifeImpact < -10 || data.lifeImpact > 10) {
+        console.error(`Invalid life impact: ${data.lifeImpact}`);
+        return null;
+      }
+
+      // Validate optional fields
+      if (data.priority !== undefined && 
+          (typeof data.priority !== 'number' || data.priority < 1 || data.priority > 5)) {
+        console.error(`Invalid priority: ${data.priority}`);
+        return null;
+      }
+
+      if (data.color !== undefined && 
+          (typeof data.color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(data.color))) {
+        console.error(`Invalid color: ${data.color}`);
+        return null;
+      }
+
+      return data as ActivityGenerationResponse;
     } catch (error) {
-      console.error("Error parsing LLM response:", error);
+      console.error("Error validating activity response:", error);
       return null;
     }
   }
 
   /**
-   * Generate random hex color if not provided
+   * Parse LLM response with improved error handling
    */
-  private generateRandomColor(): string {
-    const color = Math.floor(Math.random() * 16777215).toString(16);
-    return '#' + color.padStart(6, '0');
+  private parseLLMResponse(response: string): ProcessingResult<ActivityGenerationResponse> {
+    try {
+      // Clean the response - remove markdown code blocks if present
+      let cleanResponse = response.trim();
+      if (cleanResponse.startsWith('```json')) {
+        cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      } else if (cleanResponse.startsWith('```')) {
+        cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/```\s*$/, '');
+      }
+
+      // Find JSON object in the response
+      const jsonMatch = cleanResponse.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
+      if (!jsonMatch) {
+        return {
+          success: false,
+          error: "No JSON object found in response",
+          retryable: true
+        };
+      }
+
+      const parsedData = JSON.parse(jsonMatch[0]);
+      const validatedData = this.validateActivityResponse(parsedData);
+
+      if (!validatedData) {
+        return {
+          success: false,
+          error: "Invalid activity data structure",
+          retryable: true
+        };
+      }
+
+      return {
+        success: true,
+        data: validatedData
+      };
+    } catch (error) {
+      console.error("Error parsing LLM response:", error);
+      return {
+        success: false,
+        error: `Parse error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        retryable: true
+      };
+    }
   }
 
   /**
-   * Convert LLM response to ActivityInsert
+   * Parse batch LLM response with improved error handling
+   */
+  private parseBatchLLMResponse(response: string, expectedCount: number): ProcessingResult<(ActivityGenerationResponse | null)[]> {
+    try {
+      // Clean the response
+      let cleanResponse = response.trim();
+      if (cleanResponse.startsWith('```json')) {
+        cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      } else if (cleanResponse.startsWith('```')) {
+        cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/```\s*$/, '');
+      }
+
+      // Find JSON array in the response - improved regex
+      const jsonArrayMatch = cleanResponse.match(/\[[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*\]/);
+      if (!jsonArrayMatch) {
+        return {
+          success: false,
+          error: "No JSON array found in batch response",
+          retryable: true
+        };
+      }
+
+      const parsedArray = JSON.parse(jsonArrayMatch[0]);
+      if (!Array.isArray(parsedArray)) {
+        return {
+          success: false,
+          error: "Parsed JSON is not an array",
+          retryable: true
+        };
+      }
+
+      // Process each item in the array
+      const results: (ActivityGenerationResponse | null)[] = [];
+      for (let i = 0; i < expectedCount; i++) {
+        if (i < parsedArray.length && parsedArray[i]) {
+          const validated = this.validateActivityResponse(parsedArray[i]);
+          results.push(validated);
+        } else {
+          results.push(null);
+        }
+      }
+
+      return {
+        success: true,
+        data: results
+      };
+    } catch (error) {
+      console.error("Error parsing batch LLM response:", error);
+      return {
+        success: false,
+        error: `Batch parse error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        retryable: true
+      };
+    }
+  }
+
+  /**
+   * Generate random hex color
+   */
+  private generateRandomColor(): string {
+    const colors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+      '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  /**
+   * Convert LLM response to ActivityInsert with defaults
    */
   private toActivityInsert(response: ActivityGenerationResponse): ActivityInsert {
     return {
@@ -146,265 +448,302 @@ Respond with a valid JSON object containing all the required properties.`;
   }
 
   /**
-   * Generate activity details from an image filename
+   * Make API call with retry logic
+   */
+  private async makeAPICall<T>(
+    apiCall: () => Promise<T>,
+    operation: string,
+    maxRetries: number = this.defaultMaxRetries
+  ): Promise<ProcessingResult<T>> {
+    let lastError: Error;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`${operation} - Attempt ${attempt}/${maxRetries}`);
+        const result = await apiCall();
+        return { success: true, data: result };
+      } catch (error) {
+        lastError = error as Error;
+        console.warn(`${operation} - Attempt ${attempt} failed:`, error);
+
+        if (attempt < maxRetries) {
+          const delay = this.defaultRetryDelay * Math.pow(2, attempt - 1); // Exponential backoff
+          console.log(`Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    return {
+      success: false,
+      error: `Failed after ${maxRetries} attempts: ${lastError.message}`,
+      retryable: false
+    };
+  }
+
+  /**
+   * Generate activity from single filename with improved error handling
    */
   async generateActivityFromFilename(filename: string): Promise<ActivityInsert | null> {
     try {
+      this.ensureInitialized();
       console.log(`Generating activity details for filename: ${filename}`);
 
-      const response = await this.client.chat.completions.create({
-        messages: [
-          { role: "system", content: this.generateSystemPrompt() },
-          { role: "user", content: this.generateUserPrompt(filename) }
-        ],
-        model: this.textModel,
-        temperature: 0.7,
-        max_tokens: 1000
-      });
+      const apiCall = async () => {
+        return await this.client.chat.completions.create({
+          messages: [
+            { role: "system", content: this.generateSystemPrompt() },
+            { role: "user", content: this.generateUserPrompt(filename) }
+          ],
+          model: this.textModel,
+          temperature: 0.7,
+          max_tokens: 1000
+        });
+      };
 
-      const content = response.choices[0]?.message?.content || '';
+      const result = await this.makeAPICall(apiCall, `Generate activity for ${filename}`);
+      if (!result.success || !result.data) {
+        console.error(`Failed to generate activity for ${filename}:`, result.error);
+        return null;
+      }
+
+      const content = result.data.choices[0]?.message?.content;
       if (!content) {
         console.error("Empty response from LLM");
         return null;
       }
 
-      console.log("LLM Response:", content);
+      console.log(`LLM Response for ${filename}:`, content);
 
-      const parsedResponse = this.parseLLMResponse(content);
-      if (!parsedResponse) {
+      const parseResult = this.parseLLMResponse(content);
+      if (!parseResult.success || !parseResult.data) {
+        console.error(`Failed to parse response for ${filename}:`, parseResult.error);
         return null;
       }
 
-      return this.toActivityInsert(parsedResponse);
+      return this.toActivityInsert(parseResult.data);
     } catch (error) {
-      console.error("Error generating activity from filename:", error);
+      console.error(`Error generating activity from filename ${filename}:`, error);
       return null;
     }
   }
 
   /**
-   * Generate a batch prompt for multiple filenames
-   */
-  private generateBatchUserPrompt(filenames: string[]): string {
-    // Process each filename to make it more readable
-    const processedFilenames = filenames.map(filename => 
-      filename
-        .replace(/\.[^/.]+$/, "") // Remove extension
-        .replace(/([a-z])([A-Z])/g, "$1 $2") // Convert camelCase to spaces
-        .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2") // Convert PascalCase to spaces
-        .replace(/[_-]/g, " "); // Replace underscores and dashes with spaces
-    );
-
-    return `Generate activity details for the following image filenames:
-${processedFilenames.map((name, index) => `${index + 1}. "${name}"`).join('\n')}
-
-Respond with a valid JSON array containing one object for each filename. Each object should contain all the required properties.
-The response should be formatted as: [ { activity1 }, { activity2 }, ... ]
-
-Ensure that each activity in the array corresponds to the filename at the same position in the list.`;
-  }
-
-  /**
-   * Parse batch LLM response into structured activities
-   */
-  private parseBatchLLMResponse(response: string, count: number): (ActivityGenerationResponse | null)[] {
-    try {
-      // Find JSON array in the response - look for complete array structure
-      const jsonMatch = response.match(/\[[\s\S]*?\]/);
-      if (!jsonMatch || !jsonMatch[0]) {
-        console.error("No JSON array found in batch LLM response");
-        return Array(count).fill(null);
-      }
-
-      const jsonArray = JSON.parse(jsonMatch[0]);
-      if (!Array.isArray(jsonArray)) {
-        console.error("Parsed JSON is not an array");
-        return Array(count).fill(null);
-      }
-
-      // Ensure we return exactly the expected number of items
-      const results: (ActivityGenerationResponse | null)[] = Array(count).fill(null);
-
-      // Validate each item in the array
-      jsonArray.forEach((item, index) => {
-        if (index < count) {
-          // Check required fields
-          const requiredFields = ['name', 'category', 'frequency', 'frequencyUnit', 'duration', 'durationUnit', 'lifeImpact'];
-          const hasAllFields = requiredFields.every(field => item[field] !== undefined);
-
-          if (hasAllFields) {
-            results[index] = item as ActivityGenerationResponse;
-          } else {
-            console.error(`Missing required fields in item ${index + 1}`);
-          }
-        }
-      });
-
-      return results;
-    } catch (error) {
-      console.error("Error parsing batch LLM response:", error);
-      return Array(count).fill(null);
-    }
-  }
-
-  /**
-   * Process a batch of filenames with a single LLM call
+   * Process batch with single LLM call
    */
   private async processBatchWithSingleCall(filenames: string[]): Promise<(ActivityInsert | null)[]> {
     try {
-      console.log(`Processing ${filenames.length} files in a single LLM call`);
+      console.log(`Processing ${filenames.length} files in single LLM call`);
 
-      const response = await this.client.chat.completions.create({
-        messages: [
-          { role: "system", content: this.generateSystemPrompt() },
-          { role: "user", content: this.generateBatchUserPrompt(filenames) }
-        ],
-        model: this.textModel,
-        temperature: 0.7,
-        max_tokens: 3000 // Increased for batch processing
-      });
+      const apiCall = async () => {
+        return await this.client.chat.completions.create({
+          messages: [
+            { role: "system", content: this.generateSystemPrompt() },
+            { role: "user", content: this.generateBatchUserPrompt(filenames) }
+          ],
+          model: this.textModel,
+          temperature: 0.7,
+          max_tokens: Math.min(4000, 500 * filenames.length)
+        });
+      };
 
-      const content = response.choices[0]?.message?.content || '';
+      const result = await this.makeAPICall(apiCall, `Batch process ${filenames.length} files`);
+      if (!result.success || !result.data) {
+        console.error("Failed batch processing:", result.error);
+        return Array(filenames.length).fill(null);
+      }
+
+      const content = result.data.choices[0]?.message?.content;
       if (!content) {
-        console.error("Empty response from LLM for batch processing");
+        console.error("Empty batch response from LLM");
         return Array(filenames.length).fill(null);
       }
 
       console.log("Batch LLM Response:", content);
 
-      const parsedResponses = this.parseBatchLLMResponse(content, filenames.length);
+      const parseResult = this.parseBatchLLMResponse(content, filenames.length);
+      if (!parseResult.success || !parseResult.data) {
+        console.error("Failed to parse batch response:", parseResult.error);
+        return Array(filenames.length).fill(null);
+      }
 
-      // Convert each response to ActivityInsert
-      return parsedResponses.map(response => 
+      // Convert valid responses to ActivityInsert
+      return parseResult.data.map(response => 
         response ? this.toActivityInsert(response) : null
       );
     } catch (error) {
-      console.error("Error in batch processing with single call:", error);
+      console.error("Error in batch processing:", error);
       return Array(filenames.length).fill(null);
     }
   }
 
   /**
-   * Generate multiple activities from filenames (batch processing)
+   * Process batch in parallel with concurrency control
    */
-  async generateActivitiesFromFilenames(filenames: string[], batchSize: number = 10): Promise<(ActivityInsert | null)[]> {
+  private async processBatchInParallel(
+    filenames: string[], 
+    concurrency: number = this.defaultConcurrency
+  ): Promise<(ActivityInsert | null)[]> {
     const results: (ActivityInsert | null)[] = [];
+    const semaphore = Array(concurrency).fill(Promise.resolve());
 
-    // Process in batches
-    for (let i = 0; i < filenames.length; i += batchSize) {
-      const batch = filenames.slice(i, i + batchSize);
-      console.log(`Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(filenames.length/batchSize)}: ${batch.length} items`);
+    await Promise.all(
+      filenames.map(async (filename, index) => {
+        const semIndex = index % concurrency;
+        await semaphore[semIndex];
 
-      try {
-        if (batch.length === 1) {
-          // Single item processing
-          const result = await this.generateActivityFromFilename(batch[0]);
-          results.push(result);
-        } else if (batch.length <= 10) {
-          // Use more efficient batch processing with a single LLM call
-          const batchResults = await this.processBatchWithSingleCall(batch);
-          results.push(...batchResults);
-        } else {
-          // Fallback to parallel processing for large batches (though this shouldn't happen with proper batching)
-          console.log(`Batch size ${batch.length} exceeds optimal size, processing in parallel`);
-          const batchPromises = batch.map(filename => this.generateActivityFromFilename(filename));
-          const batchResults = await Promise.all(batchPromises);
-          results.push(...batchResults);
-        }
-      } catch (error) {
-        console.error(`Error processing batch starting at index ${i}:`, error);
-        // If the batch fails, add null results for each item in this batch
-        batch.forEach(() => results.push(null));
-      }
-
-      // Add a small delay between batches to avoid rate limiting
-      if (i + batchSize < filenames.length) {
-        console.log("Pausing briefly between batches");
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
+        semaphore[semIndex] = (async () => {
+          const result = await this.generateActivityFromFilename(filename);
+          results[index] = result;
+        })();
+      })
+    );
 
     return results;
   }
 
   /**
-   * Generate a prompt for image generation based on activity details
+   * Enhanced batch processing with flexible options
+   */
+  async generateActivitiesFromFilenames(
+    filenames: string[], 
+    options: BatchProcessingOptions = {}
+  ): Promise<(ActivityInsert | null)[]> {
+    try {
+      this.ensureInitialized();
+
+      const {
+        batchSize = this.defaultBatchSize,
+        maxRetries = this.defaultMaxRetries,
+        retryDelay = this.defaultRetryDelay,
+        concurrency = this.defaultConcurrency
+      } = options;
+
+      console.log(`Starting batch processing of ${filenames.length} files with batch size ${batchSize}`);
+
+      if (filenames.length === 0) {
+        return [];
+      }
+
+      const results: (ActivityInsert | null)[] = [];
+      const totalBatches = Math.ceil(filenames.length / batchSize);
+
+      for (let i = 0; i < filenames.length; i += batchSize) {
+        const batch = filenames.slice(i, i + batchSize);
+        const batchNumber = Math.floor(i / batchSize) + 1;
+
+        console.log(`Processing batch ${batchNumber}/${totalBatches}: ${batch.length} items`);
+
+        let batchResults: (ActivityInsert | null)[];
+
+        if (batch.length === 1) {
+          // Single item - use individual processing
+          const result = await this.generateActivityFromFilename(batch[0]);
+          batchResults = [result];
+        } else if (batch.length <= 10) {
+          // Small batch - use single LLM call for efficiency
+          batchResults = await this.processBatchWithSingleCall(batch);
+        } else {
+          // Large batch - use parallel processing with concurrency control
+          batchResults = await this.processBatchInParallel(batch, concurrency);
+        }
+
+        results.push(...batchResults);
+
+        // Add delay between batches to avoid rate limiting
+        if (i + batchSize < filenames.length) {
+          console.log(`Waiting ${retryDelay}ms before next batch...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+      }
+
+      const successCount = results.filter(r => r !== null).length;
+      console.log(`Batch processing complete: ${successCount}/${filenames.length} successful`);
+
+      return results;
+    } catch (error) {
+      console.error("Error in batch processing:", error);
+      return Array(filenames.length).fill(null);
+    }
+  }
+
+  /**
+   * Generate image prompt with enhanced customization
    */
   private generateImagePrompt(activity: ActivityInsert): string {
-    // Create a detailed prompt based on activity details
-    const categoryDescriptions: Record<string, string> = {
-      'Work': 'in a professional setting',
-      'Health': 'in a health-related context',
-      'Leisure': 'during leisure time',
-      'Education': 'in an educational setting',
-      'Family': 'with family members',
-      'Social': 'in a social gathering',
-      'Personal Growth': 'for personal development',
-      'Spiritual': 'in a spiritual context',
-      'Travel': 'during a travel experience',
-      'Chores': 'doing household tasks',
-      'Hobby': 'enjoying a hobby',
-      'Exercise': 'during physical activity',
-      'Nutrition': 'related to food and nutrition',
-      'Other': ''
+    const categoryStyles: Record<string, string> = {
+      'Work': 'professional office environment, modern workspace',
+      'Health': 'clean medical or wellness setting, bright and calming',
+      'Leisure': 'relaxed recreational environment, comfortable atmosphere',
+      'Education': 'learning environment, books or classroom setting',
+      'Family': 'warm family gathering, cozy home atmosphere',
+      'Social': 'social gathering, friendly interaction',
+      'Personal Growth': 'inspiring personal development setting',
+      'Spiritual': 'peaceful spiritual environment, serene atmosphere',
+      'Travel': 'exciting travel destination, adventure setting',
+      'Chores': 'organized home setting, clean environment',
+      'Hobby': 'creative hobby space, organized and inspiring',
+      'Exercise': 'fitness environment, energetic atmosphere',
+      'Nutrition': 'healthy food setting, fresh ingredients',
+      'Other': 'appropriate activity setting'
     };
 
-    const categoryContext = categoryDescriptions[activity.category] || '';
+    const baseStyle = categoryStyles[activity.category] || '';
+    let prompt = `High-quality, photorealistic image showing ${activity.name} in ${baseStyle}.`;
 
-    // Basic prompt structure
-    let prompt = `A high-quality, photorealistic image of people engaging in ${activity.name} ${categoryContext}.`;
-
-    // Adding emotional tone based on life impact
-    if (activity.lifeImpact !== undefined) {
-      if (activity.lifeImpact > 7) {
-        prompt += ' The scene should convey joy, fulfillment, and positive energy.';
-      } else if (activity.lifeImpact > 3) {
-        prompt += ' The scene should have a pleasant, positive atmosphere.';
-      } else if (activity.lifeImpact < -3) {
-        prompt += ' The scene should convey challenge or difficulty.';
-      }
+    // Add emotional tone based on life impact
+    if (activity.lifeImpact >= 7) {
+      prompt += ' Vibrant, joyful atmosphere with bright lighting and positive energy.';
+    } else if (activity.lifeImpact >= 3) {
+      prompt += ' Pleasant, comfortable atmosphere with good lighting.';
+    } else if (activity.lifeImpact >= 0) {
+      prompt += ' Neutral, balanced atmosphere.';
+    } else if (activity.lifeImpact >= -3) {
+      prompt += ' Subdued atmosphere, soft lighting.';
+    } else {
+      prompt += ' Challenging environment, dramatic lighting.';
     }
 
-    // Add aesthetic style guidance
-    prompt += ' The image should be vibrant, well-lit, with good composition. Professional photography style.';
+    // Add style specifications
+    prompt += ' Professional photography style, sharp focus, good composition, realistic lighting.';
+
+    // Add color hint if available
+    if (activity.color) {
+      prompt += ` Color palette inspired by ${activity.color}.`;
+    }
 
     return prompt;
   }
 
   /**
-   * Save a base64 image to the file system
+   * Save base64 image with enhanced error handling
    */
   private async saveBase64Image(base64Data: string, activityName: string): Promise<ImageGenerationResponse> {
     try {
-      // Extract the base64 content (remove data:image/jpeg;base64, part if present)
-      const base64Image = base64Data.includes(',') 
+      await this.ensureUploadDirectory();
+
+      // Clean base64 data
+      const base64Content = base64Data.includes(',') 
         ? base64Data.split(',')[1] 
         : base64Data;
 
-      // Generate a sanitized filename
-      const sanitizedName = activityName
+      // Generate safe filename
+      const safeName = activityName
         .toLowerCase()
-        .replace(/[^a-z0-9]/g, '')
+        .replace(/[^a-z0-9]/g, '_')
         .substring(0, 20);
 
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      const filename = `${uniqueSuffix}.jpg`;
-      const originalFilename = `${sanitizedName}.jpg`;
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const filename = `${timestamp}_${randomSuffix}.jpg`;
+      const originalFilename = `${safeName}.jpg`;
+      const fullPath = path.join(this.uploadDir, filename);
 
-      // Ensure the uploads directory exists
-      const uploadDir = './uploads';
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
+      // Decode and save
+      const imageBuffer = Buffer.from(base64Content, 'base64');
+      await writeFile(fullPath, imageBuffer);
 
-      // Full path to save the image
-      const filePath = path.join(uploadDir, filename);
-
-      // Decode and save the image
-      const imageBuffer = Buffer.from(base64Image, 'base64');
-      fs.writeFileSync(filePath, imageBuffer);
-
-      console.log(`Image saved to ${filePath}`);
+      console.log(`Image saved successfully: ${fullPath}`);
 
       return {
         filename,
@@ -414,101 +753,277 @@ Ensure that each activity in the array corresponds to the filename at the same p
       };
     } catch (error) {
       console.error('Error saving base64 image:', error);
-      throw error;
+      throw new TogetherAIError(
+        `Failed to save image: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'IMAGE_SAVE_ERROR',
+        false
+      );
     }
   }
 
   /**
-   * Fetch image from URL and convert to base64
+   * Fetch image from URL with retry logic
    */
   private async fetchImageAsBase64(url: string): Promise<string> {
-    try {
+    const fetchCall = async () => {
       const fetch = (await import('node-fetch')).default;
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'TogetherAI-Service/1.0'
+        },
+        timeout: 30000 // 30 second timeout
+      });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      return buffer.toString('base64');
+      return Buffer.from(arrayBuffer).toString('base64');
+    };
+
+    const result = await this.makeAPICall(fetchCall, `Fetch image from ${url}`);
+    if (!result.success) {
+      throw new TogetherAIError(
+        `Failed to fetch image: ${result.error}`,
+        'IMAGE_FETCH_ERROR',
+        true
+      );
+    }
+
+    return result.data!;
+  }
+
+  /**
+   * Generate image for activity with comprehensive error handling
+   */
+  async generateImageForActivity(activity: ActivityInsert): Promise<ImageGenerationResponse | null> {
+    try {
+      this.ensureInitialized();
+      console.log(`Generating image for activity: ${activity.name}`);
+
+      const prompt = this.generateImagePrompt(activity);
+      console.log(`Image prompt: ${prompt}`);
+
+      const imageCall = async () => {
+        return await this.client.images.create({
+          model: this.imageModel,
+          prompt: prompt,
+          width: 1024,
+          height: 1024,
+          steps: 40,
+          n: 1, // Generate single image for reliability
+          seed: Math.floor(Math.random() * 1000000)
+        });
+      };
+
+      const result = await this.makeAPICall(imageCall, `Generate image for ${activity.name}`);
+      if (!result.success || !result.data) {
+        console.error(`Failed to generate image for ${activity.name}:`, result.error);
+        return null;
+      }
+
+      const response = result.data;
+
+      // Validate response structure
+      if (!response.data || response.data.length === 0) {
+        console.error('No image data in response');
+        return null;
+      }
+
+      const imageData = response.data[0];
+      console.log('Image response keys:', Object.keys(imageData));
+
+      // Handle URL response
+      if (imageData.url) {
+        console.log('Processing image URL response...');
+        try {
+          const base64Image = await this.fetchImageAsBase64(imageData.url);
+          return await this.saveBase64Image(base64Image, activity.name);
+        } catch (error) {
+          console.error('Error processing image URL:', error);
+          return null;
+        }
+      }
+
+      // Handle base64 response
+      if (imageData.b64_json) {
+        console.log('Processing base64 image response...');
+        try {
+          return await this.saveBase64Image(imageData.b64_json, activity.name);
+        } catch (error) {
+          console.error('Error processing base64 image:', error);
+          return null;
+        }
+      }
+
+      console.error('No valid image data found in response');
+      return null;
+
     } catch (error) {
-      console.error('Error fetching image:', error);
-      throw error;
+      console.error(`Error generating image for activity ${activity.name}:`, error);
+      return null;
     }
   }
 
-  async generateImageForActivity(activity: ActivityInsert): Promise<ImageGenerationResponse | null> {
+  /**
+   * Health check method
+   */
+  async healthCheck(): Promise<{ status: string; initialized: boolean; canGenerateText: boolean; canGenerateImages: boolean }> {
+    const status = {
+      status: 'unknown',
+      initialized: this.isInitialized,
+      canGenerateText: false,
+      canGenerateImages: false
+    };
+
     try {
-      console.log(`Generating image for activity: ${activity.name}`);
-
-      // Create a prompt for the image generation
-      const prompt = this.generateImagePrompt(activity);
-      console.log(`Image generation prompt: ${prompt}`);
-
-      // Call the Together API with the Stability AI model using the specified parameters
-      const response = await this.client.images.create({
-        model: this.imageModel,
-        prompt: prompt,
-        width: 1024,
-        height: 1024,
-        steps: 40,
-        n: 4,
-        seed: 1000
-      });
-
-      // Log the full response structure for debugging
-      console.log('Image generation response structure:', JSON.stringify({
-        hasData: !!response.data,
-        dataLength: response.data ? response.data.length : 0,
-        responseKeys: Object.keys(response)
-      }));
-
-      // Check if we have a valid response with a URL or b64_json
-      if (!response.data || response.data.length === 0) {
-        console.error('No data in response');
-        return null;
+      if (!this.isInitialized) {
+        status.status = 'not_initialized';
+        return status;
       }
 
-      if (response.data && response.data.length > 0) {
-        console.log('Response data first item keys:', Object.keys(response.data[0]));
+      // Test text generation
+      try {
+        const testResponse = await this.client.chat.completions.create({
+          messages: [{ role: "user", content: "Hello" }],
+          model: this.textModel,
+          max_tokens: 10
+        });
+        status.canGenerateText = !!testResponse.choices[0]?.message?.content;
+      } catch (error) {
+        console.warn('Text generation test failed:', error);
       }
 
-      // Check for URL in the response
-      if (response.data[0].url) {
-        console.log('Found image URL in response, fetching image...');
-        const imageUrl = response.data[0].url;
-
-        // Fetch the image from the URL and convert to base64
-        const base64Image = await this.fetchImageAsBase64(imageUrl);
-
-        // Save the image to the filesystem
-        const imageData = await this.saveBase64Image(base64Image, activity.name);
-        return imageData;
-      } 
-      // Fallback to b64_json if it exists
-      else if (response.data[0].b64_json) {
-        console.log('Found b64_json in response');
-        const imageData = await this.saveBase64Image(
-          response.data[0].b64_json, 
-          activity.name
-        );
-        return imageData;
+      // Test image generation (optional, as it's more expensive)
+      // Uncomment if you want to test image generation in health checks
+      /*
+      try {
+        const testImageResponse = await this.client.images.create({
+          model: this.imageModel,
+          prompt: "test",
+          width: 256,
+          height: 256,
+          steps: 10,
+          n: 1
+        });
+        status.canGenerateImages = !!testImageResponse.data[0];
+      } catch (error) {
+        console.warn('Image generation test failed:', error);
       }
-      else {
-        console.error('No image URL or base64 data in response');
-        return null;
-      }
+      */
+
+      // For now, assume image generation works if text generation works
+      status.canGenerateImages = status.canGenerateText;
+
+      status.status = status.canGenerateText ? 'healthy' : 'degraded';
     } catch (error) {
-      console.error('Error generating image for activity:', error);
-      if (error instanceof Error) {
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
-      return null;
+      console.error('Health check failed:', error);
+      status.status = 'unhealthy';
+    }
+
+    return status;
+  }
+
+  /**
+   * Get service statistics
+   */
+  getStats(): { 
+    initialized: boolean; 
+    uploadDirectory: string;
+    textModel: string;
+    imageModel: string;
+    defaultBatchSize: number;
+  } {
+    return {
+      initialized: this.isInitialized,
+      uploadDirectory: this.uploadDir,
+      textModel: this.textModel,
+      imageModel: this.imageModel,
+      defaultBatchSize: this.defaultBatchSize
+    };
+  }
+
+  /**
+   * Update service configuration
+   */
+  updateConfig(config: {
+    textModel?: string;
+    imageModel?: string;
+    uploadDir?: string;
+  }): void {
+    if (config.textModel) {
+      this.textModel = config.textModel;
+      console.log(`Updated text model to: ${this.textModel}`);
+    }
+
+    if (config.imageModel) {
+      this.imageModel = config.imageModel;
+      console.log(`Updated image model to: ${this.imageModel}`);
+    }
+
+    if (config.uploadDir) {
+      this.uploadDir = config.uploadDir;
+      this.ensureUploadDirectory();
+      console.log(`Updated upload directory to: ${this.uploadDir}`);
+    }
+  }
+
+  /**
+   * Cleanup resources (if needed)
+   */
+  async cleanup(): Promise<void> {
+    try {
+      // Add any cleanup logic here if needed
+      console.log('TogetherAI service cleanup completed');
+    } catch (error) {
+      console.error('Error during cleanup:', error);
     }
   }
 }
 
+// Export singleton instance for backward compatibility
 export const togetherAIService = new TogetherAIService();
+
+// Export additional utilities for advanced usage
+export { TogetherAIError, type ActivityGenerationResponse, type ImageGenerationResponse, type BatchProcessingOptions };
+
+// Example usage:
+/*
+
+// Basic usage (backward compatible)
+const activity = await togetherAIService.generateActivityFromFilename('morningYoga.jpg');
+
+// Batch processing with options
+const activities = await togetherAIService.generateActivitiesFromFilenames(
+  ['morningYoga.jpg', 'readingBook.png', 'cookingDinner.jpg'],
+  {
+    batchSize: 5,
+    maxRetries: 3,
+    retryDelay: 1000,
+    concurrency: 2
+  }
+);
+
+// Image generation
+const imageData = await togetherAIService.generateImageForActivity(activity);
+
+// Health check
+const health = await togetherAIService.healthCheck();
+console.log('Service health:', health);
+
+// Get service stats
+const stats = togetherAIService.getStats();
+console.log('Service stats:', stats);
+
+// Update configuration
+togetherAIService.updateConfig({
+  textModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+  uploadDir: './custom-uploads'
+});
+
+// Cleanup (call before shutting down)
+await togetherAIService.cleanup();
+
+*/
