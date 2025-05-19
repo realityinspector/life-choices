@@ -100,4 +100,4 @@ authRouter.get("/status", (req, res) => {
   return res.json({ authenticated: false });
 });
 
-export default authRouter; 
+export default authRouter;
