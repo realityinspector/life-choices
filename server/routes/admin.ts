@@ -7,6 +7,8 @@ import { Together } from "together-ai";
 import { ActivityImage, InsertActivityImage, Activity } from "../../shared/schema";
 import { getAllSampleActivities } from "../../shared/sample-activities";
 import { importActivities } from "../../scripts/import-activities";
+import { db } from "../db";
+import { activities } from "../../db/schema";
 
 // Set up storage for uploaded files
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -81,7 +83,7 @@ adminRouter.post("/generate-description", requireAuth, async (req: Authenticated
     }
 
     const prompt = `Generate activity details for the image filename: "${filename}"\n\nRespond with a JSON object that matches this schema exactly.`;
-    
+
     const response = await client.chat.completions.create({
       model: "mistral/mixtral-8x7b-instruct",
       messages: [
@@ -116,7 +118,7 @@ adminRouter.post("/generate-description", requireAuth, async (req: Authenticated
     });
 
     const activityData = JSON.parse(response.choices[0].message.content);
-    
+
     // Create the activity
     const activity = await storage.createActivity({
       ...activityData,
@@ -138,18 +140,26 @@ adminRouter.use(requireAuth);
 // Get all activities for dropdown selection - separate from user's activities
 adminRouter.get("/activities", async (req: AuthenticatedRequest, res) => {
   try {
-    // Get all activities from database for all users
-    const dbActivities = await storage.getActivities();
-    
-    // Get all sample activities
+    // Get all activities from database, ordered by ID
+    const dbActivities = await db.select()
+      .from(activities)
+      .orderBy(activities.id);
+
+    // Get all sample activities 
     const sampleActivities = getAllSampleActivities();
-    
-    // Combine both sets of activities
-    const allActivities = [...dbActivities, ...sampleActivities];
-    
+
+    // Combine both sets of activities, ensuring no ID conflicts
+    const allActivities = [
+      ...dbActivities,
+      ...sampleActivities.map(activity => ({
+        ...activity,
+        id: activity.id + 1000 // Offset sample activity IDs to avoid conflicts
+      }))
+    ];
+
     console.log("Admin activities fetch:", allActivities.length, "activities found",
                 `(${dbActivities.length} from database, ${sampleActivities.length} samples)`);
-    
+
     res.json(allActivities);
   } catch (error) {
     console.error("Error fetching activities:", error);
@@ -180,14 +190,14 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
 
     // Get all activities from database
     const dbActivities = await storage.getActivities();
-    
+
     // Get all sample activities
     const sampleActivities = getAllSampleActivities();
-    
+
     // Combine both sets of activities
     const activities = [...dbActivities, ...sampleActivities];
     const activityNames = activities.map(a => a.name);
-    
+
     if (activityNames.length === 0) {
       console.log("Warning: No activities found to match against");
       return res.json({
@@ -196,7 +206,7 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
         activityId: null
       });
     }
-    
+
     console.log(`Found ${activityNames.length} activities for matching (${dbActivities.length} from DB, ${sampleActivities.length} samples)`);
 
     // Extract likely words from filename
@@ -206,13 +216,13 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
       .replace(/([a-z])([A-Z])/g, "$1 $2") // Convert camelCase to spaces
       .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2") // Convert PascalCase to spaces
       .replace(/[_-]/g, " "); // Replace underscores and dashes with spaces
-      
+
     console.log("Processed filename for matching:", processedFilename);
 
     // Simplified approach - just one API call with clear instructions
     try {
       console.log("Sending request to Together AI...");
-      
+
       const response = await together.chat.completions.create({
         messages: [
           {
@@ -222,7 +232,7 @@ adminRouter.post("/suggest-match", async (req: AuthenticatedRequest, res) => {
           {
             role: "user",
             content: `Match this image filename to ONE of these activities:
-            
+
 Image filename: ${processedFilename}
 
 Available activities:
@@ -245,10 +255,10 @@ IMPORTANT RULES:
       // Get the raw response
       const rawSuggestion = response.choices?.[0]?.message?.content?.trim() || "No match";
       console.log("Raw Together AI response:", rawSuggestion);
-      
+
       // Clean up the response to handle cases where the model adds extra text
       let suggestedMatch = "No match";
-      
+
       // Try to find an exact match first
       for (const activityName of activityNames) {
         if (rawSuggestion === activityName) {
@@ -256,7 +266,7 @@ IMPORTANT RULES:
           break;
         }
       }
-      
+
       // If no exact match, check if any activity name is contained in the response
       if (suggestedMatch === "No match" && rawSuggestion !== "No match") {
         for (const activityName of activityNames) {
@@ -266,41 +276,41 @@ IMPORTANT RULES:
           }
         }
       }
-      
+
       // Find the activity that matches
       const matchedActivity = activities.find(a => a.name === suggestedMatch);
-      
+
       const result = {
         filename,
         suggestedMatch,
         activityId: matchedActivity?.id || null
       };
-      
+
       console.log("Final match result:", result);
       res.json(result);
-      
+
     } catch (togetherError) {
       console.error("Together AI API error:", togetherError);
-      
+
       // Fallback to simple keyword matching if API fails
       console.log("Using fallback keyword matching...");
       const words = processedFilename.toLowerCase().split(/\s+/);
       let bestMatch = null;
       let bestMatchScore = 0;
-      
+
       for (const activity of activities) {
         const activityName = activity.name.toLowerCase();
         // Count how many words from the filename appear in the activity name
         const matchingWords = words.filter((word: string) => 
           word.length > 2 && activityName.includes(word)
         );
-        
+
         if (matchingWords.length > bestMatchScore) {
           bestMatchScore = matchingWords.length;
           bestMatch = activity;
         }
       }
-      
+
       // Return the result with the best match if we have one
       if (bestMatch && bestMatchScore > 0) {
         console.log("Fallback match found:", bestMatch.name, "with score", bestMatchScore);
@@ -352,7 +362,7 @@ adminRouter.post("/upload", upload.array("images", 50), async (req: Authenticate
 adminRouter.post("/associate-image", async (req: AuthenticatedRequest, res) => {
   try {
     const { activityId, filename, originalFilename, path, mimeType } = req.body;
-    
+
     if (!activityId || !filename || !originalFilename || !path || !mimeType) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -377,7 +387,7 @@ adminRouter.post("/associate-image", async (req: AuthenticatedRequest, res) => {
 adminRouter.post("/batch-associate", async (req: AuthenticatedRequest, res) => {
   try {
     const { associations } = req.body;
-    
+
     if (!associations || !Array.isArray(associations)) {
       return res.status(400).json({ error: "No associations provided" });
     }
@@ -387,7 +397,7 @@ adminRouter.post("/batch-associate", async (req: AuthenticatedRequest, res) => {
 
     for (const assoc of associations) {
       const { activityId, filename, originalFilename, path, mimeType } = assoc;
-      
+
       if (!activityId || !filename || !originalFilename || !path || !mimeType) {
         errors.push({ filename, error: "Missing required fields" });
         continue;
@@ -455,9 +465,9 @@ adminRouter.post("/import-activities", async (req: AuthenticatedRequest, res) =>
 
     const userId = req.user.id;
     console.log(`Starting import of activities from CSV for user ${userId}...`);
-    
+
     const importCount = await importActivities(userId);
-    
+
     console.log(`Successfully imported ${importCount} activities for user ${userId}`);
     res.json({ 
       message: `Successfully imported ${importCount} activities`,
