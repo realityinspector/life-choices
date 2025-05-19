@@ -145,25 +145,33 @@ adminBackupRouter.post("/restore", upload.single('backupFile'), async (req: Auth
     }
     
     const backupFilePath = req.file.path;
-    const extractDir = path.join(backupDir, `restore_${Date.now()}`);
+    let sqlDumpPath: string;
+    let extractDir: string | null = null;
     
-    console.log(`Extracting backup from ${backupFilePath} to ${extractDir}...`);
-    
-    // Create extraction directory
-    fs.mkdirSync(extractDir, { recursive: true });
-    
-    // Extract the tarball
-    execSync(`tar -xzf ${backupFilePath} -C ${extractDir}`);
-    
-    // Find the SQL dump file
-    const files = fs.readdirSync(extractDir);
-    const sqlDumpFile = files.find(file => file.startsWith('dump_') && file.endsWith('.sql'));
-    
-    if (!sqlDumpFile) {
-      throw new Error("SQL dump file not found in backup");
+    // Check if this is a SQL file or tar.gz backup
+    if (backupFilePath.endsWith('.sql')) {
+      console.log('Processing SQL file restore...');
+      sqlDumpPath = backupFilePath;
+    } else {
+      console.log(`Extracting backup from ${backupFilePath}...`);
+      extractDir = path.join(backupDir, `restore_${Date.now()}`);
+      
+      // Create extraction directory
+      fs.mkdirSync(extractDir, { recursive: true });
+      
+      // Extract the tarball
+      execSync(`tar -xzf ${backupFilePath} -C ${extractDir}`);
+      
+      // Find the SQL dump file
+      const files = fs.readdirSync(extractDir);
+      const sqlDumpFile = files.find(file => file.startsWith('dump_') && file.endsWith('.sql'));
+      
+      if (!sqlDumpFile) {
+        throw new Error("SQL dump file not found in backup");
+      }
+      
+      sqlDumpPath = path.join(extractDir, sqlDumpFile);
     }
-    
-    const sqlDumpPath = path.join(extractDir, sqlDumpFile);
     
     // Get database connection info
     const dbPort = process.env.PGPORT || '5432';
@@ -228,7 +236,9 @@ adminBackupRouter.post("/restore", upload.single('backupFile'), async (req: Auth
     }
     
     // Clean up temporary files
-    execSync(`rm -rf ${extractDir}`);
+    if (extractDir) {
+      execSync(`rm -rf ${extractDir}`);
+    }
     fs.unlinkSync(backupFilePath);
     
     res.json({ message: "Backup restored successfully" });
