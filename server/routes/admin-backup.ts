@@ -21,7 +21,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 function isAuthenticated(req: Request): boolean {
-  return req.isAuthenticated();
+  return req.isAuthenticated?.() || false;
 }
 
 // Setup temporary directory for backups
@@ -54,12 +54,17 @@ export const adminBackupRouter = Router();
 
 // Middleware to check if user is authenticated and is admin
 const requireAdminAuth = (req: AuthenticatedRequest, res: Response, next: any) => {
-  if (!isAuthenticated(req)) {
-    return res.status(401).json({ message: "Unauthorized" });
+  if (!isAuthenticated(req) || !req.user) {
+    console.log('Auth failed - not authenticated:', { 
+      isAuthenticated: isAuthenticated(req),
+      user: req.user 
+    });
+    return res.status(401).json({ message: "Not authenticated" });
   }
   
   // Check if user is admin (all users with ID 1 are considered admins in this app)
-  if (req.user?.id !== 1) {
+  if (req.user.id !== 1) {
+    console.log('Auth failed - not admin:', { userId: req.user.id });
     return res.status(403).json({ message: "Forbidden: Admin access required" });
   }
   
