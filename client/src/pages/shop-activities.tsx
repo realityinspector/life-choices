@@ -48,6 +48,7 @@ interface ActivityCardProps {
   recommendationReason?: string;
   userActivities: Activity[];
   activityImages?: ActivityImage[];
+  isAdmin: boolean;
 }
 
 const ActivityCard = ({ 
@@ -59,7 +60,8 @@ const ActivityCard = ({
   isRecommended = false,
   recommendationReason,
   userActivities,
-  activityImages = []
+  activityImages = [],
+  isAdmin
 }: ActivityCardProps) => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharePrivacy, setSharePrivacy] = useState<"private" | "link" | "public">("private");
@@ -533,7 +535,7 @@ function completeActivityData(activities: EnhancedActivityInsert[]): Required<En
 }
 
 export default function ShopActivitiesPage() {
-  const { userData, activities, addActivity, completeActivity: completeUserActivity, addActivitiesToCart, getCartActivities } = useUser();
+  const { userData, activities, addActivity, completeUserActivity, addActivitiesToCart, getCartActivities, isAdmin } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCart, setShowCart] = useState(false);
@@ -920,6 +922,7 @@ export default function ShopActivitiesPage() {
                     onSkip={handleSkipActivity}
                     userActivities={activities}
                     activityImages={allActivityImages}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
@@ -949,6 +952,7 @@ export default function ShopActivitiesPage() {
                       onSkip={handleSkipActivity}
                       userActivities={activities}
                       activityImages={allActivityImages}
+                      isAdmin={isAdmin}
                     />
                   ))}
               </div>
@@ -968,6 +972,7 @@ export default function ShopActivitiesPage() {
                       onSkip={handleSkipActivity}
                       userActivities={activities}
                       activityImages={allActivityImages}
+                      isAdmin={isAdmin}
                     />
                   ))}
               </div>
@@ -1000,6 +1005,7 @@ export default function ShopActivitiesPage() {
                         isRecommended={true}
                         recommendationReason={getRecommendationReason(activity, userData, activities)}
                         activityImages={allActivityImages}
+                        isAdmin={isAdmin}
                       />
                     ))}
                   </div>
