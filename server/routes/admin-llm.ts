@@ -401,8 +401,15 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
       return res.status(400).json({ error: "Activity ID is required" });
     }
 
+    // Ensure activityId is a number and handle potential string input
+    const parsedId = typeof activityId === 'string' ? parseInt(activityId, 10) : activityId;
+    
+    if (isNaN(parsedId)) {
+      return res.status(400).json({ error: "Invalid activity ID format" });
+    }
+
     // Get the activity
-    const activity = await storage.getActivity(parseInt(activityId));
+    const activity = await storage.getActivity(parsedId);
     if (!activity) {
       return res.status(404).json({ error: "Activity not found" });
     }
