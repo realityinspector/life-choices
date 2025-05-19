@@ -487,12 +487,23 @@ adminRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
 
   try {
     const id = parseInt(req.params.id);
-
-    // If ID is >= 1000, it's a sample activity which can't be deleted
-    if (id >= 1000) {
-      return res.status(403).json({ message: "Cannot delete sample activities" });
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid activity ID" });
     }
 
+    // Check if this is a sample activity
+    if (id >= 1000) {
+      const sampleActivities = getAllSampleActivities();
+      const sampleActivity = sampleActivities.find(a => a.id === id);
+      
+      if (sampleActivity) {
+        return res.status(403).json({ message: "Cannot delete sample activities" });
+      } else {
+        return res.status(404).json({ message: "Sample activity not found" });
+      }
+    }
+
+    // Handle regular database activity
     const activity = await storage.getActivity(id);
     if (!activity) {
       return res.status(404).json({ message: "Activity not found" });
