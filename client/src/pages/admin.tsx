@@ -69,6 +69,12 @@ export default function AdminDashboard() {
 
   const adminModules = [
     {
+      title: "Activity Management",
+      description: "Create, edit and delete activities",
+      icon: <Database className="h-8 w-8 text-green-500" />,
+      route: "/admin/activities",
+    },
+    {
       title: "CSV Import",
       description: "Import activities from CSV with AI-generated images and details",
       icon: <FileText className="h-8 w-8 text-yellow-500" />,
