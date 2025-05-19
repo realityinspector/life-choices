@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Activity } from "@shared/schema";
@@ -24,7 +23,7 @@ export default function AdminActivities() {
   const queryClient = useQueryClient();
   const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
 
-  // Fetch all activities
+  // Fetch all activities and images
   const { data: activities = [] } = useQuery<Activity[]>({
     queryKey: ['/api/admin/activities'],
     queryFn: async () => {
@@ -33,24 +32,36 @@ export default function AdminActivities() {
     }
   });
 
-  // Delete activity mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest(`/api/activities/${id}`, {
-        method: 'DELETE'
-      });
+  const { data: activityImages = [] } = useQuery<ActivityImage[]>({
+    queryKey: ['/api/admin/activity-images'],
+    queryFn: async () => {
+      const res = await apiRequest('/api/admin/activity-images');
+      return res.json();
+    }
+  });
+
+  // Create a Set of activity IDs that have images
+  const activitiesWithImages = new Set(activityImages.map(img => img.activityId));
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map(id => 
+        apiRequest(`/api/activities/${id}`, { method: 'DELETE' })
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/activities'] });
       toast({
         title: 'Success',
-        description: 'Activity deleted successfully',
+        description: `Selected activities deleted successfully`,
       });
+      setSelectedActivities([]);
     },
     onError: () => {
       toast({
         title: 'Error',
-        description: 'Failed to delete activity',
+        description: 'Failed to delete activities',
         variant: 'destructive',
       });
     }
@@ -91,6 +102,7 @@ export default function AdminActivities() {
                 <TableHead>Frequency</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Impact</TableHead>
+                 <TableHead>Has Image</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -102,6 +114,7 @@ export default function AdminActivities() {
                   <TableCell>{activity.frequency} {activity.frequencyUnit}</TableCell>
                   <TableCell>{activity.duration} {activity.durationUnit}</TableCell>
                   <TableCell>{activity.lifeImpact}</TableCell>
+                   <TableCell>{activitiesWithImages.has(activity.id) ? 'True' : 'False'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
