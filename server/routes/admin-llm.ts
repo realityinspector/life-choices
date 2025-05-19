@@ -470,7 +470,7 @@ adminLLMRouter.post("/generate-missing-images", async (req: AuthenticatedRequest
   try {
     // Get all activities with images
     const activitiesWithImages = await storage.getActivitiesWithImages();
-    const activitiesWithImagesIds = new Set(activitiesWithImages.map(a => a.id));
+    const activitiesWithImagesIds = new Set(activitiesWithImages.map(img => img.activityId));
 
     // Get all activities
     const allActivities = await storage.getActivities();
@@ -602,7 +602,7 @@ adminLLMRouter.post("/import-csv", csvUpload.single('csv'), async (req: Authenti
     // Read and parse CSV file
     const records: { activity_name: string; activity_description: string }[] = [];
     const fileContent = fs.readFileSync(req.file.path, 'utf-8');
-    
+
     parser.on('readable', () => {
       let record;
       while ((record = parser.read()) !== null) {
@@ -627,23 +627,23 @@ adminLLMRouter.post("/import-csv", csvUpload.single('csv'), async (req: Authenti
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           console.log(`Generate activity for ${record.activity_name} - Attempt ${attempt}/3`);
-          
+
           // Generate activity details using Together AI
           const activityResponse = await togetherAIService.generateActivityFromFilename(record.activity_name);
-          
+
           if (!activityResponse) {
             throw new Error("Failed to generate activity details");
           }
 
           console.log(`Generate image for ${record.activity_name} - Attempt ${attempt}/3`);
-          
+
           // Generate image using Together AI with timeout
           const imagePromise = togetherAIService.generateImageForActivity(activityResponse);
           const imageResponse = await Promise.race([
             imagePromise,
             new Promise((_, reject) => setTimeout(() => reject(new Error("Image generation timeout")), 60000))
           ]);
-          
+
           if (!imageResponse) {
             throw new Error("Failed to generate activity image");
           }
