@@ -179,6 +179,7 @@ export default function AdminActivities() {
                     className="h-4 w-4"
                   />
                 </TableHead>
+                <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Frequency</TableHead>
@@ -199,6 +200,7 @@ export default function AdminActivities() {
                       className="h-4 w-4"
                     />
                   </TableCell>
+                  <TableCell>{activity.id}</TableCell>
                   <TableCell>{activity.name}</TableCell>
                   <TableCell>{activity.category}</TableCell>
                   <TableCell>{activity.frequency} {activity.frequencyUnit}</TableCell>
