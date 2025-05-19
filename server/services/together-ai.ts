@@ -154,7 +154,7 @@ export class TogetherAIService {
     const durationUnits = VALID_DURATION_UNITS.join(", ");
 
     return `You are an AI assistant that creates detailed activities from image filenames. 
-The filenames describe activities people engage in.
+The filenames describe activities people engage in. Your job is to ADHERE TO THE ORIGINAL CONCEPT, then do the instructions that follow. For example, if the activity says "Stargazing with S'Mores" you must stick to that with "Stargazing + S'mores" as the title; this is just an example. Do not change the concept or intent of the title, even if it's a novel or not-very-common approach. 
 
 For each filename, create a structured activity with these attributes:
 - name: Clear, descriptive title (maximum 40 characters)
