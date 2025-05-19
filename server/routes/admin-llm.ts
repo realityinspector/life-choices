@@ -409,15 +409,10 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
       return res.status(400).json({ error: "Invalid activity ID format" });
     }
 
-    // Get the activity from either admin activities or user activities
-    let activity = await storage.getActivity(parsedId);
+    // Get the activity from all activities without user filtering
+    const activity = await storage.getActivity(parsedId, true); // true flag to bypass user check
     if (!activity) {
-      // Try getting from admin activities
-      const adminActivities = await storage.getActivities();
-      activity = adminActivities.find(a => a.id === parsedId);
-      if (!activity) {
-        return res.status(404).json({ error: "Activity not found" });
-      }
+      return res.status(404).json({ error: "Activity not found" });
     }
 
     // Check if the activity already has images

@@ -226,7 +226,7 @@ export default function AdminActivities() {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ 
-                                  activityId: parseInt(activity.id.toString(), 10)
+                                  activityId: activity.id
                                 }),
                               });
                               if (!res.ok) {
