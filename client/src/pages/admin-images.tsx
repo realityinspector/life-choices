@@ -67,10 +67,10 @@ function ActivitySearch({
 }: ActivitySearchProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  
+
   // Initialize a local value state to handle internal component state properly
   const [value, setValue] = useState<string>("");
-  
+
   // Update local value whenever selectedActivity changes
   useEffect(() => {
     if (selectedActivity) {
@@ -79,14 +79,14 @@ function ActivitySearch({
       setValue("");
     }
   }, [selectedActivity]);
-  
+
   // Function to handle selection and ensure UI updates
   const handleSelect = (activity: Activity) => {
     setValue(activity.name); // Update local state immediately
     onSelect(activity);      // Notify parent component
     setOpen(false);          // Close dropdown
   };
-  
+
   // Group activities by category if needed
   const groupedActivities = showCategories ? 
     Object.entries(
@@ -99,12 +99,12 @@ function ActivitySearch({
       }, {})
     ).sort(([a], [b]) => a.localeCompare(b)) : 
     [["All Activities", activities]] as [string, Activity[]][];
-  
+
   // Filter based on whether it's a shop or database activity
   const getActivitySource = (activity: Activity): string => {
     return activity.id >= 1000 ? 'Shop Item' : 'Database';
   };
-  
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -143,9 +143,9 @@ function ActivitySearch({
                   activity.name.toLowerCase().includes(search.toLowerCase()) ||
                   activity.category.toLowerCase().includes(search.toLowerCase())
                 );
-                
+
                 if (filteredItems.length === 0) return null;
-                
+
                 return (
                   <CommandGroup key={category} heading={category}>
                     {filteredItems.map((activity: Activity) => (
@@ -182,7 +182,7 @@ function ActivitySearch({
                   Clear selection
                 </Button>
               )}
-              
+
               <div className="p-2 mt-1 border-t">
                 <div className="text-sm font-medium mb-1">Create new activity:</div>
                 <div className="flex items-center gap-2">
@@ -197,19 +197,19 @@ function ActivitySearch({
                     onClick={() => {
                       const input = document.getElementById('new-activity-input') as HTMLInputElement;
                       const activityName = input?.value?.trim();
-                      
+
                       if (!activityName) {
                         // Show toast using context
                         const toast = document.createEvent('CustomEvent');
                         document.dispatchEvent(toast);
                         return;
                       }
-                      
+
                       // Dispatch a custom event to create a new activity
                       // Get the current file index from the parent component's context
                       const fileIndexElem = document.getElementById('current-file-index');
                       const fileIndex = fileIndexElem ? parseInt(fileIndexElem.getAttribute('data-index') || '-1') : undefined;
-                      
+
                       const event = new CustomEvent('createNewActivity', { 
                         detail: { activityName, fileIndex } 
                       });
@@ -255,7 +255,7 @@ export default function AdminImagesPage() {
   const [files, setFiles] = useState<FileUploadState[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isMatching, setIsMatching] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(isUploading);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [searchQuery, setSearchQuery] = useState('');
@@ -267,7 +267,7 @@ export default function AdminImagesPage() {
   const [autoSaveAfterMatch, setAutoSaveAfterMatch] = useState(true);
   const [searchActive, setSearchActive] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Fetch activities for dropdown selection (including both database activities and shop catalog)
   const { data: activities = [] } = useQuery<Activity[]>({
     queryKey: ['/api/admin/activities'],
@@ -281,7 +281,7 @@ export default function AdminImagesPage() {
       }
     }
   });
-  
+
   // Fetch existing activity images
   const { data: activityImages = [], refetch: refetchImages } = useQuery<ActivityImage[]>({
     queryKey: ['/api/admin/activity-images'],
@@ -295,7 +295,7 @@ export default function AdminImagesPage() {
       }
     }
   });
-  
+
   // Upload files mutation
   const uploadMutation = useMutation({
     mutationFn: async (filesToUpload: File[]) => {
@@ -303,13 +303,13 @@ export default function AdminImagesPage() {
       filesToUpload.forEach(file => {
         formData.append('images', file);
       });
-      
+
       const res = await apiRequest('/api/admin/upload', {
         method: 'POST',
         body: formData,
         // Don't set Content-Type, let browser set it with boundary
       });
-      
+
       return res.json();
     },
     onSuccess: (data) => {
@@ -319,7 +319,7 @@ export default function AdminImagesPage() {
           const uploadedFile = data.files.find(
             (f: any) => f.originalFilename === fileState.file.name
           );
-          
+
           if (uploadedFile) {
             return {
               ...fileState,
@@ -332,12 +332,12 @@ export default function AdminImagesPage() {
           return fileState;
         })
       );
-      
+
       toast({
         title: 'Upload Complete',
         description: `Successfully uploaded ${data.files.length} files.`,
       });
-      
+
       setIsUploading(false);
       // Start matching process after upload
       matchFilesWithActivities();
@@ -352,7 +352,7 @@ export default function AdminImagesPage() {
       setIsUploading(false);
     }
   });
-  
+
   // Suggest match mutation
   const suggestMatchMutation = useMutation({
     mutationFn: async (filename: string) => {
@@ -362,7 +362,7 @@ export default function AdminImagesPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filename }),
         });
-        
+
         const data = await res.json();
         console.log('Matching result for', filename, data);
         return data;
@@ -372,7 +372,7 @@ export default function AdminImagesPage() {
       }
     }
   });
-  
+
   // Associate image mutation
   const associateImageMutation = useMutation({
     mutationFn: async (data: AssociationRequest) => {
@@ -381,7 +381,7 @@ export default function AdminImagesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      
+
       return res.json();
     },
     onSuccess: () => {
@@ -400,7 +400,7 @@ export default function AdminImagesPage() {
       });
     }
   });
-  
+
   // Create a new activity mutation
   const createActivityMutation = useMutation({
     mutationFn: async (activityName: string) => {
@@ -423,7 +423,7 @@ export default function AdminImagesPage() {
           nextDue: new Date().toISOString(),
         }),
       });
-      
+
       return res.json();
     },
     onSuccess: (data) => {
@@ -444,17 +444,17 @@ export default function AdminImagesPage() {
       });
     }
   });
-  
+
   // Setup event listener for creating new activities
   useEffect(() => {
     const handleCreateActivity = async (e: any) => {
       const { activityName, fileIndex } = e.detail;
       if (!activityName) return;
-      
+
       try {
         // Create the new activity
         const newActivity = await createActivityMutation.mutateAsync(activityName);
-        
+
         // Use the new activity
         if (newActivity?.id) {
           // If we're editing an existing image, associate it
@@ -484,7 +484,7 @@ export default function AdminImagesPage() {
               } : f
             ));
           }
-          
+
           toast({
             title: 'Activity Created',
             description: `New activity "${activityName}" created and ready to use.`,
@@ -499,16 +499,16 @@ export default function AdminImagesPage() {
         });
       }
     };
-    
+
     // Listen for the custom event
     document.addEventListener('createNewActivity', handleCreateActivity);
-    
+
     // Clean up
     return () => {
       document.removeEventListener('createNewActivity', handleCreateActivity);
     };
   }, [editingImageId, createActivityMutation, associateImageMutation, toast, activityImages]);
-  
+
   // Batch associate mutation
   const batchAssociateMutation = useMutation({
     mutationFn: async (associations: AssociationRequest[]) => {
@@ -517,7 +517,7 @@ export default function AdminImagesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ associations }),
       });
-      
+
       return res.json();
     },
     onSuccess: (data) => {
@@ -536,14 +536,14 @@ export default function AdminImagesPage() {
       });
     }
   });
-  
+
   // Delete image mutation
   const deleteImageMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest(`/api/admin/activity-image/${id}`, {
         method: 'DELETE',
       });
-      
+
       return res.json();
     },
     onSuccess: () => {
@@ -562,7 +562,7 @@ export default function AdminImagesPage() {
       });
     }
   });
-  
+
   // Import activities from CSV mutation
   const importActivitiesMutation = useMutation({
     mutationFn: async () => {
@@ -571,7 +571,7 @@ export default function AdminImagesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      
+
       return res.json();
     },
     onSuccess: (data) => {
@@ -592,7 +592,7 @@ export default function AdminImagesPage() {
       });
     }
   });
-  
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files).map(file => ({
@@ -600,11 +600,11 @@ export default function AdminImagesPage() {
         loading: false,
         status: 'idle' as const
       }));
-      
+
       setFiles(prev => [...prev, ...newFiles]);
     }
   };
-  
+
   const handleUploadFiles = async () => {
     if (files.length === 0 || files.every(f => f.status === 'uploaded')) {
       toast({
@@ -613,15 +613,15 @@ export default function AdminImagesPage() {
       });
       return;
     }
-    
+
     setIsUploading(true);
     setUploadProgress(0);
-    
+
     // Get files that aren't already uploaded
     const filesToUpload = files
       .filter(f => f.status === 'idle')
       .map(f => f.file);
-    
+
     if (filesToUpload.length === 0) {
       toast({
         title: 'No new files',
@@ -630,11 +630,11 @@ export default function AdminImagesPage() {
       setIsUploading(false);
       return;
     }
-    
+
     // Determine batch size - process in chunks of 40 files to avoid overwhelming the server
     const BATCH_SIZE = 40;
     const totalBatches = Math.ceil(filesToUpload.length / BATCH_SIZE);
-    
+
     try {
       // Start progress simulation
       const progressInterval = setInterval(() => {
@@ -646,33 +646,33 @@ export default function AdminImagesPage() {
           return prev + 2;
         });
       }, 300);
-      
+
       // Process files in batches
       for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
         const start = batchIndex * BATCH_SIZE;
         const end = Math.min(start + BATCH_SIZE, filesToUpload.length);
         const currentBatch = filesToUpload.slice(start, end);
-        
+
         // Update progress to reflect batch progress
         setUploadProgress(Math.floor((batchIndex / totalBatches) * 90));
-        
+
         // Wait for batch to upload before continuing
         await uploadMutation.mutateAsync(currentBatch);
-        
+
         // Small delay between batches to avoid overwhelming the server
         if (batchIndex < totalBatches - 1) {
           await new Promise(r => setTimeout(r, 500));
         }
       }
-      
+
       clearInterval(progressInterval);
       setUploadProgress(100);
-      
+
       toast({
         title: 'Upload Complete',
         description: `Successfully uploaded ${filesToUpload.length} files.`,
       });
-      
+
     } catch (error) {
       console.error('Error uploading files:', error);
       toast({
@@ -683,7 +683,7 @@ export default function AdminImagesPage() {
       setIsUploading(false);
     }
   };
-  
+
   const matchFilesWithActivities = async () => {
     if (files.length === 0 || files.some(f => f.status !== 'uploaded')) {
       toast({
@@ -692,38 +692,38 @@ export default function AdminImagesPage() {
       });
       return;
     }
-    
+
     setIsMatching(true);
-    
+
     // Get files that need matching
     const filesToMatch = files.filter(f => f.status === 'uploaded');
     const totalFiles = filesToMatch.length;
-    
+
     // Set batch size for concurrent processing (not too many to avoid rate limits)
     const CONCURRENT_BATCH_SIZE = 5;
-    
+
     // Keep track of matches and non-matches
     let matchedFiles: AssociationRequest[] = [];
     let nonMatchedIndices: number[] = [];
-    
+
     // Create a function to process a single file
     const processFile = async (fileIndex: number) => {
       const fileState = files[fileIndex];
-      
+
       if (fileState.status !== 'uploaded') return;
-      
+
       // Update status for this file
       setFiles(prev => prev.map((f, idx) => 
         idx === fileIndex ? { ...f, status: 'matching', loading: true } : f
       ));
-      
+
       try {
         // Use original filename for better matching
         const result = await suggestMatchMutation.mutateAsync(fileState.file.name);
-        
+
         // Find matching activity
         const matchedActivity = activities.find(a => a.id === result.activityId);
-        
+
         if (result.activityId && matchedActivity && autoSaveAfterMatch) {
           // Prepare for auto-save if there's a match
           matchedFiles.push({
@@ -734,12 +734,12 @@ export default function AdminImagesPage() {
             mimeType: fileState.file.type
           });
         }
-        
+
         if (!result.activityId || !matchedActivity) {
           // Keep track of non-matched file indices to show in UI
           nonMatchedIndices.push(fileIndex);
         }
-        
+
         // Update file state with match result
         setFiles(prev => prev.map((f, idx) => 
           idx === fileIndex ? { 
@@ -756,36 +756,36 @@ export default function AdminImagesPage() {
         setFiles(prev => prev.map((f, idx) => 
           idx === fileIndex ? { ...f, status: 'failed', loading: false } : f
         ));
-        
+
         // Add to non-matched list when there's an error
         nonMatchedIndices.push(fileIndex);
       }
     };
-    
+
     // Process files in smaller batches
     for (let batchIndex = 0; batchIndex < Math.ceil(totalFiles / CONCURRENT_BATCH_SIZE); batchIndex++) {
       const batchPromises: Promise<void>[] = [];
-      
+
       // Calculate which files to process in this batch
       const uploadedFiles = files.filter(f => f.status === 'uploaded');
       const startIdx = batchIndex * CONCURRENT_BATCH_SIZE;
       const endIdx = Math.min(startIdx + CONCURRENT_BATCH_SIZE, uploadedFiles.length);
-      
+
       // Create batch of promises
       for (let i = startIdx; i < endIdx; i++) {
         // Find the index of this uploaded file in the original files array
         const fileIndex = files.findIndex((f, idx) => 
           f === uploadedFiles[i]
         );
-        
+
         if (fileIndex !== -1) {
           batchPromises.push(processFile(fileIndex));
         }
       }
-      
+
       // Process this batch concurrently
       await Promise.all(batchPromises);
-      
+
       // If auto-save is enabled and we have matches, save them now
       if (autoSaveAfterMatch && matchedFiles.length > 0) {
         try {
@@ -794,7 +794,7 @@ export default function AdminImagesPage() {
             title: 'Batch Saved',
             description: `Saved ${result.results?.length || 0} matched images.`,
           });
-          
+
           // Clear the matched files after saving
           matchedFiles = [];
         } catch (error) {
@@ -806,23 +806,23 @@ export default function AdminImagesPage() {
           });
         }
       }
-      
+
       // Add a small delay between batches
       if (batchIndex < Math.ceil(totalFiles / CONCURRENT_BATCH_SIZE) - 1) {
         await new Promise(r => setTimeout(r, 500));
       }
     }
-    
+
     // Show results summary
     const matchedCount = files.filter(f => f.status === 'matched').length;
     const failedCount = files.filter(f => f.status === 'failed').length;
-    
+
     toast({
       title: 'Matching Complete',
       description: `Successfully matched ${matchedCount} files. ${failedCount} files had no automatic matches.`,
       duration: 5000,
     });
-    
+
     // If we have auto-save enabled and non-matched files, set to show only those
     if (autoSaveAfterMatch && nonMatchedIndices.length > 0) {
       setShowOnlyNonMatches(true);
@@ -832,7 +832,7 @@ export default function AdminImagesPage() {
         duration: 5000,
       });
     }
-    
+
     setIsMatching(false);
   };
 
@@ -847,34 +847,34 @@ export default function AdminImagesPage() {
       } : f
     ));
   };
-  
+
   const handleSkipFile = (index: number) => {
     setFiles(prev => prev.filter((_, idx) => idx !== index));
-    
+
     toast({
       title: 'File Skipped',
       description: 'The file has been removed from the list.',
     });
   };
-  
+
   const handleRematchFile = async (index: number) => {
     const file = files[index];
     if (!file || !file.filename) return;
-    
+
     // Update state to show we're matching
     setFiles(prev => prev.map((f, idx) => 
       idx === index ? { ...f, status: 'matching', loading: true } : f
     ));
-    
+
     try {
       // Call API to get suggestion
       const matchResult = await suggestMatchMutation.mutateAsync(file.filename);
-      
+
       // Find the matching activity in our list
       const matchedActivity = matchResult.activityId 
         ? activities.find(a => a.id === matchResult.activityId) 
         : null;
-      
+
       // Update file state with match result
       setFiles(prev => prev.map((f, idx) => 
         idx === index ? { 
@@ -888,7 +888,7 @@ export default function AdminImagesPage() {
           loading: false
         } : f
       ));
-      
+
       // Automatically save if enabled
       if (autoSaveAfterMatch && matchResult.activityId) {
         const fileToSave = {
@@ -896,7 +896,7 @@ export default function AdminImagesPage() {
           activityId: matchResult.activityId,
           suggestedMatch: matchResult.suggestedMatch
         };
-        
+
         if (fileToSave.filename && fileToSave.activityId) {
           await batchAssociateMutation.mutateAsync([{
             activityId: fileToSave.activityId,
@@ -905,10 +905,10 @@ export default function AdminImagesPage() {
             path: fileToSave.path || '',
             mimeType: fileToSave.mimeType || 'image/jpeg'
           }]);
-          
+
           // Remove the saved file from the list
           setFiles(prev => prev.filter((_, idx) => idx !== index));
-          
+
           toast({
             title: 'Auto-saved',
             description: `${fileToSave.file.name} was matched and saved.`,
@@ -921,7 +921,7 @@ export default function AdminImagesPage() {
       setFiles(prev => prev.map((f, idx) => 
         idx === index ? { ...f, status: 'failed', loading: false } : f
       ));
-      
+
       toast({
         title: 'Matching Error',
         description: 'Failed to get an activity match for this file.',
@@ -929,7 +929,7 @@ export default function AdminImagesPage() {
       });
     }
   };
-  
+
   const handleSaveAssociations = async () => {
     // Get all files that have an activity assigned but haven't been saved yet
     // Include both 'uploaded' and 'matched' files as long as they have an activityId
@@ -942,7 +942,7 @@ export default function AdminImagesPage() {
         path: f.path as string,
         mimeType: f.file.type
       }));
-    
+
     if (fileAssociations.length === 0) {
       toast({
         title: 'No Associations',
@@ -950,22 +950,22 @@ export default function AdminImagesPage() {
       });
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       await batchAssociateMutation.mutateAsync(fileAssociations);
-      
+
       // Clear any files that were just saved
       setFiles(prev => prev.filter(f => !((f.status === 'uploaded' || f.status === 'matched') && f.activityId)));
-      
+
       setIsSaving(false);
     } catch (error) {
       console.error('Error saving associations:', error);
       setIsSaving(false);
     }
   };
-  
+
   const handleImageEdit = (image: ActivityImage) => {
     setEditingImageId(image.id);
     // Find current activity
@@ -973,7 +973,7 @@ export default function AdminImagesPage() {
     setSelectedActivity(currentActivity);
     setIsEditDialogOpen(true);
   };
-  
+
   const handleSaveImageEdit = async () => {
     if (!editingImageId || !selectedActivity) {
       toast({
@@ -983,10 +983,10 @@ export default function AdminImagesPage() {
       });
       return;
     }
-    
+
     const image = activityImages.find(img => img.id === editingImageId);
-    if (!image) return;
-    
+    if (!image) return;```python
+
     try {
       await associateImageMutation.mutateAsync({
         activityId: selectedActivity.id,
@@ -995,7 +995,7 @@ export default function AdminImagesPage() {
         path: image.path,
         mimeType: image.mimeType
       });
-      
+
       setIsEditDialogOpen(false);
       setEditingImageId(null);
       setSelectedActivity(null);
@@ -1003,54 +1003,65 @@ export default function AdminImagesPage() {
       console.error('Error updating image:', error);
     }
   };
-  
+
   const handleDeleteImage = (id: number) => {
     deleteImageMutation.mutate(id);
   };
-  
+
   const handleImportActivities = () => {
     importActivitiesMutation.mutate();
   };
-  
+
   const toggleSearchFocus = (active: boolean) => {
     setSearchActive(active);
     if (active && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   };
-  
+
   const filteredImages = activityImages.filter(image => {
     // Text search
     const matchesSearch = searchQuery.trim() === '' || 
       image.originalFilename.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
     // Activity filter
     const matchesActivity = !activitySearchQuery || 
       activities.find(a => a.id === image.activityId)?.name.toLowerCase().includes(activitySearchQuery.toLowerCase());
-    
+
     return matchesSearch && matchesActivity;
   });
-  
+
   const filteredFiles = files.filter(file => {
     if (showOnlyNonMatches) {
       return file.status === 'failed' || (file.status === 'uploaded' && !file.activityId);
     }
     return true;
   });
-  
+
   // Group images by activity
   const imagesByActivity = filteredImages.reduce((acc: Record<string, ActivityImage[]>, image) => {
     const activity = activities.find(a => a.id === image.activityId);
     const key = activity ? activity.name : 'Unassigned';
-    
+
     if (!acc[key]) {
       acc[key] = [];
     }
-    
+
     acc[key].push(image);
     return acc;
   }, {});
-  
+
+    // LLM description generation
+  const handleGenerateLLMDescription = async (file: FileUploadState) => {
+    // Implement the LLM description generation logic here
+    // Use the OPENROUTER_API_KEY from Replit secrets
+    // Call the OpenRouter API with the image name and a system prompt
+    // Parse the JSON response and populate the activity fields
+    // Display the data in a modal for user verification
+    // Save, reject, or crud the reply
+    console.log('Generate LLM Description for:', file);
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
@@ -1062,14 +1073,14 @@ export default function AdminImagesPage() {
           </Link>
         </Button>
       </div>
-      
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="upload">Upload & Match</TabsTrigger>
           <TabsTrigger value="manage">Manage Images</TabsTrigger>
           <TabsTrigger value="actions">Admin Actions</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="upload" className="space-y-4">
           <Card>
             <CardHeader>
@@ -1089,7 +1100,7 @@ export default function AdminImagesPage() {
                   onChange={handleFileChange} 
                   disabled={isUploading || isMatching}
                 />
-                
+
                 <div className="flex items-center gap-2 my-2">
                   <input
                     type="checkbox"
@@ -1102,7 +1113,7 @@ export default function AdminImagesPage() {
                     Automatically save matched images (recommended)
                   </Label>
                 </div>
-                
+
                 {isUploading && (
                   <div className="w-full space-y-2">
                     <div className="flex justify-between text-sm">
@@ -1112,7 +1123,7 @@ export default function AdminImagesPage() {
                     <Progress value={uploadProgress} className="h-2" />
                   </div>
                 )}
-                
+
                 <div className="flex flex-wrap gap-2">
                   <Button
                     onClick={handleUploadFiles}
@@ -1122,7 +1133,7 @@ export default function AdminImagesPage() {
                     {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                     Upload Files
                   </Button>
-                  
+
                   <Button
                     onClick={matchFilesWithActivities}
                     disabled={isMatching || isUploading || files.length === 0 || files.some(f => f.status !== 'uploaded')}
@@ -1132,7 +1143,7 @@ export default function AdminImagesPage() {
                     {isMatching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                     Match with Activities
                   </Button>
-                  
+
                   <Button
                     onClick={handleSaveAssociations}
                     disabled={isSaving || files.filter(f => (f.status === 'uploaded' || f.status === 'matched') && f.activityId).length === 0}
@@ -1142,7 +1153,7 @@ export default function AdminImagesPage() {
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     Save Associations
                   </Button>
-                  
+
                   <Button
                     onClick={() => setShowOnlyNonMatches(!showOnlyNonMatches)}
                     variant="outline"
@@ -1152,7 +1163,7 @@ export default function AdminImagesPage() {
                     {showOnlyNonMatches ? "Show All Files" : "Show Only Non-Matches"}
                   </Button>
                 </div>
-                
+
                 {filteredFiles.length > 0 && (
                   <div className="max-h-96 overflow-y-auto border rounded-md">
                     <Table>
@@ -1203,7 +1214,7 @@ export default function AdminImagesPage() {
                                     selectedActivity={file.suggestedActivity || null}
                                     onSelect={(activity) => handleActivityChange(index, activity)}
                                   />
-                                  
+
                                   {/* Re-map, Create New Activity, and Skip buttons for files that are already matched or uploaded */}
                                   {(file.status === 'matched' || file.status === 'uploaded') && file.filename && (
                                     <div className="flex gap-1">
@@ -1219,7 +1230,7 @@ export default function AdminImagesPage() {
                                           Re-map
                                         </span>
                                       </Button>
-                                      
+
                                       <Button
                                         size="sm"
                                         variant="secondary"
@@ -1242,22 +1253,23 @@ export default function AdminImagesPage() {
                                           Create New
                                         </span>
                                       </Button>
-                                      
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => handleSkipFile(index)}
-                                        className="whitespace-nowrap text-gray-500 hover:text-red-500"
-                                        title="Remove from list"
-                                      >
-                                        <span className="flex items-center gap-1">
-                                          <X className="h-3 w-3" />
-                                          Skip
-                                        </span>
-                                      </Button>
+                                       <Button 
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleGenerateLLMDescription(file)}
+                                  >
+                                    Generate with LLM
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    onClick={() => handleSkipFile(index)}
+                                  >
+                                    Skip
+                                  </Button>
                                     </div>
                                   )}
-                                  
+
                                   {(file.status === 'failed' || !file.suggestedActivity) && (
                                     <div className="flex gap-1">
                                       <Button 
@@ -1269,13 +1281,13 @@ export default function AdminImagesPage() {
                                           const suggestedName = nameParts.length > 1 
                                             ? nameParts.slice(1).join(' ') 
                                             : file.file.name.split('.')[0];
-                                          
+
                                           // Create the input dialog
                                           const activityName = window.prompt(
                                             "Enter name for new activity:", 
                                             suggestedName
                                           );
-                                          
+
                                           if (activityName?.trim()) {
                                             // Dispatch event to create new activity
                                             const event = new CustomEvent('createNewActivity', { 
@@ -1287,15 +1299,20 @@ export default function AdminImagesPage() {
                                       >
                                         Create New Activity
                                       </Button>
-                                      
-                                      <Button 
-                                        size="sm"
-                                        variant="outline"
-                                        className="whitespace-nowrap"
-                                        onClick={() => handleSkipFile(index)}
-                                      >
-                                        Skip
-                                      </Button>
+                                       <Button 
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleGenerateLLMDescription(file)}
+                                  >
+                                    Generate with LLM
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    onClick={() => handleSkipFile(index)}
+                                  >
+                                    Skip
+                                  </Button>
                                     </div>
                                   )}
                                 </div>
@@ -1309,7 +1326,7 @@ export default function AdminImagesPage() {
                     </Table>
                   </div>
                 )}
-                
+
                 {files.length === 0 && (
                   <div className="text-center py-10 text-gray-500">
                     No files selected. Please choose files to upload.
@@ -1319,7 +1336,7 @@ export default function AdminImagesPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="manage">
           <Card>
             <CardHeader>
@@ -1417,7 +1434,7 @@ export default function AdminImagesPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="actions" className="space-y-4">
           <Card>
             <CardHeader>
@@ -1443,7 +1460,7 @@ export default function AdminImagesPage() {
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
@@ -1453,7 +1470,7 @@ export default function AdminImagesPage() {
               Change which activity this image is associated with.
             </DialogDescription>
           </DialogHeader>
-          
+
           {editingImageId && (
             <div className="space-y-4">
               <div className="aspect-video overflow-hidden bg-gray-100 rounded-md">
@@ -1463,7 +1480,7 @@ export default function AdminImagesPage() {
                   className="w-full h-full object-contain"
                 />
               </div>
-              
+
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Select Activity</Label>
@@ -1474,7 +1491,7 @@ export default function AdminImagesPage() {
                     placeholder="Choose an activity for this image..."
                   />
                 </div>
-                
+
                 <div className="flex justify-between">
                   <Button 
                     variant="outline"
@@ -1484,18 +1501,18 @@ export default function AdminImagesPage() {
                       // Extract a potential activity name from the image filename
                       const image = activityImages.find(img => img.id === editingImageId);
                       if (!image) return;
-                      
+
                       const nameParts = image.originalFilename.split('.')[0].split(/(?=[A-Z])|\s+|(?=[a-z][A-Z])/);
                       const suggestedName = nameParts.length > 1 
                         ? nameParts.slice(1).join(' ') 
                         : image.originalFilename.split('.')[0];
-                      
+
                       // Create the input dialog
                       const activityName = window.prompt(
                         "Enter name for new activity:", 
                         suggestedName
                       );
-                      
+
                       if (activityName?.trim()) {
                         // Dispatch event to create new activity
                         const event = new CustomEvent('createNewActivity', { 
@@ -1511,7 +1528,7 @@ export default function AdminImagesPage() {
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>

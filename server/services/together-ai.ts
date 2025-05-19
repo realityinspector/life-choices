@@ -31,7 +31,7 @@ export class TogetherAIService {
   private client: Together;
   private textModel = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
   private imageModel = "stabilityai/stable-diffusion-xl-base-1.0";
-  
+
   constructor() {
     const apiKey = process.env.TOGETHER_API_KEY;
     if (!apiKey) {
@@ -100,7 +100,7 @@ Respond with a valid JSON object containing all the required properties.`;
       }
 
       const json = JSON.parse(jsonMatch[0]);
-      
+
       // Validate required fields
       const requiredFields = ['name', 'category', 'frequency', 'frequencyUnit', 'duration', 'durationUnit', 'lifeImpact'];
       for (const field of requiredFields) {
@@ -150,7 +150,7 @@ Respond with a valid JSON object containing all the required properties.`;
   async generateActivityFromFilename(filename: string): Promise<ActivityInsert | null> {
     try {
       console.log(`Generating activity details for filename: ${filename}`);
-      
+
       const response = await this.client.chat.completions.create({
         messages: [
           { role: "system", content: this.generateSystemPrompt() },
@@ -168,7 +168,7 @@ Respond with a valid JSON object containing all the required properties.`;
       }
 
       console.log("LLM Response:", content);
-      
+
       const parsedResponse = this.parseLLMResponse(content);
       if (!parsedResponse) {
         return null;
@@ -191,7 +191,7 @@ Respond with a valid JSON object containing all the required properties.`;
         .replace(/\.[^/.]+$/, "") // Remove extension
         .replace(/([a-z])([A-Z])/g, "$1 $2") // Convert camelCase to spaces
         .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2") // Convert PascalCase to spaces
-        .replace(/[_-]/g, " ") // Replace underscores and dashes with spaces
+        .replace(/[_-]/g, " "); // Replace underscores and dashes with spaces
     );
 
     return `Generate activity details for the following image filenames:
@@ -209,7 +209,7 @@ Ensure that each activity in the array corresponds to the filename at the same p
   private parseBatchLLMResponse(response: string, count: number): (ActivityGenerationResponse | null)[] {
     try {
       // Find JSON array in the response
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      const jsonMatch = response.match(/\[[\s\S]*\}/);
       if (!jsonMatch || !jsonMatch[0]) {
         console.error("No JSON array found in batch LLM response");
         return Array(count).fill(null);
@@ -220,7 +220,7 @@ Ensure that each activity in the array corresponds to the filename at the same p
         console.error("Parsed JSON is not an array");
         return Array(count).fill(null);
       }
-      
+
       // Validate each item in the array
       return jsonArray.map((item, index) => {
         // Check required fields
@@ -245,7 +245,7 @@ Ensure that each activity in the array corresponds to the filename at the same p
   private async processBatchWithSingleCall(filenames: string[]): Promise<(ActivityInsert | null)[]> {
     try {
       console.log(`Processing ${filenames.length} files in a single LLM call`);
-      
+
       const response = await this.client.chat.completions.create({
         messages: [
           { role: "system", content: this.generateSystemPrompt() },
@@ -263,9 +263,9 @@ Ensure that each activity in the array corresponds to the filename at the same p
       }
 
       console.log("Batch LLM Response:", content);
-      
+
       const parsedResponses = this.parseBatchLLMResponse(content, filenames.length);
-      
+
       // Convert each response to ActivityInsert
       return parsedResponses.map(response => 
         response ? this.toActivityInsert(response) : null
@@ -281,12 +281,12 @@ Ensure that each activity in the array corresponds to the filename at the same p
    */
   async generateActivitiesFromFilenames(filenames: string[], batchSize: number = 10): Promise<(ActivityInsert | null)[]> {
     const results: (ActivityInsert | null)[] = [];
-    
+
     // Process in batches
     for (let i = 0; i < filenames.length; i += batchSize) {
       const batch = filenames.slice(i, i + batchSize);
       console.log(`Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(filenames.length/batchSize)}: ${batch.length} items`);
-      
+
       try {
         if (batch.length === 1) {
           // Single item processing
@@ -308,14 +308,14 @@ Ensure that each activity in the array corresponds to the filename at the same p
         // If the batch fails, add null results for each item in this batch
         batch.forEach(() => results.push(null));
       }
-      
+
       // Add a small delay between batches to avoid rate limiting
       if (i + batchSize < filenames.length) {
         console.log("Pausing briefly between batches");
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
-    
+
     return results;
   }
 
@@ -340,12 +340,12 @@ Ensure that each activity in the array corresponds to the filename at the same p
       'Nutrition': 'related to food and nutrition',
       'Other': ''
     };
-    
+
     const categoryContext = categoryDescriptions[activity.category] || '';
-    
+
     // Basic prompt structure
     let prompt = `A high-quality, photorealistic image of people engaging in ${activity.name} ${categoryContext}.`;
-    
+
     // Adding emotional tone based on life impact
     if (activity.lifeImpact !== undefined) {
       if (activity.lifeImpact > 7) {
@@ -356,13 +356,13 @@ Ensure that each activity in the array corresponds to the filename at the same p
         prompt += ' The scene should convey challenge or difficulty.';
       }
     }
-    
+
     // Add aesthetic style guidance
     prompt += ' The image should be vibrant, well-lit, with good composition. Professional photography style.';
-    
+
     return prompt;
   }
-  
+
   /**
    * Save a base64 image to the file system
    */
@@ -372,32 +372,32 @@ Ensure that each activity in the array corresponds to the filename at the same p
       const base64Image = base64Data.includes(',') 
         ? base64Data.split(',')[1] 
         : base64Data;
-      
+
       // Generate a sanitized filename
       const sanitizedName = activityName
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '')
         .substring(0, 20);
-      
+
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
       const filename = `${uniqueSuffix}.jpg`;
       const originalFilename = `${sanitizedName}.jpg`;
-      
+
       // Ensure the uploads directory exists
       const uploadDir = './uploads';
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
-      
+
       // Full path to save the image
       const filePath = path.join(uploadDir, filename);
-      
+
       // Decode and save the image
       const imageBuffer = Buffer.from(base64Image, 'base64');
       fs.writeFileSync(filePath, imageBuffer);
-      
+
       console.log(`Image saved to ${filePath}`);
-      
+
       return {
         filename,
         originalFilename,
@@ -409,7 +409,7 @@ Ensure that each activity in the array corresponds to the filename at the same p
       throw error;
     }
   }
-  
+
   /**
    * Fetch image from URL and convert to base64
    */
@@ -417,11 +417,11 @@ Ensure that each activity in the array corresponds to the filename at the same p
     try {
       const fetch = (await import('node-fetch')).default;
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
       }
-      
+
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       return buffer.toString('base64');
@@ -434,11 +434,11 @@ Ensure that each activity in the array corresponds to the filename at the same p
   async generateImageForActivity(activity: ActivityInsert): Promise<ImageGenerationResponse | null> {
     try {
       console.log(`Generating image for activity: ${activity.name}`);
-      
+
       // Create a prompt for the image generation
       const prompt = this.generateImagePrompt(activity);
       console.log(`Image generation prompt: ${prompt}`);
-      
+
       // Call the Together API with the Stability AI model using the specified parameters
       const response = await this.client.images.create({
         model: this.imageModel,
@@ -449,32 +449,32 @@ Ensure that each activity in the array corresponds to the filename at the same p
         n: 4,
         seed: 1000
       });
-      
+
       // Log the full response structure for debugging
       console.log('Image generation response structure:', JSON.stringify({
         hasData: !!response.data,
         dataLength: response.data ? response.data.length : 0,
         responseKeys: Object.keys(response)
       }));
-      
+
       // Check if we have a valid response with a URL or b64_json
       if (!response.data || response.data.length === 0) {
         console.error('No data in response');
         return null;
       }
-      
+
       if (response.data && response.data.length > 0) {
         console.log('Response data first item keys:', Object.keys(response.data[0]));
       }
-      
+
       // Check for URL in the response
       if (response.data[0].url) {
         console.log('Found image URL in response, fetching image...');
         const imageUrl = response.data[0].url;
-        
+
         // Fetch the image from the URL and convert to base64
         const base64Image = await this.fetchImageAsBase64(imageUrl);
-        
+
         // Save the image to the filesystem
         const imageData = await this.saveBase64Image(base64Image, activity.name);
         return imageData;

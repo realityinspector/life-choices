@@ -64,6 +64,66 @@ function isAuthenticated(req: Request): boolean {
 
 export const adminRouter = Router();
 
+// Generate activity description using LLM
+adminRouter.post("/generate-description", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { filename } = req.body;
+    if (!filename) {
+      return res.status(400).json({ error: "Filename is required" });
+    }
+
+    const prompt = `Generate activity details for the image filename: "${filename}"\n\nRespond with a JSON object that matches this schema exactly.`;
+    
+    const response = await client.chat.completions.create({
+      model: "mistral/mixtral-8x7b-instruct",
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI that generates structured activity data. Output only valid JSON matching the required schema."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: {
+        type: "json_schema",
+        schema: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            category: { type: "string" },
+            frequency: { type: "number" },
+            frequencyUnit: { type: "string", enum: ["day", "week", "month", "year"] },
+            duration: { type: "number" },
+            durationUnit: { type: "string", enum: ["minute", "hour"] },
+            lifeImpact: { type: "number" },
+            exportToCalendar: { type: "boolean" },
+            emoji: { type: "string" },
+            motivator: { type: "string" }
+          },
+          required: ["name", "category", "frequency", "frequencyUnit", "duration", "durationUnit", "lifeImpact"]
+        }
+      }
+    });
+
+    const activityData = JSON.parse(response.choices[0].message.content);
+    
+    // Create the activity
+    const activity = await storage.createActivity({
+      ...activityData,
+      userId: req.user!.id,
+      nextDue: new Date(),
+      color: '#' + Math.floor(Math.random()*16777215).toString(16)
+    });
+
+    res.json({ activity });
+  } catch (error) {
+    console.error("Error generating description:", error);
+    res.status(500).json({ error: "Failed to generate description" });
+  }
+});
+
 // Middleware to check if user is authenticated
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: any) => {
   if (!isAuthenticated(req)) {
