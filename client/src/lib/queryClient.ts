@@ -28,12 +28,17 @@ export async function apiRequest(
   },
 ): Promise<Response> {
   try {
-    const res = await fetch(url, {
-      method: options?.method || 'GET',
-      headers: options?.headers || {
+    const headers = options?.body instanceof FormData
+    ? undefined // Let browser set correct Content-Type for FormData
+    : {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
+        'Accept': 'application/json',
+        ...options?.headers
+      };
+
+  const res = await fetch(url, {
+      method: options?.method || 'GET',
+      headers,
       body: options?.body,
       credentials: "include",
       signal: options?.signal,
