@@ -732,7 +732,7 @@ adminLLMRouter.post("/import-csv", csvUpload.single('csv'), async (req: Authenti
             });
           } else {
             // Wait before retry
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            await new Promise(resolve => setTimeout(resolve, 8000));
           }
         }
       }

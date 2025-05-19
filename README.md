@@ -90,7 +90,7 @@ Sundial is a sophisticated lifetime management application that transforms time 
    npm run dev
    ```
 
-6. Open your browser and navigate to `http://localhost:5000`
+6. Open your browser and navigate to `http://localhost:8000`
 
 ## Usage Guide
 

@@ -864,7 +864,7 @@ export default function AdminImagesPage() {
     toast({
       title: 'Matching Complete',
       description: `Successfully matched ${matchedCount} files. ${failedCount} files had no automatic matches.`,
-      duration: 5000,
+      duration: 8000,
     });
 
     // If we have auto-save enabled and non-matched files, set to show only those
@@ -873,7 +873,7 @@ export default function AdminImagesPage() {
       toast({
         title: 'Manual Association Needed',
         description: `${nonMatchedIndices.length} files need manual activity association.`,
-        duration: 5000,
+        duration: 8000,
       });
     }
 

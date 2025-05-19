@@ -14,10 +14,10 @@ export const pool = new Pool({
   connectionString: poolUrl,
   max: 5, // Reduce max connections to prevent overwhelming the pooler
   idleTimeoutMillis: 30000, // Lower idle timeout for serverless environment
-  connectionTimeoutMillis: 5000, // Shorter connection timeout
+  connectionTimeoutMillis: 8000, // Shorter connection timeout
   maxUses: 1000, // Recycle connections more frequently
   keepAlive: true,
-  keepAliveInitialDelayMillis: 5000,
+  keepAliveInitialDelayMillis: 8000,
   ssl: {
     rejectUnauthorized: false
   }

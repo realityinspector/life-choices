@@ -797,7 +797,7 @@ export default function AdminImagesPage() {
     toast({
       title: 'Matching Complete',
       description: `Successfully matched ${matchedCount} files. ${failedCount} files had no automatic matches.`,
-      duration: 5000,
+      duration: 8000,
     });
     
     // If we have auto-save enabled and non-matched files, set to show only those
@@ -806,7 +806,7 @@ export default function AdminImagesPage() {
       toast({
         title: 'Non-Matched Files',
         description: `Now showing only the ${nonMatchedIndices.length} files that need manual matching.`,
-        duration: 5000,
+        duration: 8000,
       });
     }
     
@@ -877,7 +877,7 @@ export default function AdminImagesPage() {
       toast({
         title: 'Save Complete',
         description: `Successfully saved ${savedCount} image associations.`,
-        duration: 5000,
+        duration: 8000,
       });
       
       // Clear processed files
