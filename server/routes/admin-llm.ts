@@ -410,9 +410,15 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
     }
 
     // Get the activity from all activities without user filtering
-    const activity = await storage.getActivity(parsedId, true); // true flag to bypass user check
+    const activity = await storage.getActivity(parsedId);
     if (!activity) {
-      return res.status(404).json({ error: "Activity not found" });
+      // Try getting from all activities without user filtering
+      const allActivities = await storage.getActivities();
+      const matchingActivity = allActivities.find(a => a.id === parsedId);
+      if (!matchingActivity) {
+        return res.status(404).json({ error: "Activity not found" });
+      }
+      return matchingActivity;
     }
 
     // Check if the activity already has images
