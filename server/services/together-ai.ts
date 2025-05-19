@@ -209,8 +209,8 @@ Ensure that each activity in the array corresponds to the filename at the same p
    */
   private parseBatchLLMResponse(response: string, count: number): (ActivityGenerationResponse | null)[] {
     try {
-      // Find JSON array in the response
-      const jsonMatch = response.match(/\[[\s\S]*\}/);
+      // Find JSON array in the response - look for complete array structure
+      const jsonMatch = response.match(/\[[\s\S]*\]/);
       if (!jsonMatch || !jsonMatch[0]) {
         console.error("No JSON array found in batch LLM response");
         return Array(count).fill(null);
@@ -222,18 +222,25 @@ Ensure that each activity in the array corresponds to the filename at the same p
         return Array(count).fill(null);
       }
 
+      // Ensure we return exactly the expected number of items
+      const results: (ActivityGenerationResponse | null)[] = Array(count).fill(null);
+
       // Validate each item in the array
-      return jsonArray.map((item, index) => {
-        // Check required fields
-        const requiredFields = ['name', 'category', 'frequency', 'frequencyUnit', 'duration', 'durationUnit', 'lifeImpact'];
-        for (const field of requiredFields) {
-          if (item[field] === undefined) {
-            console.error(`Missing required field '${field}' in item ${index + 1}`);
-            return null;
+      jsonArray.forEach((item, index) => {
+        if (index < count) {
+          // Check required fields
+          const requiredFields = ['name', 'category', 'frequency', 'frequencyUnit', 'duration', 'durationUnit', 'lifeImpact'];
+          const hasAllFields = requiredFields.every(field => item[field] !== undefined);
+
+          if (hasAllFields) {
+            results[index] = item as ActivityGenerationResponse;
+          } else {
+            console.error(`Missing required fields in item ${index + 1}`);
           }
         }
-        return item as ActivityGenerationResponse;
       });
+
+      return results;
     } catch (error) {
       console.error("Error parsing batch LLM response:", error);
       return Array(count).fill(null);
