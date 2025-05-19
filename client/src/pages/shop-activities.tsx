@@ -180,27 +180,31 @@ const ActivityCard = ({
       <Card className={`overflow-hidden h-full flex flex-col ${isRecommended ? "border-primary border-2" : ""} ${activityExists ? "border-green-400" : ""}`}>
         <div className={`h-1.5 ${getImpactColor(activity.lifeImpact)}`} />
 
-        {/* Show image if available */}
-        {activityImagesForActivity.length > 0 && (
-          <div className="relative aspect-video overflow-hidden">
+        {/* Show image section */}
+        <div className="relative aspect-video overflow-hidden">
+          {activityImagesForActivity.length > 0 ? (
             <img 
               src={activityImagesForActivity[0].path}
               alt={activity.name}
               className="object-cover w-full h-full"
               onError={(e) => {
-                // Hide the image container if load fails
+                // Hide the image on error
                 const target = e.target as HTMLImageElement;
-                target.parentElement?.style.setProperty('display', 'none');
+                target.style.setProperty('display', 'none');
                 console.debug(`Image failed to load for activity ${activity.name}:`, activityImagesForActivity[0].path);
               }}
             />
-            {isAdmin && (
-              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 break-all">
-                {activityImagesForActivity[0].path}
-              </div>
-            )}
-          </div>
-        )}
+          ) : (
+            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+              <Image className="h-8 w-8 text-gray-400" />
+            </div>
+          )}
+          {isAdmin && (
+            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 break-all">
+              {activityImagesForActivity.length > 0 ? activityImagesForActivity[0].path : 'No image path'}
+            </div>
+          )}
+        </div>
 
         <CardHeader className="pb-2 pt-3">
           <div className="flex justify-between items-start">
