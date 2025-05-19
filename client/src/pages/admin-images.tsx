@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ActivityEditForm } from "@/components/activity-edit-form";
 
 // Reusable Activity Search Component
 interface ActivitySearchProps {
@@ -254,7 +255,7 @@ export default function AdminImagesPage() {
   const queryClient = useQueryClient();
   const [files, setFiles] = useState<FileUploadState[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [isMatching, setIsMatching] = useState(false);
+  const [isMatching, setIsMatching] = useState(isMatching);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('upload');
@@ -266,7 +267,7 @@ export default function AdminImagesPage() {
   const [editingImageId, setEditingImageId] = useState<number | null>(null);
   const [autoSaveAfterMatch, setAutoSaveAfterMatch] = useState(true);
   const [searchActive, setSearchActive] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchInputRef, setSearchInputRef] = useState(searchInputRef);
 
   // Fetch activities for dropdown selection (including both database activities and shop catalog)
   const { data: activities = [] } = useQuery<Activity[]>({
@@ -1085,7 +1086,7 @@ export default function AdminImagesPage() {
           title: "Description Generated",
           description: `Generated "${data.activity.name}" from image`,
         });
-        
+
         // Update the file state with the generated activity
         setFiles(prev => prev.map(f => 
           f === file ? { 

@@ -159,9 +159,16 @@ adminLLMRouter.post("/generate-activity", async (req: AuthenticatedRequest, res)
       return res.status(500).json({ error: "Failed to generate activity data" });
     }
 
+    // Add imageData to response for saving later
     res.json({ 
       message: "Activity generated successfully", 
-      activity: activityData
+      activity: activityData,
+      imageData: {
+        filename,
+        originalFilename,
+        path: `uploads/${filename}`,
+        mimeType: 'image/jpeg' // This should be dynamically determined
+      }
     });
   } catch (err: unknown) {
     console.error("Error generating activity:", err);
