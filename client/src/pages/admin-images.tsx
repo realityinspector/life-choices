@@ -256,7 +256,7 @@ export default function AdminImagesPage() {
   const [files, setFiles] = useState<FileUploadState[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isMatching, setIsMatching] = useState(false);
-  const [isUploading, setIsUploading] = useState(isUploading);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [searchQuery, setSearchQuery] = useState('');
