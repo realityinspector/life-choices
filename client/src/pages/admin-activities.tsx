@@ -26,18 +26,28 @@ export default function AdminActivities() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest(`/api/activities/${id}`, { method: 'DELETE' });
+      const response = await apiRequest(`/api/activities/${id}`, { 
+        method: 'DELETE',
+        ignoreStatuses: [404] // Don't throw on 404
+      });
       if (response.status === 404) {
-        throw new Error('Activity not found');
+        return { status: 404, message: 'Activity not found' };
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data?.status === 404) {
+        toast({
+          title: 'Info',
+          description: 'Activity was already deleted',
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Activity deleted successfully',
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/admin/activities'] });
-      toast({
-        title: 'Success',
-        description: 'Activity deleted successfully',
-      });
     },
     onError: (error) => {
       toast({
