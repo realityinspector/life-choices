@@ -396,9 +396,13 @@ adminLLMRouter.get("/unprocessed-images", async (req: AuthenticatedRequest, res)
 adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) => {
   try {
     const { activityId } = req.body;
-    console.log("LLM Image Generation Request:", { activityId });
+    console.log("\n=== LLM Image Generation Request ===");
+    console.log("Request Body:", req.body);
+    console.log("Activity ID:", activityId);
+    console.log("Activity ID Type:", typeof activityId);
 
     if (!activityId) {
+      console.log("ERROR: No activity ID provided in request");
       return res.status(400).json({ error: "Activity ID is required" });
     }
 
@@ -410,12 +414,19 @@ adminLLMRouter.post("/generate-image", async (req: AuthenticatedRequest, res) =>
     }
 
     // Get the activity from all activities without user filtering
+    console.log("Attempting to find activity with ID:", parsedId);
     let activity = await storage.getActivity(parsedId);
+    console.log("Initial activity lookup result:", activity ? `Found: ${activity.name} (ID: ${activity.id})` : "Not found");
+    
     if (!activity) {
-      // Try getting from all activities without user filtering
+      console.log("Activity not found in first lookup, trying all activities...");
       const allActivities = await storage.getActivities();
+      console.log("Total activities in database:", allActivities.length);
       activity = allActivities.find(a => a.id === parsedId);
+      console.log("Secondary lookup result:", activity ? `Found: ${activity.name} (ID: ${activity.id})` : "Not found");
+      
       if (!activity) {
+        console.log("ERROR: Activity not found in either lookup attempt");
         return res.status(404).json({ error: "Activity not found" });
       }
     }
