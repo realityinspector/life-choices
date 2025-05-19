@@ -44,6 +44,9 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
   });
   const [isBulkDeleteMode, setIsBulkDeleteMode] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<{[key: number]: boolean}>({});
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -345,10 +348,11 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
         {/* Activity List */}
         <div>
           <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <h2 className="text-lg font-medium text-gray-900">Your Activities</h2>
-                {isBulkDeleteMode && (
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <h2 className="text-lg font-medium text-gray-900">Your Activities</h2>
+                  {isBulkDeleteMode && (
                   <>
                     <div className="ml-3 px-2 py-1 bg-gray-100 rounded-md text-sm font-medium text-gray-600">
                       {getSelectedActivityIds().length} selected
@@ -414,12 +418,63 @@ const Activities = ({ onViewChange }: ActivitiesProps) => {
                 )}
               </div>
             </div>
+
+            {/* Filters and Sort Controls */}
+            <div className="flex flex-wrap gap-4 items-center">
+              <select 
+                className="border border-gray-300 rounded-md text-sm p-2"
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedCategory || ''}
+              >
+                <option value="">All Categories</option>
+                {Array.from(new Set(activities.map(a => a.category))).sort().map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+
+              <select
+                className="border border-gray-300 rounded-md text-sm p-2"
+                onChange={(e) => setSortBy(e.target.value)}
+                value={sortBy}
+              >
+                <option value="name">Sort by Name</option>
+                <option value="lifeImpact">Sort by Life Impact</option>
+                <option value="frequency">Sort by Frequency</option>
+                <option value="duration">Sort by Duration</option>
+              </select>
+
+              <button
+                onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                {sortDirection === 'asc' ? '↑' : '↓'}
+              </button>
+            </div>
             
             {/* Activity Cards - Only showing routine activities */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {activities.length > 0 ? (
                 activities
                   .filter(activity => activity.frequency > 0) // Only show activities in routine (with frequency)
+                  .filter(activity => !selectedCategory || activity.category === selectedCategory)
+                  .sort((a, b) => {
+                    let comparison = 0;
+                    switch (sortBy) {
+                      case 'name':
+                        comparison = a.name.localeCompare(b.name);
+                        break;
+                      case 'lifeImpact':
+                        comparison = (a.lifeImpact || 0) - (b.lifeImpact || 0);
+                        break;
+                      case 'frequency':
+                        comparison = a.frequency - b.frequency;
+                        break;
+                      case 'duration':
+                        comparison = a.duration - b.duration;
+                        break;
+                    }
+                    return sortDirection === 'asc' ? comparison : -comparison;
+                  })
                   .map((activity, index) => (
                   <div key={index} className={`relative bg-white border ${selectedActivities[activity.id] ? 'border-primary-500 ring-2 ring-primary-500' : 'border-gray-200'} rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200`}>
                     <div className={`h-2 bg-${activity.color}-500`}></div>
