@@ -810,7 +810,7 @@ Ensure each object contains all required properties and the array has ${filename
         return await this.client.images.create({
           model: this.imageModel,
           prompt: prompt,
-          steps: 10,
+          steps: 4, // Maximum allowed steps (1-4)
           n: 1, // Generate single image for reliability
           seed: Math.floor(Math.random() * 1000000)
         });
