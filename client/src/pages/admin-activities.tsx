@@ -26,30 +26,6 @@ export default function AdminActivities() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest(`/api/activities/${id}`, {
-        method: 'DELETE'
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/activities'] });
-      toast({
-        title: 'Success',
-        description: 'Activity deleted successfully',
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete activity',
-        variant: 'destructive',
-      });
-    }
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
       await apiRequest(`/api/activities/${id}`, { method: 'DELETE' });
     },
     onSuccess: () => {
