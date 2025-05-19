@@ -210,7 +210,7 @@ Ensure that each activity in the array corresponds to the filename at the same p
   private parseBatchLLMResponse(response: string, count: number): (ActivityGenerationResponse | null)[] {
     try {
       // Find JSON array in the response - look for complete array structure
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      const jsonMatch = response.match(/\[[\s\S]*?\]/);
       if (!jsonMatch || !jsonMatch[0]) {
         console.error("No JSON array found in batch LLM response");
         return Array(count).fill(null);
