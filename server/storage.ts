@@ -319,7 +319,12 @@ export class DatabaseStorage implements IStorage {
         if (!map[image.activityId]) {
           map[image.activityId] = [];
         }
-        map[image.activityId].push(image);
+        // Clean the image path by removing workspace prefix
+        const cleanedImage = {
+          ...image,
+          path: image.path.replace('/home/runner/workspace', '')
+        };
+        map[image.activityId].push(cleanedImage);
       }
       return map;
     }, {});
