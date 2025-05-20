@@ -13,12 +13,19 @@ const TIMEOUT_INTERVAL = 60000;
 const databaseUrl = process.env.DATABASE_URL;
 const poolUrl = databaseUrl?.replace('.us-east-2', '-pooler.us-east-2');
 
-// Create timeout to close idle connections
-setInterval(() => {
-  pool?.end().catch(err => {
-    console.error('Error during pool cleanup:', err);
-  });
-}, TIMEOUT_INTERVAL);
+// Keep-alive ping interval (60 seconds with random jitter)
+const KEEP_ALIVE_INTERVAL = 60000 + Math.floor(Math.random() * 20000); // 60-80 seconds
+
+// Create periodic ping to keep connection alive
+setInterval(async () => {
+  try {
+    const client = await pool.connect();
+    await client.query('SELECT 1');
+    client.release();
+  } catch (err) {
+    console.error('Error during keep-alive ping:', err);
+  }
+}, KEEP_ALIVE_INTERVAL);
 
 export const pool = new Pool({
   connectionString: poolUrl,
