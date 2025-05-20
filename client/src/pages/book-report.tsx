@@ -3,6 +3,7 @@ import { useBook } from "@/context/book-context";
 import { useUser } from "@/context/user-context";
 import { Activity, ActivityImage } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
