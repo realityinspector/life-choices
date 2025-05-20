@@ -1,3 +1,4 @@
+
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pkg from "pg";
@@ -8,7 +9,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Create a new pool with more robust configuration
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
