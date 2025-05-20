@@ -29,14 +29,19 @@ setInterval(async () => {
 
 export const pool = new Pool({
   connectionString: poolUrl,
-  max: 5, // Reduce max connections to prevent overwhelming the pooler
-  idleTimeoutMillis: 30000, // Lower idle timeout for serverless environment
-  connectionTimeoutMillis: 8000, // Shorter connection timeout
-  maxUses: 1000, // Recycle connections more frequently
+  max: 3,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 20000,
+  maxUses: 7500,
   keepAlive: true,
-  keepAliveInitialDelayMillis: 8000,
+  keepAliveInitialDelayMillis: 10000,
   ssl: {
     rejectUnauthorized: false
+  },
+  retry: {
+    retries: 3,
+    initialDelay: 100,
+    maxDelay: 1000
   }
 });
 
