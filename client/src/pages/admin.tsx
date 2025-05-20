@@ -29,30 +29,35 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true;
     const controller = new AbortController();
-    
+
     const checkAdminStatus = async () => {
       try {
         const res = await apiRequest('/api/auth/admin-check', {
-          signal: controller.signal
+          signal: controller.signal,
+          ignoreStatuses: [401]
         });
         const data = await res.json();
-        setIsAdmin(data.isAdmin === true);
+        if (isMounted) {
+          setIsAdmin(data.isAdmin === true);
+          setIsLoading(false);
+        }
       } catch (error) {
-        // Ignore abort errors
+        if (!isMounted) return;
         if (error instanceof Error && error.name === 'AbortError') {
           return;
         }
         console.error("Error checking admin status:", error);
         setIsAdmin(false);
-      } finally {
         setIsLoading(false);
       }
     };
 
     checkAdminStatus();
-    
+
     return () => {
+      isMounted = false;
       controller.abort();
     };
   }, []);
