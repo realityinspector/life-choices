@@ -124,13 +124,13 @@ bookRouter.get("/:id", auth, async (req, res) => {
 
     const activityIds = bookActivitiesList.map(ba => ba.activityId);
     
-    const bookActivities = activityIds.length > 0 
+    const bookActivityDetails = activityIds.length > 0 
       ? await db.select().from(activities).where(inArray(activities.id, activityIds))
       : [];
 
     res.json({
       ...book,
-      activities: bookActivitiesList.map(ba => ba.activity),
+      activities: bookActivityDetails,
     });
   } catch (error) {
     console.error("Error fetching book details:", error);
