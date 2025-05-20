@@ -60,8 +60,21 @@ export default function BookReportPage() {
           console.log('Starting PDF generation...');
           const pdf = new jsPDF();
 
-          bookActivitiesList.forEach((activity, index) => {
-            if (index > 0) pdf.addPage();
+          // Load all images first
+          const loadImage = (src: string): Promise<HTMLImageElement> => {
+            return new Promise((resolve, reject) => {
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              img.onload = () => resolve(img);
+              img.onerror = reject;
+              img.src = src;
+            });
+          };
+
+          // Process activities sequentially
+          for (let i = 0; i < bookActivitiesList.length; i++) {
+            const activity = bookActivitiesList[i];
+            if (i > 0) pdf.addPage();
 
             // Add activity name
             pdf.setFontSize(16);
@@ -74,17 +87,16 @@ export default function BookReportPage() {
             // Add image if exists
             const activityImage = allActivityImages.find(img => img.activityId === activity.id);
             if (activityImage) {
-              const img = new Image();
-              img.crossOrigin = "anonymous";
-              img.src = activityImage.path;
-
-              img.onload = () => {
+              try {
+                const img = await loadImage(activityImage.path);
                 const imgWidth = 170;
                 const imgHeight = (img.height * imgWidth) / img.width;
                 pdf.addImage(img, 'JPEG', 20, 40, imgWidth, imgHeight);
-              };
+              } catch (error) {
+                console.error(`Failed to load image for activity ${activity.name}:`, error);
+              }
             }
-          });
+          }
 
           const filename = `${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`;
           pdf.save(filename);
