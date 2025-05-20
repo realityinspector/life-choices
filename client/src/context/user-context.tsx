@@ -201,7 +201,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       await apiRequest('/api/user', {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUserData)
       });
@@ -735,7 +735,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       // Call the server logout endpoint with improved error handling
-      await apiRequest('/api/logout', {
+      await apiRequest('/api/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         ignoreStatuses: [401, 404] // Ignore authentication errors and not found

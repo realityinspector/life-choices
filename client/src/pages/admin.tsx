@@ -31,7 +31,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        const res = await apiRequest('/api/user/admin-check');
+        const res = await apiRequest('/api/auth/admin-check');
         const data = await res.json();
         setIsAdmin(data.isAdmin === true);
       } catch (error) {

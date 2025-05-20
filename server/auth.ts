@@ -6,7 +6,6 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as UserType, InsertUser } from "@shared/schema";
-import { Strategy as LocalStrategy } from "passport-local";
 import { db } from "./db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -22,12 +21,12 @@ declare global {
       id: number;
       username: string;
       name: string;
-      age: number;
-      lifeExpectancy: number;
-      sleepHours: number;
+      age: number | null;
+      lifeExpectancy: number | null;
+      sleepHours: number | null;
     }
     interface Request {
-      user?: any;
+      user?: User;
     }
   }
 }
@@ -51,20 +50,20 @@ export function setupAuth(app: Express) {
   const isDevelopment = process.env.NODE_ENV !== 'production';
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "REDACTED_SET_SESSION_SECRET_ENV",
-    resave: true,
-    saveUninitialized: true,
+    resave: false,
+    saveUninitialized: false,
     store: storage.sessionStore,
     name: 'connect.sid',
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-      secure: false,
+      secure: false, // Set to false for Replit environment
       sameSite: 'lax',
       path: '/'
     }
   };
 
-  app.set("trust proxy", true);
+  app.set("trust proxy", 1); // Trust first proxy
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
@@ -83,52 +82,47 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid credentials" });
         }
 
-        return done(null, user);
+        // Convert user to Express.User type
+        const expressUser: Express.User = {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          age: user.age,
+          lifeExpectancy: user.lifeExpectancy,
+          sleepHours: user.sleepHours
+        };
+
+        return done(null, expressUser);
       } catch (error) {
         return done(error);
       }
     })
   );
 
-  passport.serializeUser((user: any, done) => {
+  passport.serializeUser((user: Express.User, done) => {
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
     try {
       const [user] = await db.select().from(users).where(eq(users.id, id));
-      done(null, user);
+      if (!user) {
+        return done(null, false);
+      }
+      
+      // Convert user to Express.User type
+      const expressUser: Express.User = {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        age: user.age,
+        lifeExpectancy: user.lifeExpectancy,
+        sleepHours: user.sleepHours
+      };
+      
+      done(null, expressUser);
     } catch (error) {
       done(error);
-    }
-  });
-
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const { username, password, name, age, lifeExpectancy, sleepHours } = req.body;
-
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const userData: InsertUser = {
-        username,
-        password, // In a real app we would hash this with hashPassword
-        name: name || username,
-        age: parseInt(age) || 30,
-        lifeExpectancy: parseInt(lifeExpectancy) || 85,
-        sleepHours: parseFloat(sleepHours) || 8
-      };
-
-      const user = await storage.createUser(userData);
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json(user);
-      });
-    } catch (err) {
-      next(err);
     }
   });
 
@@ -138,7 +132,7 @@ export function setupAuth(app: Express) {
     passport.authenticate("local", (err: Error | null, user: UserType | false, info: { message: string } | undefined) => {
       if (err) {
         console.error("Login error:", err);
-        return next(err);
+        return res.status(500).json({ message: "Internal server error" });
       }
       
       if (!user) {
@@ -149,7 +143,7 @@ export function setupAuth(app: Express) {
       req.login(user, (err) => {
         if (err) {
           console.error("Session error:", err);
-          return next(err);
+          return res.status(500).json({ message: "Session error" });
         }
         console.log("Login successful for user:", user.username);
         return res.json(user);
@@ -185,23 +179,4 @@ export const auth = (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).json({ message: "Not authenticated" });
   }
   next();
-};
-
-// Session configuration
-export const sessionConfig: session.SessionOptions = {
-  secret: process.env.SESSION_SECRET || "REDACTED_SET_SESSION_SECRET_ENV",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  },
-};
-
-// Initialize passport middleware
-export const initializePassport = (app: any) => {
-  app.use(session(sessionConfig));
-  app.use(passport.initialize());
-  app.use(passport.session());
 };

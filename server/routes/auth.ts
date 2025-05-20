@@ -33,7 +33,9 @@ authRouter.post("/login", async (req, res) => {
         console.error("Login error:", err);
         return res.status(500).json({ message: "Login failed" });
       }
-      return res.json({ message: "Logged in successfully" });
+      // Return user data without password
+      const { password: _, ...userData } = user;
+      return res.json(userData);
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -60,9 +62,6 @@ authRouter.post("/register", async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     // Create user
     const [newUser] = await db.insert(users).values({
       username,
@@ -76,7 +75,9 @@ authRouter.post("/register", async (req, res) => {
         console.error("Login error:", err);
         return res.status(500).json({ message: "Registration successful but login failed" });
       }
-      return res.status(201).json({ message: "Registration successful" });
+      // Return user data without password
+      const { password: _, ...userData } = newUser;
+      return res.status(201).json(userData);
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -101,6 +102,21 @@ authRouter.get("/status", (req, res) => {
     return res.json({ authenticated: true, user: req.user });
   }
   return res.json({ authenticated: false });
+});
+
+// Admin check route
+authRouter.get("/admin-check", (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  // List of admin usernames
+  const adminUsers = ['realityinspector'];
+  const username = req.user && typeof req.user === 'object' ? 
+                  (req.user as {username?: string}).username || '' : '';
+  
+  const isAdmin = adminUsers.includes(username);
+  return res.json({ isAdmin });
 });
 
 export default authRouter;

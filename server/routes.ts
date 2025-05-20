@@ -52,6 +52,14 @@ router.use('/api/csv-import', csvImportRouter);
 // Book routes
 router.use('/api/books', bookRouter);
 
+// Cluster routes
+router.use('/api/clusters', clusterRouter);
+
+// Admin routes
+router.use('/api/admin', adminRouter);
+router.use('/api/admin-llm', adminLLMRouter);
+router.use('/api/admin-backup', adminBackupRouter);
+
 export default router;
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -90,14 +98,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     next();
   };
-  
-  // Register the new activity and cluster routers
-  app.use('/api/activities', activityRouter);
-  app.use('/api/clusters', clusterRouter);
-  app.use('/api/admin', requireAdmin, adminRouter);
-  app.use('/api/admin-llm', requireAdmin, adminLLMRouter);
-  app.use('/api/admin-backup', requireAdmin, adminBackupRouter);
-  app.use("/api/books", bookRouter);
+
+  // Register all routes through the router
+  app.use(router);
 
   // Admin check route
   app.get('/api/user/admin-check', requireAuth, async (req, res) => {
@@ -358,61 +361,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Add a Life Event to User's Collection - Protected
+  // Create a new Life Event - Protected
   app.post('/api/user-life-events', requireAuth, async (req, res) => {
     try {
-      // Validate request body
-      const userEventData = userLifeEventSchema.partial().parse(req.body);
-      
+      const eventData = lifeEventSchema.parse(req.body);
       // @ts-ignore - user will always exist due to requireAuth middleware
       const userId = req.user.id;
-      
-      // Add the life event to user's collection
-      const userEvent = await storage.addUserLifeEvent({
-        ...userEventData,
-        userId,
-        lifeEventId: req.body.lifeEventId,
-        isActive: true
-      });
-      
-      // Get the full user event with the event data
-      const fullUserEvent = await storage.getUserLifeEvent(userEvent.id);
-      return res.status(201).json(fullUserEvent);
+      const event = await storage.createUserLifeEvent(userId, eventData);
+      return res.status(201).json(event);
     } catch (error) {
       if (error instanceof z.ZodError) {
         const validationError = fromZodError(error);
         return res.status(400).json({ message: validationError.message });
       }
-      console.error('Error adding user life event:', error);
+      console.error('Error creating user life event:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
   
-  // Update a User Life Event - Protected
+  // Update a Life Event - Protected
   app.put('/api/user-life-events/:id', requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      
-      // Validate request body
-      const userEventData = userLifeEventSchema.partial().parse(req.body);
-      
-      // Check if the user life event exists
-      const existingUserEvent = await storage.getUserLifeEvent(id);
-      if (!existingUserEvent) {
-        return res.status(404).json({ message: 'User life event not found' });
-      }
-      
+      const eventData = lifeEventSchema.partial().parse(req.body);
       // @ts-ignore - user will always exist due to requireAuth middleware
-      if (existingUserEvent.userId !== req.user.id) {
-        return res.status(403).json({ message: 'Forbidden' });
-      }
-      
-      // Update the user life event
-      const updatedUserEvent = await storage.updateUserLifeEvent(id, userEventData);
-      
-      // Get the full user event with the event data
-      const fullUserEvent = await storage.getUserLifeEvent(id);
-      return res.json(fullUserEvent);
+      const userId = req.user.id;
+      const event = await storage.updateUserLifeEvent(userId, id, eventData);
+      return res.json(event);
     } catch (error) {
       if (error instanceof z.ZodError) {
         const validationError = fromZodError(error);
@@ -423,27 +398,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Remove a Life Event from User's Collection - Protected
+  // Delete a Life Event - Protected
   app.delete('/api/user-life-events/:id', requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      
-      // Check if the user life event exists
-      const existingUserEvent = await storage.getUserLifeEvent(id);
-      if (!existingUserEvent) {
-        return res.status(404).json({ message: 'User life event not found' });
-      }
-      
       // @ts-ignore - user will always exist due to requireAuth middleware
-      if (existingUserEvent.userId !== req.user.id) {
-        return res.status(403).json({ message: 'Forbidden' });
-      }
-      
-      // Remove the user life event
-      await storage.removeUserLifeEvent(id);
+      const userId = req.user.id;
+      await storage.deleteUserLifeEvent(userId, id);
       return res.status(204).send();
     } catch (error) {
-      console.error('Error removing user life event:', error);
+      console.error('Error deleting user life event:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });

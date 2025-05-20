@@ -39,7 +39,7 @@ const LoginForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
           'Accept': 'application/json',
         },
         body: JSON.stringify({ username, password }),
-        credentials: 'same-origin'
+        credentials: 'include'
       });
       
       if (response.ok) {
@@ -166,26 +166,32 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({ 
           username, 
           password, 
-          name, 
-          age, 
-          lifeExpectancy, 
-          sleepHours: 8 
+          name
         }),
-        credentials: 'include'  // This is important for cookies to work
+        credentials: 'include'
       });
       
       if (response.ok) {
         const userData = await response.json();
         console.log('Registration successful, user data:', userData);
         
+        // Update user data with additional fields
+        const updatedUserData = {
+          ...userData,
+          age,
+          lifeExpectancy,
+          sleepHours: 8
+        };
+        
         // Verify session cookies are set
         console.log('Cookies after registration:', document.cookie);
         
-        completeSetup(userData);
+        completeSetup(updatedUserData);
         toast({
           title: "Registration successful",
           description: "Welcome to LIFE CHOICES by ALL ONE THING!",
