@@ -12,6 +12,17 @@
   }
 
   button {
-    @apply text-primary-foreground;
+    @apply text-black;
+  }
+  button:hover,
+  button:active,
+  button:focus,
+  button:focus-visible,
+  button:disabled {
+    @apply text-black;
+  }
+  button:focus,
+  button:active {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
   }
 }

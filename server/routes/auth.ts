@@ -45,42 +45,49 @@ authRouter.post("/login", async (req, res) => {
 
 // Register route
 authRouter.post("/register", async (req, res) => {
+  console.log("[REGISTER] Incoming registration request:", req.body);
   try {
     const { username, password, name } = z.object({
       username: z.string().min(3),
       password: z.string().min(6),
       name: z.string(),
     }).parse(req.body);
+    console.log("[REGISTER] Parsed body:", { username, name });
 
     // Check if username already exists
     const [existingUser] = await db.select().from(users).where(eq(users.username, username));
-
     if (existingUser) {
+      console.log("[REGISTER] Username already exists:", username);
       return res.status(400).json({ message: "Username already exists" });
     }
 
     // Hash password
+    console.log("[REGISTER] Hashing password for:", username);
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("[REGISTER] Password hashed");
 
     // Create user
+    console.log("[REGISTER] Inserting new user into database:", { username, name });
     const [newUser] = await db.insert(users).values({
       username,
       password: hashedPassword,
       name,
     }).returning();
+    console.log("[REGISTER] New user created:", newUser);
 
     // Log in the new user
     req.login(newUser, (err) => {
       if (err) {
-        console.error("Login error:", err);
+        console.error("[REGISTER] Login error after registration:", err);
         return res.status(500).json({ message: "Registration successful but login failed" });
       }
       // Return user data without password
       const { password: _, ...userData } = newUser;
+      console.log("[REGISTER] Registration and login successful for:", username);
       return res.status(201).json(userData);
     });
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error("[REGISTER] Registration error:", error);
     res.status(500).json({ message: "Registration failed" });
   }
 });

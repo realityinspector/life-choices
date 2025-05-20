@@ -162,7 +162,7 @@ const RegisterForm = ({ onSwitchForm }: { onSwitchForm: () => void }) => {
       console.log('Attempting to register with credentials:', { username, name });
       
       // Register with the server
-      const response = await fetch('/api/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
