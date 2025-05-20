@@ -462,7 +462,31 @@ adminRouter.post("/import-activities", async (req: AuthenticatedRequest, res) =>
   }
 });
 
-// Delete activity
+// Get single activity
+adminRouter.get('/:id', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid activity ID" });
+    }
+
+    const activity = await storage.getActivity(id);
+    if (!activity) {
+      return res.status(404).json({ message: "Activity not found" });
+    }
+
+    res.json(activity);
+  } catch (error) {
+    console.error('Error fetching activity:', error);
+    res.status(500).json({ message: "Failed to fetch activity" });
+  }
+});
+
+// Delete activity  
 adminRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req)) {
     return res.status(401).json({ message: "Not authenticated" });
