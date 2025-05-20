@@ -474,12 +474,19 @@ adminRouter.get('/:id', async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ message: "Invalid activity ID" });
     }
 
+    // Get both activity and its images
     const activity = await storage.getActivity(id);
     if (!activity) {
       return res.status(404).json({ message: "Activity not found" });
     }
 
-    res.json(activity);
+    const images = await storage.getActivityImages(id);
+    
+    // Return combined data
+    res.json({
+      activity,
+      images
+    });
   } catch (error) {
     console.error('Error fetching activity:', error);
     res.status(500).json({ message: "Failed to fetch activity" });
