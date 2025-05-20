@@ -5,10 +5,20 @@ import * as schema from "@shared/schema";
 // Create a PostgreSQL pool using CommonJS-style import
 const { Pool } = pkg;
 
+// Global timeout interval (1 minute)
+const TIMEOUT_INTERVAL = 60000;
+
 // Configure the PostgreSQL pool with enhanced connection settings
 // Configure the PostgreSQL pool with enhanced settings for Neon's pooler
 const databaseUrl = process.env.DATABASE_URL;
 const poolUrl = databaseUrl?.replace('.us-east-2', '-pooler.us-east-2');
+
+// Create timeout to close idle connections
+setInterval(() => {
+  pool?.end().catch(err => {
+    console.error('Error during pool cleanup:', err);
+  });
+}, TIMEOUT_INTERVAL);
 
 export const pool = new Pool({
   connectionString: poolUrl,
