@@ -57,23 +57,14 @@ export default function AdminActivityForm() {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const formDataObj = new FormData();
-      
-      // Add activity data
-      formDataObj.append('activity', JSON.stringify(formData));
-      
-      // Add image if selected
-      if (selectedFile) {
-        formDataObj.append('image', selectedFile);
-      }
-
       const url = isEditing 
         ? `/api/admin/activities/${activityId}` 
         : '/api/admin/activities';
         
       const res = await apiRequest(url, {
         method: isEditing ? 'PUT' : 'POST',
-        body: formDataObj
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
       });
       
       return res.json();
