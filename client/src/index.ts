@@ -2,6 +2,9 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
+// Export for Vite
+export * from './main';
+
 // Handle WebSocket connection errors globally
 window.addEventListener('unhandledrejection', (event) => {
   if (event.reason?.message?.includes('WebSocket')) {
