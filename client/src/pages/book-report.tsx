@@ -58,7 +58,16 @@ export default function BookReportPage() {
         setIsGenerating(true);
         try {
           console.log('Starting PDF generation...');
-          const pdf = new jsPDF();
+          const pdf = new jsPDF({
+            orientation: 'landscape',
+          });
+          
+          // Load AOT logo
+          const aotLogo = new Image();
+          aotLogo.src = '/src/images/aot-logo.png';
+          await new Promise((resolve) => {
+            aotLogo.onload = resolve;
+          });
           
           // Set black background for all pages
           pdf.setFillColor(0, 0, 0);
@@ -82,6 +91,9 @@ export default function BookReportPage() {
           for (let i = 0; i < bookActivitiesList.length; i++) {
             const activity = bookActivitiesList[i];
             if (i > 0) pdf.addPage();
+            
+            // Add AOT logo to top right of each page
+            pdf.addImage(aotLogo, 'PNG', pdf.internal.pageSize.width - 50, 10, 40, 20);
 
             // Add activity name
             pdf.setFontSize(16);
