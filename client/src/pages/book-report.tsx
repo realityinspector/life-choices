@@ -84,11 +84,21 @@ export default function BookReportPage() {
         const canvas = await html2canvas(card, {
           scale: 2,
           useCORS: true,
-          logging: false,
-          backgroundColor: null,
+          logging: true,
+          backgroundColor: 'transparent',
+          allowTaint: true,
+          foreignObjectRendering: true,
+          imageTimeout: 0,
+          onclone: (clonedDoc) => {
+            const clonedCard = clonedDoc.querySelector('.card') as HTMLElement;
+            if (clonedCard) {
+              clonedCard.style.transform = 'none';
+              clonedCard.style.boxShadow = 'none';
+            }
+          }
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const imgData = canvas.toDataURL('image/png', 1.0);
         const aspectRatio = canvas.height / canvas.width;
         let imgWidth = maxWidth;
         let imgHeight = imgWidth * aspectRatio;
@@ -106,7 +116,12 @@ export default function BookReportPage() {
         // Add rounded rectangle background
         pdf.setFillColor(255, 255, 255);
         pdf.roundedRect(x - 10, y - 10, imgWidth + 20, imgHeight + 20, 10, 10, 'F');
-        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+        
+        try {
+          pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+        } catch (error) {
+          console.error('Error adding image to PDF:', error);
+        }
 
         // Add logo at top
         const logoWidth = 60;
