@@ -463,11 +463,7 @@ adminRouter.post("/import-activities", async (req: AuthenticatedRequest, res) =>
 });
 
 // Get single activity
-adminRouter.get('/:id', async (req: AuthenticatedRequest, res) => {
-  if (!isAuthenticated(req)) {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-
+adminRouter.get('/activities/:id', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req)) {
     return res.status(401).json({ message: "Not authenticated" });
   }
