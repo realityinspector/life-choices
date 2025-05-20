@@ -58,13 +58,22 @@ export default function BookReportPage() {
     
     setIsGenerating(true);
     try {
+      console.log('Starting PDF generation...');
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
 
+      // Debug text styling
+      const addDebugText = (text: string, y: number) => {
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(8);
+        pdf.text(text, 10, y);
+      };
+
       // Load logo
+      console.log('Loading logo...');
       const logoImg = new Image();
       logoImg.crossOrigin = "anonymous";
       logoImg.src = "/src/images/aot-logo.png";
@@ -72,8 +81,10 @@ export default function BookReportPage() {
         logoImg.onload = resolve;
         logoImg.onerror = reject;
       });
+      console.log('Logo loaded successfully');
 
       const cards = reportRef.current.querySelectorAll('.card');
+      console.log(`Found ${cards.length} cards to process`);
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 10;
@@ -81,7 +92,11 @@ export default function BookReportPage() {
       const maxHeight = pageHeight - (4 * margin);
 
       for (let i = 0; i < cards.length; i++) {
+        console.log(`Processing card ${i + 1} of ${cards.length}`);
         if (i > 0) pdf.addPage();
+
+        // Add debug info at top of page
+        addDebugText(`Processing Activity ${i + 1} of ${cards.length}`, 5);
 
         // Black background
         pdf.setFillColor(0, 0, 0);
@@ -89,6 +104,12 @@ export default function BookReportPage() {
 
         // Convert card to canvas
         const card = cards[i] as HTMLElement;
+        const activityName = card.querySelector('h3')?.textContent || 'Unnamed Activity';
+        const activityCategory = card.querySelector('.text-gray-600')?.textContent || 'No Category';
+        addDebugText(`Activity: ${activityName}`, 15);
+        addDebugText(`Category: ${activityCategory}`, 20);
+        
+        console.log(`Converting card to canvas: ${activityName}`);
         const canvas = await html2canvas(card, {
           scale: 2,
           useCORS: true,
@@ -164,7 +185,11 @@ export default function BookReportPage() {
         );
       }
 
-      pdf.save(`${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`);
+      console.log('PDF generation completed, saving file...');
+      const filename = `${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`;
+      addDebugText(`Generated on ${new Date().toLocaleString()}`, pageHeight - 5);
+      pdf.save(filename);
+      console.log('PDF saved successfully:', filename);
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
