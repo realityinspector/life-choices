@@ -106,9 +106,23 @@ export default function BookReportPage() {
                   <h3 className="text-lg font-medium mb-2">{activity.name}</h3>
                   <div className="space-y-2 text-sm text-gray-600">
                     <p><span className="font-medium">Category:</span> {activity.category}</p>
-                    <p><span className="font-medium">Frequency:</span> {activity.frequency}</p>
-                    <p><span className="font-medium">Duration:</span> {activity.duration}</p>
-                    <p><span className="font-medium">Life Impact:</span> {activity.lifeImpact}</p>
+                    
+                    <div className="text-gray-700">
+                      {activity.frequency} {activity.frequencyUnit}{activity.frequency > 1 ? 's' : ''}
+                    </div>
+
+                    <div className="text-gray-700">
+                      {activity.duration} {activity.durationUnit}{activity.duration > 1 ? 's' : ''}
+                    </div>
+
+                    <div className="text-gray-700">
+                      <span className={cn(
+                        activity.lifeImpact === 'high' ? 'text-green-500' :
+                          activity.lifeImpact === 'medium' ? 'text-yellow-500' :
+                            'text-red-500',
+                        "font-medium"
+                      )}>Impact: {activity.lifeImpact}</span>
+                    </div>
                   </div>
                 </div>
               </Card>
