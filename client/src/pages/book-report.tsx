@@ -96,11 +96,13 @@ export default function BookReportPage() {
         if (i > 0) pdf.addPage();
 
         // Add debug info at top of page
-        addDebugText(`Processing Activity ${i + 1} of ${cards.length}`, 5);
-
-        // Black background
+        // Set black background first
         pdf.setFillColor(0, 0, 0);
         pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+
+        // Add debug text in white
+        pdf.setTextColor(255, 255, 255);
+        addDebugText(`Processing Activity ${i + 1} of ${cards.length}`, 5);
 
         // Convert card to canvas
         const card = cards[i] as HTMLElement;
@@ -113,14 +115,16 @@ export default function BookReportPage() {
         const canvas = await html2canvas(card, {
           scale: 2,
           useCORS: true,
-          logging: false,
-          backgroundColor: null,
+          logging: true,
+          backgroundColor: '#000000',
           imageTimeout: 15000,
           onclone: (clonedDoc) => {
             const clonedCard = clonedDoc.querySelector('.card') as HTMLElement;
             if (clonedCard) {
               clonedCard.style.transform = 'none';
               clonedCard.style.boxShadow = 'none';
+              clonedCard.style.backgroundColor = '#000000';
+              clonedCard.style.color = '#ffffff';
             }
           }
         });
