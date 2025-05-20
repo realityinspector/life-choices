@@ -195,24 +195,44 @@ export default function BookPage() {
         {/* Book Management */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Select
-              value={currentBook?.id.toString()}
-              onValueChange={(value) => {
-                const book = books.find(b => b.id.toString() === value);
-                selectBook(book || null);
-              }}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select a book" />
-              </SelectTrigger>
-              <SelectContent>
-                {books.map(book => (
-                  <SelectItem key={book.id} value={book.id.toString()}>
-                    {book.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center space-x-2">
+              <Select
+                value={currentBook?.id.toString()}
+                onValueChange={(value) => {
+                  const book = books.find(b => b.id.toString() === value);
+                  if (book) {
+                    selectBook(book);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select a book" />
+                </SelectTrigger>
+                <SelectContent>
+                  {books.map(book => (
+                    <SelectItem key={book.id} value={book.id.toString()}>
+                      {book.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Button 
+                variant="secondary"
+                onClick={() => {
+                  if (currentBook) {
+                    selectBook(currentBook);
+                    toast({
+                      title: "Success",
+                      description: `Loaded book: ${currentBook.name}`
+                    });
+                  }
+                }}
+                disabled={!currentBook}
+              >
+                Load Book
+              </Button>
+            </div>
 
             <Dialog open={showNewBookDialog} onOpenChange={setShowNewBookDialog}>
               <DialogTrigger asChild>
