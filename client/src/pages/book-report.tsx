@@ -50,30 +50,76 @@ export default function BookReportPage() {
         format: 'a4',
       });
 
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
+      const logo = await new Promise<string>((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = "/src/images/aot-logo.png";
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        };
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      const cards = reportRef.current.querySelectorAll('.card');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const aspectRatio = canvas.height / canvas.width;
-      const imgWidth = pdfWidth;
-      const imgHeight = pdfWidth * aspectRatio;
+      const margin = 40;
+      const maxWidth = pdfWidth * 0.8;
+      const maxHeight = pdfHeight * 0.8;
 
-      let heightLeft = imgHeight;
-      let position = 0;
+      // Set up each card on its own page
+      for (let i = 0; i < cards.length; i++) {
+        if (i > 0) pdf.addPage();
+        
+        // Black background
+        pdf.setFillColor(0, 0, 0);
+        pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
 
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
+        // Add card image
+        const card = cards[i] as HTMLElement;
+        const canvas = await html2canvas(card, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: null,
+        });
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const aspectRatio = canvas.height / canvas.width;
+        let imgWidth = maxWidth;
+        let imgHeight = imgWidth * aspectRatio;
+
+        // Adjust if height exceeds max
+        if (imgHeight > maxHeight) {
+          imgHeight = maxHeight;
+          imgWidth = imgHeight / aspectRatio;
+        }
+
+        // Center the image
+        const x = (pdfWidth - imgWidth) / 2;
+        const y = (pdfHeight - imgHeight) / 2;
+
+        // Add rounded rectangle background
+        pdf.setFillColor(255, 255, 255);
+        pdf.roundedRect(x - 10, y - 10, imgWidth + 20, imgHeight + 20, 10, 10, 'F');
+        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+
+        // Add logo at top
+        const logoWidth = 60;
+        const logoHeight = 60;
+        const logoX = (pdfWidth - logoWidth) / 2;
+        pdf.addImage(logo, 'PNG', logoX, margin, logoWidth, logoHeight);
+
+        // Add footer
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(12);
+        const footer = "MADE BY THE LIFE CHOICES APP FROM ALLONETHING.XYZ";
+        const footerWidth = pdf.getTextWidth(footer);
+        pdf.text(footer, (pdfWidth - footerWidth) / 2, pdfHeight - margin);
       }
 
       pdf.save(`${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`);
