@@ -11,8 +11,18 @@ if (!process.env.DATABASE_URL) {
 // Create a new pool with more robust configuration
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+  application_name: 'life-choices-app',
+  keepAlive: true,
+  retry: {
+    retries: 5,
+    factor: 2,
+    minTimeout: 1000,
+    maxTimeout: 5000
+  }
   connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
   maxUses: 7500, // Close a connection after it has been used 7500 times
   keepAlive: true, // Keep connections alive
