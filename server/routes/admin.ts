@@ -468,6 +468,10 @@ adminRouter.get('/:id', async (req: AuthenticatedRequest, res) => {
     return res.status(401).json({ message: "Not authenticated" });
   }
 
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {

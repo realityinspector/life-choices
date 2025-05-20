@@ -34,14 +34,19 @@ export default function AdminActivityForm() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Fetch activity if editing
-  const { data: activity } = useQuery<Activity>({
-    queryKey: ['/api/activities', activityId],
+  const { data: activityData } = useQuery<{activity: Activity, images: any[]}>({
+    queryKey: ['/api/admin/activities', activityId],
     queryFn: async () => {
-      const res = await apiRequest(`/api/activities/${activityId}`);
+      const res = await apiRequest(`/api/admin/activities/${activityId}`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch activity');
+      }
       return res.json();
     },
     enabled: isEditing
   });
+
+  const activity = activityData?.activity;
 
   useEffect(() => {
     if (activity) {
