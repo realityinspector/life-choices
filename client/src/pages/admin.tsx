@@ -29,12 +29,20 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+    
     const checkAdminStatus = async () => {
       try {
-        const res = await apiRequest('/api/auth/admin-check');
+        const res = await apiRequest('/api/auth/admin-check', {
+          signal: controller.signal
+        });
         const data = await res.json();
         setIsAdmin(data.isAdmin === true);
       } catch (error) {
+        // Ignore abort errors
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
         console.error("Error checking admin status:", error);
         setIsAdmin(false);
       } finally {
@@ -43,6 +51,10 @@ export default function AdminDashboard() {
     };
 
     checkAdminStatus();
+    
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   if (isLoading) {
