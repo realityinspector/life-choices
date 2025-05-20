@@ -59,6 +59,13 @@ export default function BookReportPage() {
         try {
           console.log('Starting PDF generation...');
           const pdf = new jsPDF();
+          
+          // Set black background for all pages
+          pdf.setFillColor(0, 0, 0);
+          pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, 'F');
+          
+          // Set white text color
+          pdf.setTextColor(255, 255, 255);
 
           // Load all images first
           const loadImage = (src: string): Promise<HTMLImageElement> => {
@@ -91,7 +98,18 @@ export default function BookReportPage() {
                 const img = await loadImage(activityImage.path);
                 const imgWidth = 170;
                 const imgHeight = (img.height * imgWidth) / img.width;
-                pdf.addImage(img, 'JPEG', 20, 40, imgWidth, imgHeight);
+                
+                // Draw rounded rectangle background for image
+                pdf.setFillColor(40, 40, 40); // Dark gray background for image container
+                const cornerRadius = 10;
+                const x = 20;
+                const y = 40;
+                
+                // Draw rounded rectangle
+                pdf.roundedRect(x - 5, y - 5, imgWidth + 10, imgHeight + 10, cornerRadius, cornerRadius, 'F');
+                
+                // Add image
+                pdf.addImage(img, 'JPEG', x, y, imgWidth, imgHeight);
               } catch (error) {
                 console.error(`Failed to load image for activity ${activity.name}:`, error);
               }
