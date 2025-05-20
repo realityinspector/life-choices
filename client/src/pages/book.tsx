@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useBook } from "@/context/book-context";
 import { useUser } from "@/context/user-context";
+import { Link } from "wouter";
 import { Activity, ActivityImage } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/header";
