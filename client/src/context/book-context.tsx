@@ -153,9 +153,13 @@ export function BookProvider({ children }: { children: React.ReactNode }) {
     if (book) {
       const bookActivitySet = bookActivities.get(book.id);
       if (bookActivitySet) {
-        setSelectedActivities(new Set(bookActivitySet));
-      } else {
-        setSelectedActivities(new Set());
+        const activities = new Set(bookActivitySet);
+        setSelectedActivities(activities);
+        setBookActivities(prev => {
+          const newMap = new Map(prev);
+          newMap.set(book.id, activities);
+          return newMap;
+        });
       }
     } else {
       setSelectedActivities(new Set());
