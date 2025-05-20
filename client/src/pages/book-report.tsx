@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBook } from "@/context/book-context";
 import { useUser } from "@/context/user-context";
 import { Activity, ActivityImage } from "@shared/schema";
@@ -12,7 +12,7 @@ import { BookOpen, ArrowLeft, Download } from "lucide-react";
 import { useLocation } from "wouter";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 export default function BookReportPage() {
   const [, navigate] = useLocation();
@@ -20,6 +20,7 @@ export default function BookReportPage() {
   const { currentBook, bookActivities } = useBook();
   const reportRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
     queryKey: ['/api/activities/shop/with-images'],
