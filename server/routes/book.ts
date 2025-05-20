@@ -11,10 +11,10 @@ const bookRouter = Router();
 // Get all books for the current user
 bookRouter.get("/", auth, async (req, res) => {
   try {
-    const userBooks = await db.query.books.findMany({
-      where: eq(books.userId, req.user!.id),
-      orderBy: (books, { desc }) => [desc(books.createdAt)],
-    });
+    const userBooks = await db.select()
+      .from(books)
+      .where(eq(books.userId, req.user!.id))
+      .orderBy(desc(books.createdAt));
     res.json(userBooks);
   } catch (error) {
     console.error("Error fetching books:", error);
