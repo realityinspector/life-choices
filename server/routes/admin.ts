@@ -511,8 +511,31 @@ adminRouter.put('/activities/:id', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ message: "Activity not found" });
     }
 
+    // Extract the fields we want to update
+    const { 
+      name, category, frequency, frequencyUnit, 
+      duration, durationUnit, lifeImpact, color,
+      priority, emoji, exportToCalendar, clusterId 
+    } = req.body;
+
+    // Create update payload with only the fields we want to update
+    const updateData = {
+      name,
+      category,
+      frequency,
+      frequencyUnit,
+      duration,
+      durationUnit,
+      lifeImpact,
+      color,
+      priority,
+      emoji,
+      exportToCalendar,
+      clusterId
+    };
+
     // Update the activity
-    const updatedActivity = await storage.updateActivity(id, req.body);
+    const updatedActivity = await storage.updateActivity(id, updateData);
     res.json(updatedActivity);
   } catch (error) {
     console.error('Error updating activity:', error);
