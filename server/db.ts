@@ -17,19 +17,12 @@ export const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
   application_name: 'life-choices-app',
   keepAlive: true,
+  maxUses: 7500, // Close a connection after it has been used 7500 times
   retry: {
     retries: 5,
     factor: 2,
     minTimeout: 1000,
     maxTimeout: 5000
-  }
-  connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
-  maxUses: 7500, // Close a connection after it has been used 7500 times
-  keepAlive: true, // Keep connections alive
-  retry: {
-    retries: 3,
-    minTimeout: 1000,
-    maxTimeout: 5000,
   }
 });
 
