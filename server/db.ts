@@ -1,71 +1,42 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import pkg from "pg";
-import * as schema from "@shared/schema";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { Pool } from "pg";
 
-// Create a PostgreSQL pool using CommonJS-style import
-const { Pool } = pkg;
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL not found");
+}
 
-// Global timeout interval (1 minute)
-const TIMEOUT_INTERVAL = 60000;
-
-// Configure the PostgreSQL pool with enhanced connection settings
-// Configure the PostgreSQL pool with enhanced settings for Neon's pooler
-const databaseUrl = process.env.DATABASE_URL;
-const poolUrl = databaseUrl?.replace('.us-east-2', '-pooler.us-east-2');
-
-// Keep-alive ping interval (60 seconds with random jitter)
-const KEEP_ALIVE_INTERVAL = 60000 + Math.floor(Math.random() * 20000); // 60-80 seconds
-
-// Create periodic ping to keep connection alive
-setInterval(async () => {
-  try {
-    const client = await pool.connect();
-    await client.query('SELECT 1');
-    client.release();
-  } catch (err) {
-    console.error('Error during keep-alive ping:', err);
-  }
-}, KEEP_ALIVE_INTERVAL);
-
-export const pool = new Pool({
-  connectionString: poolUrl,
-  max: 3,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 20000,
-  maxUses: 7500,
-  keepAlive: true,
-  keepAliveInitialDelayMillis: 10000,
-  ssl: {
-    rejectUnauthorized: false
-  },
+// Create a new pool with more robust configuration
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 20, // Maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: 10000, // Return an error after 10 seconds if connection could not be established
+  maxUses: 7500, // Close a connection after it has been used 7500 times
+  keepAlive: true, // Keep connections alive
   retry: {
     retries: 3,
-    initialDelay: 100,
-    maxDelay: 1000
+    minTimeout: 1000,
+    maxTimeout: 5000,
   }
 });
 
-// Setup error handling for the connection pool
-pool.on('error', (err) => {
+// Add error handler to the pool
+pool.on('error', (err, client) => {
   console.error('Unexpected error on idle client', err);
-  // Don't crash the process, but log the error
 });
 
-// Create a Drizzle ORM instance with the schema
-export const db = drizzle(pool, { schema });
+// Add connection handling
+pool.on('connect', () => {
+  console.log('Database connection established');
+});
 
-// Function to check if database connection is alive
-export async function checkDatabaseConnection(): Promise<boolean> {
-  try {
-    const client = await pool.connect();
-    try {
-      await client.query('SELECT 1');
-      return true;
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Database connection check failed:', error);
-    return false;
-  }
-}
+export const db = drizzle(pool);
+
+// Add graceful shutdown
+process.on('SIGTERM', () => {
+  pool.end().then(() => {
+    console.log('Database pool has ended');
+    process.exit(0);
+  });
+});
