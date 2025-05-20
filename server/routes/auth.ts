@@ -84,6 +84,7 @@ authRouter.post("/register", async (req, res) => {
       // Return user data without password
       const { password: _, ...userData } = newUser;
       console.log("[REGISTER] Registration and login successful for:", username);
+      console.log("[REGISTER] User data being returned:", userData);
       return res.status(201).json(userData);
     });
   } catch (error) {
