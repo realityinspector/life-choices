@@ -60,49 +60,41 @@ export default function BookReportPage() {
     try {
       const pdf = new jsPDF({
         orientation: 'portrait',
-        unit: 'px',
-        format: 'a4',
+        unit: 'mm',
+        format: 'a4'
       });
 
-      const logo = await new Promise<string>((resolve) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = "/src/images/aot-logo.png";
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
-        };
+      // Load logo
+      const logoImg = new Image();
+      logoImg.crossOrigin = "anonymous";
+      logoImg.src = "/src/images/aot-logo.png";
+      await new Promise((resolve, reject) => {
+        logoImg.onload = resolve;
+        logoImg.onerror = reject;
       });
 
       const cards = reportRef.current.querySelectorAll('.card');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 40;
-      const maxWidth = pdfWidth * 0.8;
-      const maxHeight = pdfHeight * 0.8;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const maxWidth = pageWidth - (2 * margin);
+      const maxHeight = pageHeight - (4 * margin);
 
-      // Set up each card on its own page
       for (let i = 0; i < cards.length; i++) {
         if (i > 0) pdf.addPage();
-        
+
         // Black background
         pdf.setFillColor(0, 0, 0);
-        pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
+        pdf.rect(0, 0, pageWidth, pageHeight, 'F');
 
-        // Add card image
+        // Convert card to canvas
         const card = cards[i] as HTMLElement;
         const canvas = await html2canvas(card, {
           scale: 2,
           useCORS: true,
-          logging: true,
-          backgroundColor: 'transparent',
-          allowTaint: true,
-          foreignObjectRendering: true,
-          imageTimeout: 0,
+          logging: false,
+          backgroundColor: null,
+          imageTimeout: 15000,
           onclone: (clonedDoc) => {
             const clonedCard = clonedDoc.querySelector('.card') as HTMLElement;
             if (clonedCard) {
@@ -112,43 +104,64 @@ export default function BookReportPage() {
           }
         });
 
-        const imgData = canvas.toDataURL('image/png', 1.0);
-        const aspectRatio = canvas.height / canvas.width;
+        // Calculate dimensions
+        const imgAspectRatio = canvas.height / canvas.width;
         let imgWidth = maxWidth;
-        let imgHeight = imgWidth * aspectRatio;
+        let imgHeight = imgWidth * imgAspectRatio;
 
-        // Adjust if height exceeds max
         if (imgHeight > maxHeight) {
           imgHeight = maxHeight;
-          imgWidth = imgHeight / aspectRatio;
+          imgWidth = imgHeight / imgAspectRatio;
         }
 
-        // Center the image
-        const x = (pdfWidth - imgWidth) / 2;
-        const y = (pdfHeight - imgHeight) / 2;
-
-        // Add rounded rectangle background
-        pdf.setFillColor(255, 255, 255);
-        pdf.roundedRect(x - 10, y - 10, imgWidth + 20, imgHeight + 20, 10, 10, 'F');
-        
-        try {
-          pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-        } catch (error) {
-          console.error('Error adding image to PDF:', error);
-        }
+        // Center everything
+        const centerX = (pageWidth - imgWidth) / 2;
+        const startY = margin * 2;
 
         // Add logo at top
-        const logoWidth = 60;
-        const logoHeight = 60;
-        const logoX = (pdfWidth - logoWidth) / 2;
-        pdf.addImage(logo, 'PNG', logoX, margin, logoWidth, logoHeight);
+        const logoWidth = 20;
+        const logoHeight = 20;
+        const logoX = (pageWidth - logoWidth) / 2;
+        const logoCanvas = document.createElement('canvas');
+        logoCanvas.width = logoImg.width;
+        logoCanvas.height = logoImg.height;
+        const logoCtx = logoCanvas.getContext('2d');
+        logoCtx?.drawImage(logoImg, 0, 0);
+        const logoData = logoCanvas.toDataURL('image/png');
+        pdf.addImage(logoData, 'PNG', logoX, margin, logoWidth, logoHeight);
+
+        // Add white rounded rectangle background
+        pdf.setFillColor(255, 255, 255);
+        pdf.roundedRect(
+          centerX - 2, 
+          startY + logoHeight, 
+          imgWidth + 4, 
+          imgHeight + 4, 
+          3, 3, 
+          'F'
+        );
+
+        // Add card image
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        pdf.addImage(
+          imgData, 
+          'PNG', 
+          centerX, 
+          startY + logoHeight + 2, 
+          imgWidth, 
+          imgHeight
+        );
 
         // Add footer
         pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(12);
+        pdf.setFontSize(8);
         const footer = "MADE BY THE LIFE CHOICES APP FROM ALLONETHING.XYZ";
         const footerWidth = pdf.getTextWidth(footer);
-        pdf.text(footer, (pdfWidth - footerWidth) / 2, pdfHeight - margin);
+        pdf.text(
+          footer, 
+          (pageWidth - footerWidth) / 2, 
+          pageHeight - margin
+        );
       }
 
       pdf.save(`${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`);
