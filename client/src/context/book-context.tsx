@@ -150,7 +150,16 @@ export function BookProvider({ children }: { children: React.ReactNode }) {
 
   const selectBook = (book: Book | null) => {
     setCurrentBook(book);
-    setSelectedActivities(new Set());
+    if (book) {
+      const bookActivitySet = bookActivities.get(book.id);
+      if (bookActivitySet) {
+        setSelectedActivities(new Set(bookActivitySet));
+      } else {
+        setSelectedActivities(new Set());
+      }
+    } else {
+      setSelectedActivities(new Set());
+    }
   };
 
   const addActivityToBook = async (bookId: number, activityId: number): Promise<void> => {
