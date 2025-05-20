@@ -12,14 +12,14 @@
   }
 
   button {
-    @apply text-black;
+    @apply text-black !important;
   }
   button:hover,
   button:active,
   button:focus,
   button:focus-visible,
   button:disabled {
-    @apply text-black;
+    @apply text-black !important;
   }
   button:focus,
   button:active {
