@@ -293,7 +293,7 @@ export default function BookPage() {
                   variant="outline"
                   className="ml-2"
                 >
-                  <Link to={`/book-report/${currentBook.id}`}>
+                  <Link to="/book-report">
                     <BookOpen className="h-4 w-4 mr-2" />
                     View Book Report
                   </Link>
