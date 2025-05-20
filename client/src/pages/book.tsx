@@ -258,11 +258,27 @@ export default function BookPage() {
             )}
           </div>
 
-          {currentBook && selectedActivities.size > 0 && (
-            <Button onClick={handleAddSelectedToBook}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add {selectedActivities.size} to Book
-            </Button>
+          {currentBook && (
+            <>
+              {selectedActivities.size > 0 && (
+                <Button onClick={handleAddSelectedToBook}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add {selectedActivities.size} to Book
+                </Button>
+              )}
+              {bookActivities.get(currentBook.id)?.size > 0 && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="ml-2"
+                >
+                  <Link to={`/book-report/${currentBook.id}`}>
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    View Book Report
+                  </Link>
+                </Button>
+              )}
+            </>
           )}
         </div>
 
@@ -327,6 +343,24 @@ export default function BookPage() {
             const isInBook = currentBook ? bookActivities.get(currentBook.id)?.has(activity.id) : false;
             const activityImage = allActivityImages.find(img => img.activityId === activity.id);
 
+            const handleRemoveFromBook = async (e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (!currentBook) return;
+              try {
+                await removeActivityFromBook(currentBook.id, activity.id);
+                toast({
+                  title: "Success",
+                  description: "Activity removed from book"
+                });
+              } catch (error) {
+                toast({
+                  title: "Error",
+                  description: "Failed to remove activity from book",
+                  variant: "destructive"
+                });
+              }
+            };
+
             return (
               <Card
                 key={activity.id}
@@ -355,9 +389,19 @@ export default function BookPage() {
                     </div>
                   )}
                   {isInBook && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
-                      <BookOpen className="h-4 w-4" />
-                    </div>
+                    <>
+                      <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
+                        <BookOpen className="h-4 w-4" />
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute bottom-2 right-2"
+                        onClick={handleRemoveFromBook}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
                   )}
                 </div>
                 <div className="p-2">
