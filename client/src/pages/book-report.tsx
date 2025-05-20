@@ -90,10 +90,18 @@ export default function BookReportPage() {
           // Process activities sequentially
           for (let i = 0; i < bookActivitiesList.length; i++) {
             const activity = bookActivitiesList[i];
-            if (i > 0) pdf.addPage();
+            if (i > 0) {
+              pdf.addPage();
+              // Set black background for new page
+              pdf.setFillColor(0, 0, 0);
+              pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, 'F');
+              pdf.setTextColor(255, 255, 255);
+            }
             
-            // Add AOT logo to top right of each page
-            pdf.addImage(aotLogo, 'PNG', pdf.internal.pageSize.width - 50, 10, 40, 20);
+            // Add AOT logo to top right of each page with correct aspect ratio
+            const logoWidth = 40;
+            const logoHeight = (234/227) * logoWidth; // Maintain aspect ratio
+            pdf.addImage(aotLogo, 'PNG', pdf.internal.pageSize.width - 50, 10, logoWidth, logoHeight);
 
             // Add activity name
             pdf.setFontSize(16);
