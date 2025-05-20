@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { useBook } from "@/context/book-context";
 import { useUser } from "@/context/user-context";
@@ -7,15 +8,19 @@ import { cn } from "@/lib/utils";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BookOpen, ArrowLeft } from "lucide-react";
+import { BookOpen, ArrowLeft, Download } from "lucide-react";
 import { useLocation } from "wouter";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
+import { useRef, useState } from "react";
 
 export default function BookReportPage() {
   const [, navigate] = useLocation();
   const { userData } = useUser();
   const { currentBook, bookActivities } = useBook();
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  // Fetch all activities with images
   const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
     queryKey: ['/api/activities/shop/with-images'],
     queryFn: async ({ signal }) => {
@@ -30,12 +35,54 @@ export default function BookReportPage() {
     staleTime: 30000
   });
 
-  // Extract all images for easier reference
   const allActivityImages = activitiesWithImages.flatMap(a => a.images);
-
-  // Get activities in the current book
   const bookActivityIds = currentBook ? bookActivities.get(currentBook.id) || new Set() : new Set();
   const bookActivitiesList = activitiesWithImages.filter(activity => bookActivityIds.has(activity.id));
+
+  const generatePDF = async () => {
+    if (!reportRef.current || !currentBook) return;
+    
+    setIsGenerating(true);
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: 'a4',
+      });
+
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const aspectRatio = canvas.height / canvas.width;
+      const imgWidth = pdfWidth;
+      const imgHeight = pdfWidth * aspectRatio;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save(`${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   if (!userData) {
     return (
@@ -64,27 +111,36 @@ export default function BookReportPage() {
       <Header userData={userData} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* Page Header */}
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <Button
+              variant="ghost"
+              className="mb-4"
+              onClick={() => navigate("/book")}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Books
+            </Button>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+              <BookOpen className="h-6 w-6 mr-2" />
+              {currentBook.name}
+            </h1>
+            <p className="text-gray-500 mt-1">
+              {bookActivitiesList.length} activities in this collection
+            </p>
+          </div>
+          
           <Button
-            variant="ghost"
-            className="mb-4"
-            onClick={() => navigate("/book")}
+            onClick={generatePDF}
+            disabled={isGenerating || bookActivitiesList.length === 0}
+            className="ml-4"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Books
+            <Download className="h-4 w-4 mr-2" />
+            {isGenerating ? 'Generating...' : 'Download PDF'}
           </Button>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <BookOpen className="h-6 w-6 mr-2" />
-            {currentBook.name}
-          </h1>
-          <p className="text-gray-500 mt-1">
-            {bookActivitiesList.length} activities in this collection
-          </p>
         </div>
 
-        {/* Activity Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div ref={reportRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {bookActivitiesList.map((activity) => {
             const activityImage = allActivityImages.find(img => img.activityId === activity.id);
 
@@ -96,6 +152,7 @@ export default function BookReportPage() {
                       src={activityImage.path}
                       alt={activity.name}
                       className="w-full h-full object-cover"
+                      crossOrigin="anonymous"
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-100 flex items-center justify-center">
