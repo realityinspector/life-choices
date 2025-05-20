@@ -22,14 +22,19 @@ export default function BookReportPage() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
-    queryKey: ['/api/activities/shop/with-images'],
+    queryKey: ['/api/activities/with-images'],
     queryFn: async ({ signal }) => {
       try {
-        const res = await apiRequest('/api/activities/shop/with-images', { signal });
-        return res.json();
+        const res = await apiRequest('/api/activities/with-images', { signal });
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        console.log('Fetched activities with images:', data.length);
+        return data;
       } catch (error) {
         console.error('Error fetching activities with images:', error);
-        return [];
+        throw error;
       }
     },
     staleTime: 30000
