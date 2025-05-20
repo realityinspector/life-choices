@@ -493,6 +493,33 @@ adminRouter.get('/activities/:id', async (req: AuthenticatedRequest, res) => {
   }
 });
 
+// Update activity
+adminRouter.put('/activities/:id', async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid activity ID" });
+    }
+
+    // Get existing activity to verify it exists
+    const existingActivity = await storage.getActivity(id);
+    if (!existingActivity) {
+      return res.status(404).json({ message: "Activity not found" });
+    }
+
+    // Update the activity
+    const updatedActivity = await storage.updateActivity(id, req.body);
+    res.json(updatedActivity);
+  } catch (error) {
+    console.error('Error updating activity:', error);
+    res.status(500).json({ message: "Failed to update activity" });
+  }
+});
+
 // Delete activity  
 adminRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req)) {
