@@ -4,7 +4,7 @@ import { auth } from "../auth";
 import { z } from "zod";
 import { db } from "../db";
 import { books, bookActivities, activities } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 
 const bookRouter = Router();
 
@@ -113,13 +113,20 @@ bookRouter.get("/:id", auth, async (req, res) => {
       return res.status(404).json({ error: "Book not found" });
     }
 
-    const bookActivitiesList = await db.query.bookActivities.findMany({
-      where: eq(bookActivities.bookId, parseInt(id)),
-      with: {
-        activity: true,
-      },
-      orderBy: (bookActivities, { asc }) => [asc(bookActivities.orderIndex)],
-    });
+    const bookActivitiesList = await db
+      .select({
+        activityId: bookActivities.activityId,
+        orderIndex: bookActivities.orderIndex,
+      })
+      .from(bookActivities)
+      .where(eq(bookActivities.bookId, parseInt(id)))
+      .orderBy(bookActivities.orderIndex);
+
+    const activityIds = bookActivitiesList.map(ba => ba.activityId);
+    
+    const bookActivities = activityIds.length > 0 
+      ? await db.select().from(activities).where(inArray(activities.id, activityIds))
+      : [];
 
     res.json({
       ...book,
