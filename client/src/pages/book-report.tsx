@@ -131,7 +131,7 @@ export default function BookReportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col pb-16">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
       <Header userData={userData} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -169,13 +169,13 @@ export default function BookReportPage() {
             const activityImage = allActivityImages.find(img => img.activityId === activity.id);
 
             return (
-              <Card key={activity.id} className="overflow-hidden rounded-xl bg-gray-900 text-white border-gray-800">
+              <Card key={activity.id} className="overflow-hidden">
                 <div className="aspect-video relative">
                   {activityImage ? (
                     <img
                       src={activityImage.path}
                       alt={activity.name}
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full object-cover"
                       crossOrigin="anonymous"
                     />
                   ) : (
