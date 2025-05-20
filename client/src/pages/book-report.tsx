@@ -22,10 +22,10 @@ export default function BookReportPage() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
-    queryKey: ['/api/activities/with-images'],
+    queryKey: ['/api/activities/shop/with-images'],
     queryFn: async ({ signal }) => {
       try {
-        const res = await apiRequest('/api/activities/with-images', { signal });
+        const res = await apiRequest('/api/activities/shop/with-images', { signal });
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
@@ -37,8 +37,16 @@ export default function BookReportPage() {
         throw error;
       }
     },
-    staleTime: 30000
+    staleTime: 30000,
+    enabled: !!currentBook
   });
+
+  // Force refetch when book changes
+  useEffect(() => {
+    if (currentBook) {
+      queryClient.invalidateQueries({ queryKey: ['/api/activities/shop/with-images'] });
+    }
+  }, [currentBook?.id]);
 
   const allActivityImages = activitiesWithImages.flatMap(a => a.images);
   const bookActivityIds = currentBook ? bookActivities.get(currentBook.id) || new Set() : new Set();
