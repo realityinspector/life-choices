@@ -1,8 +1,7 @@
 
 import { db } from '../server/db';
 import { activities, activityImages } from '../shared/schema';
-import { eq, and, sql, isNull, or } from 'drizzle-orm';
-import { storage } from '../server/storage';
+import { eq, and, sql, isNull } from 'drizzle-orm';
 
 async function cleanActivitiesDatabase() {
   console.log('Starting database cleanup...');
@@ -14,9 +13,9 @@ async function cleanActivitiesDatabase() {
       .update(activities)
       .set({ source: 'legacy' })
       .where(isNull(activities.source))
-      .returning();
+      .execute();
     
-    console.log(`Updated ${updateResult.length} activities without source`);
+    console.log('Updated activities without source');
 
     // Step 1: Get all activities and their images
     console.log('Fetching activities...');
@@ -54,7 +53,8 @@ async function cleanActivitiesDatabase() {
 
       if (!imagesByActivityId.has(activity.id)) {
         await db.delete(activities)
-          .where(eq(activities.id, activity.id));
+          .where(eq(activities.id, activity.id))
+          .execute();
         deletedNoImages++;
         if (deletedNoImages % 100 === 0) {
           console.log(`Deleted ${deletedNoImages} activities without images so far...`);
@@ -95,7 +95,8 @@ async function cleanActivitiesDatabase() {
           const extraImages = imagesByActivityId.get(keepActivity.id).slice(1);
           for (const img of extraImages) {
             await db.delete(activityImages)
-              .where(eq(activityImages.id, img.id));
+              .where(eq(activityImages.id, img.id))
+              .execute();
           }
         }
 
@@ -104,11 +105,13 @@ async function cleanActivitiesDatabase() {
           // Delete associated images first
           for (const img of imagesByActivityId.get(activity.id)) {
             await db.delete(activityImages)
-              .where(eq(activityImages.id, img.id));
+              .where(eq(activityImages.id, img.id))
+              .execute();
           }
           // Delete the activity
           await db.delete(activities)
-            .where(eq(activities.id, activity.id));
+            .where(eq(activities.id, activity.id))
+            .execute();
           deletedDuplicates++;
         }
 
