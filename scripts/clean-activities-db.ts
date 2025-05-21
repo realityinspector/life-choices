@@ -6,13 +6,35 @@ async function cleanActivitiesDatabase() {
   console.log('Starting database cleanup...');
 
   try {
-    // First update activities without source
-    console.log('Updating activities without source...');
-    await db.execute(
-      sql`UPDATE activities SET source = 'legacy' WHERE source IS NULL`
-    );
+    // First check if source column exists
+    console.log('Checking source column existence...');
+    const columnCheck = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'activities' 
+        AND column_name = 'source'
+      );
+    `);
 
-    console.log('Updated activities without source');
+    const sourceColumnExists = columnCheck.rows[0].exists;
+
+    if (sourceColumnExists) {
+      console.log('Updating activities without source...');
+      await db.execute(
+        sql`UPDATE activities SET source = 'legacy' WHERE source IS NULL`
+      );
+      console.log('Updated activities without source');
+    } else {
+      console.log('Source column not found, skipping source update...');
+      // Run the migration to add the source column
+      console.log('Running migration to add source column...');
+      await db.execute(sql`
+        ALTER TABLE activities 
+        ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'legacy'
+      `);
+      console.log('Added source column successfully');
+    }
 
     // Step 1: Get all activities and their images
     console.log('Fetching activities...');
