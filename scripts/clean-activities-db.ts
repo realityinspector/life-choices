@@ -9,14 +9,22 @@ async function cleanActivitiesDatabase() {
 
   try {
     // Step 1: Get all activities and their images
+    console.log('Fetching activities...');
     const allActivities = await storage.getActivities();
-    const allImages = await storage.getActivityImages();
     console.log(`Found ${allActivities.length} total activities`);
+    
+    console.log('Fetching images...');
+    const allImages = await storage.getActivityImages();
     console.log(`Found ${allImages.length} total images`);
 
-    // Create image lookup map
+    console.log('Creating image lookup map...');
     const imagesByActivityId = new Map();
-    allImages.forEach(img => {
+    let imageMapProgress = 0;
+    allImages.forEach((img, index) => {
+      if (index % 100 === 0) {
+        imageMapProgress = Math.round((index / allImages.length) * 100);
+        console.log(`Processing images: ${imageMapProgress}% (${index}/${allImages.length})`);
+      }
       if (!imagesByActivityId.has(img.activityId)) {
         imagesByActivityId.set(img.activityId, []);
       }
@@ -25,14 +33,25 @@ async function cleanActivitiesDatabase() {
 
     // Step 2: First remove all activities without images
     let deletedNoImages = 0;
+    let processedCount = 0;
+    console.log('\nRemoving activities without images...');
+    
     for (const activity of allActivities) {
+      processedCount++;
+      if (processedCount % 1000 === 0) {
+        console.log(`Processing activities: ${Math.round((processedCount / allActivities.length) * 100)}% (${processedCount}/${allActivities.length})`);
+      }
+      
       if (!imagesByActivityId.has(activity.id)) {
         await db.delete(activities)
           .where(eq(activities.id, activity.id));
         deletedNoImages++;
+        if (deletedNoImages % 100 === 0) {
+          console.log(`Deleted ${deletedNoImages} activities without images so far...`);
+        }
       }
     }
-    console.log(`\nDeleted ${deletedNoImages} activities without images`);
+    console.log(`\nCompleted: Deleted ${deletedNoImages} activities without images`);
 
     // Step 3: Get remaining activities (those with images)
     const remainingActivities = allActivities.filter(activity => 
