@@ -57,7 +57,7 @@ const logActivityCreation = (req: Request, res: Response, next: NextFunction) =>
   next();
 };
 
-router.post('/', auth, logActivityCreation, async (req, res) => {
+activityRouter.post('/', auth, logActivityCreation, async (req, res) => {
   try {
     const activity = activitySchema.parse({
       ...req.body,
