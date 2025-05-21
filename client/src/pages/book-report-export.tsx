@@ -197,13 +197,20 @@ export default function BookReportExportPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Format</label>
-                <Select 
+                <RadioGroup 
                   value={config.format}
                   onValueChange={(value: "letter" | "phone") => setConfig({...config, format: value})}
+                  className="flex gap-4"
                 >
-                  <option value="letter">Letter</option>
-                  <option value="phone">Phone</option>
-                </Select>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroup.Item value="letter" id="format-letter" />
+                    <label htmlFor="format-letter">Letter</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroup.Item value="phone" id="format-phone" />
+                    <label htmlFor="format-phone">Phone</label>
+                  </div>
+                </RadioGroup>
               </div>
 
               <div>
