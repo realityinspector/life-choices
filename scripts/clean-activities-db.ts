@@ -10,18 +10,21 @@ async function cleanActivitiesDatabase() {
   try {
     // First update activities without source
     console.log('Updating activities without source...');
-    await db
+    const updateResult = await db
       .update(activities)
       .set({ source: 'legacy' })
-      .where(isNull(activities.source));
+      .where(isNull(activities.source))
+      .returning();
+    
+    console.log(`Updated ${updateResult.length} activities without source`);
 
     // Step 1: Get all activities and their images
     console.log('Fetching activities...');
-    const allActivities = await storage.getActivities();
+    const allActivities = await db.select().from(activities);
     console.log(`Found ${allActivities.length} total activities`);
 
     console.log('Fetching images...');
-    const allImages = await storage.getActivityImages();
+    const allImages = await db.select().from(activityImages);
     console.log(`Found ${allImages.length} total images`);
 
     console.log('Creating image lookup map...');
