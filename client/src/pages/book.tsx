@@ -59,7 +59,15 @@ export default function BookPage() {
   const allActivityImages = activitiesWithImages.flatMap(a => a.images);
 
   // Filter activities based on search and category
+  // Create a Set of activity IDs that have images
+  const activityIdsWithImages = new Set(allActivityImages.map(img => img.activityId));
+
   const filteredActivities = activitiesWithImages.filter(activity => {
+    // First check if activity has images
+    if (!activityIdsWithImages.has(activity.id)) {
+      return false;
+    }
+
     const query = searchQuery.toLowerCase();
     const nameMatch = activity.name.toLowerCase().includes(query);
     const categoryMatch = activity.category.toLowerCase().includes(query);
