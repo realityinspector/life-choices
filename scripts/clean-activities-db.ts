@@ -1,18 +1,26 @@
-
 import { db } from '../server/db';
 import { activities, activityImages } from '../shared/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, isNull, or } from 'drizzle-orm';
 import { storage } from '../server/storage';
 
 async function cleanActivitiesDatabase() {
   console.log('Starting database cleanup...');
 
   try {
+    // First update activities without source
+    console.log('Updating activities without source...');
+    await db
+      .update(activities)
+      .set({ source: 'legacy' })
+      .where(
+        isNull(activities.source)
+      );
+
     // Step 1: Get all activities and their images
     console.log('Fetching activities...');
     const allActivities = await storage.getActivities();
     console.log(`Found ${allActivities.length} total activities`);
-    
+
     console.log('Fetching images...');
     const allImages = await storage.getActivityImages();
     console.log(`Found ${allImages.length} total images`);
@@ -35,13 +43,13 @@ async function cleanActivitiesDatabase() {
     let deletedNoImages = 0;
     let processedCount = 0;
     console.log('\nRemoving activities without images...');
-    
+
     for (const activity of allActivities) {
       processedCount++;
       if (processedCount % 1000 === 0) {
         console.log(`Processing activities: ${Math.round((processedCount / allActivities.length) * 100)}% (${processedCount}/${allActivities.length})`);
       }
-      
+
       if (!imagesByActivityId.has(activity.id)) {
         await db.delete(activities)
           .where(eq(activities.id, activity.id));
@@ -75,7 +83,7 @@ async function cleanActivitiesDatabase() {
     for (const [name, group] of activityGroups) {
       if (group.length > 1) {
         console.log(`\nProcessing duplicate group "${name}" (${group.length} activities)`);
-        
+
         // Keep only the first activity in the group
         const keepActivity = group[0];
         const keepImageId = imagesByActivityId.get(keepActivity.id)[0].id;
@@ -101,7 +109,7 @@ async function cleanActivitiesDatabase() {
             .where(eq(activities.id, activity.id));
           deletedDuplicates++;
         }
-        
+
         console.log(`  Kept activity ${keepActivity.id} with image ${keepImageId}`);
         keptCount++;
       } else {
@@ -133,59 +141,3 @@ cleanActivitiesDatabase()
     console.error('Database cleanup failed:', error);
     process.exit(1);
   });
-import { db } from '../server/db';
-import { activities } from '../shared/schema';
-import { and, eq, isNull, or } from 'drizzle-orm';
-
-async function cleanActivitiesDb() {
-  try {
-    // First, let's count activities without a source
-    const noSourceCount = await db
-      .select({ count: activities.id })
-      .from(activities)
-      .where(isNull(activities.source));
-
-    console.log(`Found ${noSourceCount.length} activities without source`);
-
-    // Update activities without source to have 'legacy' source
-    await db
-      .update(activities)
-      .set({ source: 'legacy' })
-      .where(
-        eq(activities.source, null)
-      );
-
-    // Count automated sources
-    const automatedCount = await db
-      .select({ count: activities.id })
-      .from(activities)
-      .where(
-        or(
-          eq(activities.source, 'llm'),
-          eq(activities.source, 'import'),
-          eq(activities.source, 'sample')
-        )
-      );
-
-    console.log(`Found ${automatedCount.length} automated activities`);
-
-    // Option to delete automated activities if needed
-    if (process.env.DELETE_AUTOMATED === 'true') {
-      await db
-        .delete(activities)
-        .where(
-          or(
-            eq(activities.source, 'llm'),
-            eq(activities.source, 'import'),
-            eq(activities.source, 'sample')
-          )
-        );
-      console.log('Deleted automated activities');
-    }
-
-  } catch (error) {
-    console.error('Error cleaning activities:', error);
-  }
-}
-
-cleanActivitiesDb();
