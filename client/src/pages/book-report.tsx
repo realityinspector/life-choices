@@ -193,12 +193,12 @@ export default function BookReportPage() {
           </div>
 
           <Button
-            onClick={generatePDF}
-            disabled={isGenerating || bookActivitiesList.length === 0}
+            onClick={() => navigate("/book-report-export")}
+            disabled={bookActivitiesList.length === 0}
             className="ml-4"
           >
             <Download className="h-4 w-4 mr-2" />
-            {isGenerating ? 'Generating...' : 'Download PDF'}
+            Export as PDF
           </Button>
         </div>
 
