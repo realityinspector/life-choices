@@ -25,6 +25,7 @@ import AdminActivityFormPage from "@/pages/admin-activity-form";
 import BottomNavigation from "@/components/bottom-navigation";
 import BookPage from "@/pages/book";
 import BookReportPage from "@/pages/book-report";
+import BookReportExportPage from "@/pages/book-report-export";
 import { BookProvider } from "@/context/book-context";
 
 // Set the document title
@@ -121,6 +122,7 @@ function Router() {
       
       <Route path="/book" component={BookPage} />
       <Route path="/book-report" component={BookReportPage} />
+      <Route path="/book-report-export" component={BookReportExportPage} />
       
       <Route component={NotFound} />
     </Switch>
