@@ -642,8 +642,16 @@ export default function ShopActivitiesPage() {
   // Use only database activities
   const allActivities = enhancedDatabaseActivities;
 
-  // Filter activities based on search and category
+  // Create a Set of activity IDs that have images
+  const activityIdsWithImages = new Set(allActivityImages.map(img => img.activityId));
+
+  // Filter activities based on search, category, and having images
   const filteredActivities = allActivities.filter(activity => {
+    // First check if activity has images
+    if (!activityIdsWithImages.has(activity.id)) {
+      return false;
+    }
+
     // Convert search query to lowercase for case-insensitive matching
     const query = searchQuery.toLowerCase();
 
