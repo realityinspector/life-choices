@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Download, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useRef, useState } from "react";
 
 type PDFConfig = {
@@ -29,7 +30,17 @@ export default function BookReportExportPage() {
   const { currentBook, bookActivities } = useBook();
   const previewRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  
+
+  const { data: activitiesWithImages = [] } = useQuery({
+    queryKey: ['/api/activities/shop/with-images'],
+    queryFn: async ({ signal }) => {
+      const res = await apiRequest('/api/activities/shop/with-images', { signal });
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      return res.json();
+    },
+    enabled: !!currentBook
+  });
+
   const [config, setConfig] = useState<PDFConfig>({
     orientation: "portrait",
     format: "letter",
@@ -44,8 +55,11 @@ export default function BookReportExportPage() {
     phone: { width: 96, height: 160 }
   };
 
+  const bookActivityIds = currentBook ? bookActivities.get(currentBook.id) || new Set() : new Set();
+  const bookActivitiesList = activitiesWithImages.filter(activity => bookActivityIds.has(activity.id));
+
   const generatePDF = async () => {
-    if (!previewRef.current || !currentBook) return;
+    if (!previewRef.current || !currentBook || bookActivitiesList.length === 0) return;
 
     setIsGenerating(true);
     try {
@@ -56,36 +70,71 @@ export default function BookReportExportPage() {
         format: [width, height]
       });
 
-      // Set background
-      pdf.setFillColor(parseInt(config.backgroundColor.slice(1), 16));
-      pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, "F");
+      // Load AOT logo
+      const aotLogo = new Image();
+      aotLogo.src = '/src/images/aot-logo.png';
+      await new Promise((resolve) => {
+        aotLogo.onload = resolve;
+      });
 
-      // Set font
-      pdf.setFont(config.fontName);
-      pdf.setFontSize(config.fontSize);
-      pdf.setTextColor(255, 255, 255);
-
-      const canvas = await html2canvas(previewRef.current);
-      const imgData = canvas.toDataURL("image/jpeg");
-
-      if (config.imageMode === "blackAndWhite") {
-        // Convert to grayscale
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const ctx = tempCanvas.getContext("2d")!;
-        ctx.drawImage(canvas, 0, 0);
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < imgData.data.length; i += 4) {
-          const avg = (imgData.data[i] + imgData.data[i + 1] + imgData.data[i + 2]) / 3;
-          imgData.data[i] = avg;
-          imgData.data[i + 1] = avg;
-          imgData.data[i + 2] = avg;
+      // Process each activity
+      for (let i = 0; i < bookActivitiesList.length; i++) {
+        const activity = bookActivitiesList[i];
+        
+        if (i > 0) {
+          pdf.addPage();
         }
-        ctx.putImageData(imgData, 0, 0);
-        pdf.addImage(tempCanvas.toDataURL(), "JPEG", 10, 10, 190, 270);
-      } else {
-        pdf.addImage(imgData, "JPEG", 10, 10, 190, 270);
+
+        // Set background color
+        pdf.setFillColor(parseInt(config.backgroundColor.slice(1), 16));
+        pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, 'F');
+
+        // Add logo
+        const logoWidth = 40;
+        const logoHeight = (234/227) * logoWidth;
+        pdf.addImage(aotLogo, 'PNG', pdf.internal.pageSize.width - 50, 10, logoWidth, logoHeight);
+
+        // Set font
+        pdf.setFont(config.fontName);
+        pdf.setFontSize(config.fontSize);
+        pdf.setTextColor(255, 255, 255);
+
+        // Add activity details
+        pdf.text(activity.name, 20, 20);
+        pdf.setFontSize(config.fontSize - 2);
+        pdf.text(`Category: ${activity.category}`, 20, 30);
+
+        // Add image if exists
+        if (activity.images && activity.images.length > 0) {
+          try {
+            const img = await loadImage(activity.images[0].path);
+            const imgWidth = 170;
+            const imgHeight = (img.height * imgWidth) / img.width;
+            
+            // Image container background
+            pdf.setFillColor(40, 40, 40);
+            pdf.roundedRect(15, 35, imgWidth + 10, imgHeight + 10, 5, 5, 'F');
+            
+            if (config.imageMode === "blackAndWhite") {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d')!;
+              ctx.drawImage(img, 0, 0);
+              const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              for (let p = 0; p < imgData.data.length; p += 4) {
+                const avg = (imgData.data[p] + imgData.data[p + 1] + imgData.data[p + 2]) / 3;
+                imgData.data[p] = imgData.data[p + 1] = imgData.data[p + 2] = avg;
+              }
+              ctx.putImageData(imgData, 0, 0);
+              pdf.addImage(canvas.toDataURL(), 'JPEG', 20, 40, imgWidth, imgHeight);
+            } else {
+              pdf.addImage(img, 'JPEG', 20, 40, imgWidth, imgHeight);
+            }
+          } catch (error) {
+            console.error(`Failed to load image for activity ${activity.name}:`, error);
+          }
+        }
       }
 
       const filename = `${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`;
@@ -95,6 +144,16 @@ export default function BookReportExportPage() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const loadImage = (src: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
   };
 
   if (!userData || !currentBook) {
@@ -188,7 +247,7 @@ export default function BookReportExportPage() {
 
             <Button
               onClick={generatePDF}
-              disabled={isGenerating}
+              disabled={isGenerating || bookActivitiesList.length === 0}
               className="w-full mt-6"
             >
               <Download className="h-4 w-4 mr-2" />
@@ -198,7 +257,22 @@ export default function BookReportExportPage() {
 
           <div ref={previewRef}>
             <h2 className="text-lg font-semibold mb-4">Preview</h2>
-            {/* Preview content here */}
+            <div className="space-y-4">
+              {bookActivitiesList.map(activity => (
+                <Card key={activity.id} className="p-4">
+                  <h3 className="font-medium">{activity.name}</h3>
+                  <p className="text-sm text-gray-600">Category: {activity.category}</p>
+                  {activity.images && activity.images[0] && (
+                    <img 
+                      src={activity.images[0].path} 
+                      alt={activity.name}
+                      className="mt-2 rounded-md"
+                      crossOrigin="anonymous"
+                    />
+                  )}
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </div>
