@@ -68,27 +68,17 @@ export default function WhatsNextPage() {
     const { signal } = controller;
 
     try {
-      // Try to fetch shop activities first (includes both DB activities and sample activities)
+      // Fetch only database activities
       const response = await fetch('/api/activities/shop', { signal });
       if (!response.ok) {
-        throw new Error('Failed to fetch shop activities');
+        throw new Error('Failed to fetch activities');
       }
 
-      // Get activities from shop
-      const shopActivities = await response.json();
+      const activities = await response.json();
+      if (activities.length === 0) return null;
 
-      // Filter out activities that are already in the user's activities
-      const availableActivities = shopActivities.filter(
-        sample => !activities.some(userActivity => 
-          userActivity.name.toLowerCase() === sample.name.toLowerCase()
-        )
-      );
-
-      // No available activities left
-      if (availableActivities.length === 0) return null;
-
-      // Shuffle and pick one
-      const shuffled = [...availableActivities].sort(() => Math.random() - 0.5);
+      // Return a random activity
+      return activities[Math.floor(Math.random() * activities.length)];
 
       // Convert to ActivityInsert if needed
       const selectedActivity = shuffled[0];

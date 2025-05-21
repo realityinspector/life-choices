@@ -13,7 +13,7 @@ import { Store, Filter, Clock, Zap, Plus, Heart, Search, ShoppingCart, Check, Sh
 import Header from "@/components/header";
 import { Link, useLocation } from "wouter";
 // import Navigation from "@/components/navigation"; // Removed as we use central bottom navigation
-import { SAMPLE_ACTIVITIES, MORE_SAMPLE_ACTIVITIES } from "@shared/sample-activities";
+
 import { apiRequest } from "@/lib/queryClient";
 
 // Debug flag to help troubleshoot issues
@@ -580,14 +580,7 @@ export default function ShopActivitiesPage() {
     setCartItems(getCartActivities());
   }, [getCartActivities]);
 
-  // Process sample activities to ensure they have description and completed fields
-  const enhancedSampleActivities = completeActivityData(
-    SAMPLE_ACTIVITIES.map(a => ({ ...a, description: "", completed: false }))
-  );
-
-  const enhancedMoreSampleActivities = completeActivityData(
-    MORE_SAMPLE_ACTIVITIES.map(a => ({ ...a, description: "", completed: false }))
-  );
+  
 
   // Fetch all activities from database for the shop (no user filtering)
   const { data: databaseActivities = [] } = useQuery<Activity[]>({
@@ -647,16 +640,8 @@ export default function ShopActivitiesPage() {
     }
   }, [activities, databaseActivities, enhancedSampleActivities, enhancedMoreSampleActivities]);
 
-  // Combine all activities from different sources, prioritizing database entries
-  const allActivities = [
-    ...enhancedDatabaseActivities,
-    ...enhancedSampleActivities.filter(sample => 
-      !enhancedDatabaseActivities.some(db => db.name === sample.name)
-    ),
-    ...enhancedMoreSampleActivities.filter(sample => 
-      !enhancedDatabaseActivities.some(db => db.name === sample.name)
-    )
-  ];
+  // Use only database activities
+  const allActivities = enhancedDatabaseActivities;
 
   // Filter activities based on search and category
   const filteredActivities = allActivities.filter(activity => {
