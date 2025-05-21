@@ -119,7 +119,12 @@ authRouter.get("/admin-check", (req, res) => {
   }
 
   // List of admin usernames
-  const adminUsers = ['realityinspector'];
+  const adminUsers = [
+  'realityinspector',
+  'admin1',
+  'admin2',
+  'superadmin'
+];
   const username = req.user && typeof req.user === 'object' ? 
                   (req.user as {username?: string}).username || '' : '';
   

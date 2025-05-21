@@ -77,25 +77,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     next();
   };
-  
+
   // Admin route middleware - allow specific users admin access
   const requireAdmin = (req: Request, res: any, next: any) => {
     if (!isAuthenticated(req)) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    
+
     // user will always exist due to isAuthenticated check
     // Get username from request user object
     const username = req.user && typeof req.user === 'object' ? 
                     (req.user as {username?: string}).username || '' : '';
-    
+
     // List of admin usernames - add your username here
-    const adminUsers = ['realityinspector'];
-    
+    const adminUsers = [
+      'realityinspector',
+      'admin1',
+      'admin2',
+      'superadmin'
+    ];
+
     if (!adminUsers.includes(username)) {
       return res.status(403).json({ message: "Forbidden: Admin access required" });
     }
-    
+
     next();
   };
 
@@ -108,10 +113,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // user will always exist due to requireAuth middleware
       const username = req.user && typeof req.user === 'object' ? 
                       (req.user as {username?: string}).username || '' : '';
-      
+
       // List of admin usernames
-      const adminUsers = ['realityinspector'];
-      
+      const adminUsers = [
+        'realityinspector',
+        'admin1',
+        'admin2',
+        'superadmin'
+      ];
+
       const isAdmin = adminUsers.includes(username);
       return res.json({ isAdmin });
     } catch (error) {
@@ -170,10 +180,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get activity data from request body
       const { name, category, frequency, frequencyUnit, duration, durationUnit, lifeImpact, color } = req.body;
-      
+
       // @ts-ignore - user will always exist due to requireAuth middleware
       const userId = req.user.id;
-      
+
       // Create the activity with complete data
       const activity = await storage.createActivity({
         name,
@@ -186,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         color,
         userId
       });
-      
+
       return res.status(201).json(activity);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -201,21 +211,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/activities/:id', requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // Get activity data from request body
       const { name, category, frequency, frequencyUnit, duration, durationUnit, lifeImpact, color } = req.body;
-      
+
       // First check if the activity belongs to the user
       const activity = await storage.getActivity(id);
       if (!activity) {
         return res.status(404).json({ message: 'Activity not found' });
       }
-      
+
       // @ts-ignore - user will always exist due to requireAuth middleware
       if (activity.userId !== req.user.id) {
         return res.status(403).json({ message: 'Forbidden' });
       }
-      
+
       // Create the activity with complete data
       const activityData = {
         name,
@@ -227,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lifeImpact: parseFloat(lifeImpact || "0"),
         color
       };
-      
+
       const updatedActivity = await storage.updateActivity(id, activityData);
       return res.json(updatedActivity);
     } catch (error) {
@@ -243,18 +253,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/activities/:id', requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // First check if the activity belongs to the user
       const activity = await storage.getActivity(id);
       if (!activity) {
         return res.status(404).json({ message: 'Activity not found' });
       }
-      
+
       // @ts-ignore - user will always exist due to requireAuth middleware
       if (activity.userId !== req.user.id) {
         return res.status(403).json({ message: 'Forbidden' });
       }
-      
+
       await storage.deleteActivity(id);
       return res.status(204).send();
     } catch (error) {
@@ -280,12 +290,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // For the free route, we only need the basic user data without authentication
       const { name, age, lifeExpectancy, sleepHours } = req.body;
-      
+
       // Validate the input
       if (!name || !age || !lifeExpectancy || !sleepHours) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
-      
+
       // Parse and validate the values
       const userData = {
         name: String(name),
@@ -293,21 +303,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lifeExpectancy: parseInt(String(lifeExpectancy)),
         sleepHours: parseFloat(String(sleepHours))
       };
-      
+
       // Validate the numbers
       if (isNaN(userData.age) || isNaN(userData.lifeExpectancy) || isNaN(userData.sleepHours)) {
         return res.status(400).json({ message: 'Invalid numeric values' });
       }
-      
+
       return res.status(200).json(userData);
     } catch (error) {
       console.error('Error processing sundial data:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
-  
+
   // Life Events and Event Categories routes
-  
+
   // Event Categories - Public
   app.get('/api/event-categories', async (req, res) => {
     try {
@@ -318,7 +328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
-  
+
   // Get all Life Events - Public
   app.get('/api/life-events', async (req, res) => {
     try {
@@ -330,24 +340,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
-  
+
   // Get a single Life Event - Public
   app.get('/api/life-events/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const event = await storage.getLifeEvent(id);
-      
+
       if (!event) {
         return res.status(404).json({ message: 'Life event not found' });
       }
-      
+
       return res.json(event);
     } catch (error) {
       console.error('Error getting life event:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
-  
+
   // User Life Events - Protected
   app.get('/api/user-life-events', requireAuth, async (req, res) => {
     try {
@@ -360,7 +370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
-  
+
   // Create a new Life Event - Protected
   app.post('/api/user-life-events', requireAuth, async (req, res) => {
     try {
@@ -378,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
-  
+
   // Update a Life Event - Protected
   app.put('/api/user-life-events/:id', requireAuth, async (req, res) => {
     try {
@@ -397,7 +407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
-  
+
   // Delete a Life Event - Protected
   app.delete('/api/user-life-events/:id', requireAuth, async (req, res) => {
     try {
@@ -411,7 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: 'Internal server error' });
     }
   });
-  
+
   // Admin check route is already defined above
 
   const httpServer = createServer(app);
