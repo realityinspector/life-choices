@@ -1,4 +1,3 @@
-
 import { db } from '../server/db';
 import { activities } from '../shared/schema';
 import { desc } from 'drizzle-orm';
@@ -6,11 +5,11 @@ import { desc } from 'drizzle-orm';
 async function checkRecentActivities() {
   try {
     console.log('Checking 10 most recent activities...');
-    
-    const activitiesWithSource = await db
+
+    const recentActivities = await db
       .select()
       .from(activities)
-      .where(sql`source IS NOT NULL AND source != 'manual'`)
+      .where(sql`source IS NOT NULL AND source != 'undefined'`)
       .orderBy(desc(activities.id))
       .limit(10);
 
