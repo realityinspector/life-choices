@@ -9,10 +9,9 @@ async function cleanActivitiesDatabase() {
   try {
     // First update activities without source
     console.log('Updating activities without source...');
-    await db
-      .update(activities)
-      .set({ source: 'legacy' })
-      .where(isNull(activities.source));
+    await db.execute(
+      sql`UPDATE activities SET source = 'legacy' WHERE source IS NULL`
+    );
     
     console.log('Updated activities without source');
 
