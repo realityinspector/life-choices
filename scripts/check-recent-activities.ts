@@ -9,7 +9,8 @@ async function checkRecentActivities() {
     const recentActivities = await db
       .select()
       .from(activities)
-      .where(sql`source IS NOT NULL AND source != 'undefined'`)
+      .where(sql`source IS NOT NULL`)
+      .orderBy(desc(activities.createdAt))
       .orderBy(desc(activities.id))
       .limit(10);
 
@@ -20,6 +21,11 @@ async function checkRecentActivities() {
       console.log(`Name: ${activity.name}`);
       console.log(`Source: ${activity.source}`);
       console.log(`User ID: ${activity.userId}`);
+      console.log(`Created At: ${activity.createdAt}`);
+      if (activity.clusterId) {
+        console.log(`Cluster ID: ${activity.clusterId}`);
+      }
+      console.log(`Description: ${activity.description || 'No description'}`);
       console.log('----------------------');
     });
 
