@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { auth } from '../auth';
 import { db } from '../db';
-import { activities } from '../db/schema';
+import { activities } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { createActivity } from '../services/activity';
 
