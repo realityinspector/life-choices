@@ -49,6 +49,42 @@ activityRouter.get('/', async (req, res) => {
 });
 
 // Get all activities with associated images for the logged-in user
+
+// Add logging middleware for activity creation
+const logActivityCreation = (req: Request, res: Response, next: NextFunction) => {
+  const activity = req.body;
+  console.log(`[Activity Creation] source=${activity.source || 'manual'} userId=${req.user?.id}`);
+  next();
+};
+
+router.post('/', auth, logActivityCreation, async (req, res) => {
+  try {
+    const activity = activitySchema.parse({
+      ...req.body,
+      userId: req.user!.id,
+      source: req.body.source || 'manual'
+    });
+
+    // Check for duplicates
+    const duplicates = await db.select()
+      .from(activities)
+      .where(and(
+        eq(activities.userId, activity.userId),
+        eq(activities.name, activity.name)
+      ));
+
+    if (duplicates.length > 0) {
+      return res.status(400).json({ error: 'Activity already exists' });
+    }
+
+    const newActivity = await createActivity(activity);
+    res.status(201).json(newActivity);
+  } catch (error) {
+    console.error('Error creating activity:', error);
+    res.status(500).json({ error: 'Failed to create activity' });
+  }
+});
+
 activityRouter.get('/with-images', async (req, res) => {
   try {
     if (!req.isAuthenticated()) {

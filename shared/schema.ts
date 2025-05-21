@@ -151,6 +151,7 @@ export const activityInvitationSchema = createInsertSchema(activityInvitations).
 export type ActivityInsert = Omit<z.infer<typeof activitySchema>, "frequencyUnit" | "durationUnit"> & {
   frequencyUnit: "day" | "week" | "month" | "year";
   durationUnit: "minute" | "hour";
+  source?: 'manual' | 'share' | 'llm' | 'import' | 'cluster' | 'admin';
 };
 
 export type ActivityCluster = typeof activityClusters.$inferSelect;
