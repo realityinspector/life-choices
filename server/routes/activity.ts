@@ -3,6 +3,7 @@ import { storage } from '../storage';
 import { ActivityInsert, activitySchema } from '@shared/schema';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { auth } from '../auth';
 
 // Helper function to ensure correct type assertions for ActivityInsert
 function ensureActivityTypes(data: any): ActivityInsert {
