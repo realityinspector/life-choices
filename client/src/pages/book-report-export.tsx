@@ -203,11 +203,11 @@ export default function BookReportExportPage() {
                   className="flex gap-4"
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroup.Item value="letter" id="format-letter" />
+                    <RadioGroupItem value="letter" id="format-letter" />
                     <label htmlFor="format-letter">Letter</label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroup.Item value="phone" id="format-phone" />
+                    <RadioGroupItem value="phone" id="format-phone" />
                     <label htmlFor="format-phone">Phone</label>
                   </div>
                 </RadioGroup>
