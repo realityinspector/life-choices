@@ -23,76 +23,79 @@ async function cleanActivitiesDatabase() {
       imagesByActivityId.get(img.activityId).push(img);
     });
 
-    // Step 2: Group activities by name to find duplicates
+    // Step 2: First remove all activities without images
+    let deletedNoImages = 0;
+    for (const activity of allActivities) {
+      if (!imagesByActivityId.has(activity.id)) {
+        await db.delete(activities)
+          .where(eq(activities.id, activity.id));
+        deletedNoImages++;
+      }
+    }
+    console.log(`\nDeleted ${deletedNoImages} activities without images`);
+
+    // Step 3: Get remaining activities (those with images)
+    const remainingActivities = allActivities.filter(activity => 
+      imagesByActivityId.has(activity.id)
+    );
+    console.log(`${remainingActivities.length} activities remain with images`);
+
+    // Step 4: Group remaining activities by name to find duplicates
     const activityGroups = new Map();
-    allActivities.forEach(activity => {
+    remainingActivities.forEach(activity => {
       if (!activityGroups.has(activity.name)) {
         activityGroups.set(activity.name, []);
       }
       activityGroups.get(activity.name).push(activity);
     });
 
-    let deletedCount = 0;
+    let deletedDuplicates = 0;
     let keptCount = 0;
 
-    // Step 3: Process each group
+    // Step 5: Process each group of activities with the same name
     for (const [name, group] of activityGroups) {
-      console.log(`\nProcessing group "${name}" (${group.length} activities)`);
+      if (group.length > 1) {
+        console.log(`\nProcessing duplicate group "${name}" (${group.length} activities)`);
+        
+        // Keep only the first activity in the group
+        const keepActivity = group[0];
+        const keepImageId = imagesByActivityId.get(keepActivity.id)[0].id;
 
-      // Find activities with images in this group
-      const activitiesWithImages = group.filter(activity => 
-        imagesByActivityId.has(activity.id)
-      );
-
-      // If no activities have images, delete the whole group
-      if (activitiesWithImages.length === 0) {
-        console.log(`  No activities with images found - deleting entire group`);
-        for (const activity of group) {
-          await db.delete(activities)
-            .where(eq(activities.id, activity.id));
-          deletedCount++;
+        // Delete extra images for the kept activity
+        if (imagesByActivityId.get(keepActivity.id).length > 1) {
+          const extraImages = imagesByActivityId.get(keepActivity.id).slice(1);
+          for (const img of extraImages) {
+            await db.delete(activityImages)
+              .where(eq(activityImages.id, img.id));
+          }
         }
-        continue;
-      }
 
-      // Keep only the first activity with an image, delete others
-      const keepActivity = activitiesWithImages[0];
-      const keepImageId = imagesByActivityId.get(keepActivity.id)[0].id;
-
-      // Delete extra images for the kept activity
-      if (imagesByActivityId.get(keepActivity.id).length > 1) {
-        const extraImages = imagesByActivityId.get(keepActivity.id).slice(1);
-        for (const img of extraImages) {
-          await db.delete(activityImages)
-            .where(eq(activityImages.id, img.id));
-        }
-      }
-
-      // Delete all other activities in the group
-      for (const activity of group) {
-        if (activity.id !== keepActivity.id) {
+        // Delete all other activities in the group
+        for (const activity of group.slice(1)) {
           // Delete associated images first
-          if (imagesByActivityId.has(activity.id)) {
-            for (const img of imagesByActivityId.get(activity.id)) {
-              await db.delete(activityImages)
-                .where(eq(activityImages.id, img.id));
-            }
+          for (const img of imagesByActivityId.get(activity.id)) {
+            await db.delete(activityImages)
+              .where(eq(activityImages.id, img.id));
           }
           // Delete the activity
           await db.delete(activities)
             .where(eq(activities.id, activity.id));
-          deletedCount++;
+          deletedDuplicates++;
         }
+        
+        console.log(`  Kept activity ${keepActivity.id} with image ${keepImageId}`);
+        keptCount++;
+      } else {
+        // Single activity with this name, just count it as kept
+        keptCount++;
       }
-
-      keptCount++;
-      console.log(`  Kept activity ${keepActivity.id} with image ${keepImageId}`);
     }
 
     // Final report
     console.log('\nCleanup complete!');
-    console.log(`Activities deleted: ${deletedCount}`);
-    console.log(`Activities kept: ${keptCount}`);
+    console.log(`Activities without images deleted: ${deletedNoImages}`);
+    console.log(`Duplicate activities deleted: ${deletedDuplicates}`);
+    console.log(`Unique activities kept: ${keptCount}`);
     console.log('Each remaining activity has exactly one image');
 
   } catch (error) {
