@@ -21,6 +21,8 @@ type PDFConfig = {
   imageMode: "blackAndWhite" | "color";
   logoCorner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
   imageSize: "small" | "medium" | "large";
+  logoSize: "small" | "medium" | "large";
+  logoAsWatermark: boolean;
 };
 
 const FONT_OPTIONS = ["helvetica", "courier", "times", "symbol", "zapfdingbats", "arial"];
@@ -50,7 +52,9 @@ export default function BookReportExportPage() {
     fontSize: 12,
     imageMode: "color",
     logoCorner: "topRight",
-    imageSize: "medium"
+    imageSize: "medium",
+    logoSize: "medium",
+    logoAsWatermark: false
   });
 
   const dimensions = {
@@ -99,7 +103,13 @@ export default function BookReportExportPage() {
         // Define page margins and spacing
         const margin = 20;
         const headerHeight = 60;
-        const logoWidth = 40;
+
+        let logoWidth = 40;
+        if (config.logoSize === "small") {
+          logoWidth = 20;
+        } else if (config.logoSize === "large") {
+          logoWidth = 60;
+        }
         const logoHeight = (234/227) * logoWidth;
 
         // Calculate logo position based on corner selection
@@ -131,7 +141,38 @@ export default function BookReportExportPage() {
         }[config.logoCorner];
 
         // Add logo
-        pdf.addImage(aotLogo, 'PNG', logoPosition.x, logoPosition.y, logoWidth, logoHeight);
+        if (config.logoAsWatermark) {
+           // Add black background with rounded corners and padding
+           const padding = 2;
+           pdf.setFillColor(0, 0, 0);
+           pdf.roundedRect(
+               logoPosition.x - padding,
+               logoPosition.y - padding,
+               logoWidth + 2 * padding,
+               logoHeight + 2 * padding,
+               3,
+               3,
+               'F'
+           );
+            pdf.addImage(aotLogo, 'PNG', logoPosition.x, logoPosition.y, logoWidth, logoHeight);
+            pdf.setGState({ opacity: 0.25 });
+            pdf.addImage(aotLogo, 'PNG', logoPosition.x, logoPosition.y, logoWidth, logoHeight);
+            pdf.setGState({ opacity: 1 });
+        } else {
+          // Add black background with rounded corners and padding
+          const padding = 2;
+          pdf.setFillColor(0, 0, 0);
+          pdf.roundedRect(
+              logoPosition.x - padding,
+              logoPosition.y - padding,
+              logoWidth + 2 * padding,
+              logoHeight + 2 * padding,
+              3,
+              3,
+              'F'
+          );
+          pdf.addImage(aotLogo, 'PNG', logoPosition.x, logoPosition.y, logoWidth, logoHeight);
+        }
 
         // Set font
         pdf.setFont(config.fontName);
@@ -160,7 +201,7 @@ export default function BookReportExportPage() {
             }
 
             const imgHeight = (img.height * imgWidth) / img.width;
-            
+
             // Calculate centered position for image
             const pageHeight = pdf.internal.pageSize.height;
             const contentStartY = Math.max(logoPosition.textStartY + 30, headerHeight);
@@ -371,6 +412,46 @@ export default function BookReportExportPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div>
+                  <label className="block text-sm font-medium mb-1">Logo Size</label>
+                  <RadioGroup 
+                    value={config.logoSize}
+                    onValueChange={(value: "small" | "medium" | "large") => setConfig({...config, logoSize: value})}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="small" id="logo-size-small" />
+                      <label htmlFor="logo-size-small">Small</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="medium" id="logo-size-medium" />
+                      <label htmlFor="logo-size-medium">Medium</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="large" id="logo-size-large" />
+                      <label htmlFor="logo-size-large">Large</label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Logo as Watermark</label>
+                  <RadioGroup 
+                    value={config.logoAsWatermark.toString()}
+                    onValueChange={(value: string) => setConfig({...config, logoAsWatermark: value === 'true'})}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="false" id="watermark-false" />
+                      <label htmlFor="watermark-false">No</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="true" id="watermark-true" />
+                      <label htmlFor="watermark-true">Yes</label>
+                    </div>
+                  </RadioGroup>
+                </div>
             </div>
 
             <Button
