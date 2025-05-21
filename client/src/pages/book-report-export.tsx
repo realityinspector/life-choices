@@ -1,4 +1,3 @@
-
 import { useBook } from "@/context/book-context";
 import { useUser } from "@/context/user-context";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,7 @@ type PDFConfig = {
   fontName: string;
   fontSize: number;
   imageMode: "blackAndWhite";
+  logoCorner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
 };
 
 const FONT_OPTIONS = ["helvetica", "courier", "times", "symbol", "zapfdingbats", "arial"];
@@ -47,7 +47,8 @@ export default function BookReportExportPage() {
     backgroundColor: "#000000",
     fontName: "helvetica",
     fontSize: 12,
-    imageMode: "blackAndWhite"
+    imageMode: "blackAndWhite",
+    logoCorner: "topRight"
   });
 
   const dimensions = {
@@ -80,7 +81,7 @@ export default function BookReportExportPage() {
       // Process each activity
       for (let i = 0; i < bookActivitiesList.length; i++) {
         const activity = bookActivitiesList[i];
-        
+
         if (i > 0) {
           pdf.addPage();
         }
@@ -91,8 +92,14 @@ export default function BookReportExportPage() {
 
         // Add logo
         const logoWidth = 40;
-        const logoHeight = (234/227) * logoWidth;
-        pdf.addImage(aotLogo, 'PNG', pdf.internal.pageSize.width - 50, 10, logoWidth, logoHeight);
+        const logoHeight = (234/227) * logoWidth; // Maintain aspect ratio
+        const logoPosition = {
+          topLeft: { x: 10, y: 10 },
+          topRight: { x: pdf.internal.pageSize.width - 50, y: 10 },
+          bottomLeft: { x: 10, y: pdf.internal.pageSize.height - logoHeight - 10 },
+          bottomRight: { x: pdf.internal.pageSize.width - 50, y: pdf.internal.pageSize.height - logoHeight - 10 }
+        }[config.logoCorner];
+        pdf.addImage(aotLogo, 'PNG', logoPosition.x, logoPosition.y, logoWidth, logoHeight);
 
         // Set font
         pdf.setFont(config.fontName);
@@ -110,11 +117,11 @@ export default function BookReportExportPage() {
             const img = await loadImage(activity.images[0].path);
             const imgWidth = 170;
             const imgHeight = (img.height * imgWidth) / img.width;
-            
+
             // Image container background
             pdf.setFillColor(40, 40, 40);
             pdf.roundedRect(15, 35, imgWidth + 10, imgHeight + 10, 5, 5, 'F');
-            
+
             if (config.imageMode === "blackAndWhite") {
               const canvas = document.createElement('canvas');
               canvas.width = img.width;
@@ -182,7 +189,7 @@ export default function BookReportExportPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="p-6">
             <h2 className="text-lg font-semibold mb-4">PDF Settings</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Format</label>
@@ -242,6 +249,19 @@ export default function BookReportExportPage() {
                   min={8}
                   max={24}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Logo Corner</label>
+                <Select
+                  value={config.logoCorner}
+                  onValueChange={(value: "topLeft" | "topRight" | "bottomLeft" | "bottomRight") => setConfig({ ...config, logoCorner: value })}
+                >
+                  <option value="topLeft">Top Left</option>
+                  <option value="topRight">Top Right</option>
+                  <option value="bottomLeft">Bottom Left</option>
+                  <option value="bottomRight">Bottom Right</option>
+                </Select>
               </div>
             </div>
 
