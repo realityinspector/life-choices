@@ -23,6 +23,7 @@ type PDFConfig = {
   imageSize: "small" | "medium" | "large";
   logoSize: "small" | "medium" | "large";
   logoAsWatermark: boolean;
+  textColor: string;
 };
 
 const FONT_OPTIONS = ["helvetica", "courier", "times", "symbol", "zapfdingbats", "arial"];
@@ -54,7 +55,8 @@ export default function BookReportExportPage() {
     logoCorner: "topRight",
     imageSize: "medium",
     logoSize: "medium",
-    logoAsWatermark: false
+    logoAsWatermark: false,
+    textColor: "#FFFFFF"
   });
 
   const dimensions = {
@@ -177,7 +179,13 @@ export default function BookReportExportPage() {
         // Set font
         pdf.setFont(config.fontName);
         pdf.setFontSize(config.fontSize);
-        pdf.setTextColor(255, 255, 255);
+        // Convert hex to RGB for text color
+        const textColor = {
+          r: parseInt(config.textColor.slice(1,3), 16),
+          g: parseInt(config.textColor.slice(3,5), 16),
+          b: parseInt(config.textColor.slice(5,7), 16)
+        };
+        pdf.setTextColor(textColor.r, textColor.g, textColor.b);
 
         // Add activity details with proper spacing
         pdf.setFontSize(16);
@@ -204,10 +212,17 @@ export default function BookReportExportPage() {
 
             // Calculate centered position for image
             const pageHeight = pdf.internal.pageSize.height;
-            const contentStartY = Math.max(logoPosition.textStartY + 30, headerHeight);
-            const availableHeight = pageHeight - contentStartY - margin;
+            // Center image vertically in the page, accounting for header space
+            const headerSpace = Math.max(logoPosition.textStartY + 30, headerHeight);
+            const availableHeight = pageHeight - headerSpace - margin;
             const imgX = (pdf.internal.pageSize.width - imgWidth) / 2;
-            const imgY = contentStartY + (availableHeight - imgHeight) / 2;
+            const imgY = headerSpace + (availableHeight - imgHeight) / 2;
+
+            // Ensure logo is rendered after image and doesn't overlap
+            const logoMaxY = headerSpace - 10; // Keep logo in header area
+            if (logoPosition.y + logoHeight > logoMaxY) {
+              logoPosition.y = logoMaxY - logoHeight;
+            }
 
             // Image container background - centered
             pdf.setFillColor(40, 40, 40);
@@ -451,6 +466,15 @@ export default function BookReportExportPage() {
                       <label htmlFor="watermark-true">Yes</label>
                     </div>
                   </RadioGroup>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Text Color</label>
+                  <Input 
+                    type="color"
+                    value={config.textColor}
+                    onChange={(e) => setConfig({...config, textColor: e.target.value})}
+                  />
                 </div>
             </div>
 
