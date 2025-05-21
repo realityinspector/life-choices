@@ -634,8 +634,7 @@ export default function ShopActivitiesPage() {
       console.debug('Activity data for debugging:', {
         userActivitiesCount: activities.length,
         userActivitiesNames: activities.map(a => a.name),
-        databaseActivitiesCount: databaseActivities.length,
-        sampleActivitiesCount: enhancedSampleActivities.length + enhancedMoreSampleActivities.length
+        databaseActivitiesCount: databaseActivities.length
       });
     }
   }, [activities, databaseActivities]);
