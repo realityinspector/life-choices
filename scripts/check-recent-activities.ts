@@ -7,10 +7,11 @@ async function checkRecentActivities() {
   try {
     console.log('Checking 10 most recent activities...');
     
-    const recentActivities = await db.query.activities.findMany({
-      orderBy: desc(activities.id),
-      limit: 10
-    });
+    const recentActivities = await db
+      .select()
+      .from(activities)
+      .orderBy(desc(activities.id))
+      .limit(10);
 
     console.log('\nMost recent activities:');
     console.log('----------------------');
