@@ -683,6 +683,26 @@ export class DatabaseStorage implements IStorage {
     const result = await db.insert(llmMessages).values(message).returning();
     return result[0];
   }
+  async createActivity(activityData: ActivityInsert & { userId: number }): Promise<Activity> {
+    const result = await db.insert(activities).values({...activityData, source: activityData.source || 'manual'}).returning();
+
+    // Get the calling source from the stack trace
+    const stack = new Error().stack || '';
+    const callingFile = stack.split('\n')[2]?.trim() || 'unknown';
+
+    // Dynamically import activity logger
+    import('./services/logger').then(({ activityLogger }) => {
+      // Log the activity creation
+      activityLogger.log(
+        result[0].id,
+        result[0].name,
+        result[0].userId,
+        callingFile
+      );
+    });
+
+    return result[0];
+  }
 }
 
 export const storage = new DatabaseStorage();
