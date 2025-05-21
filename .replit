@@ -40,3 +40,12 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 8000
+
+[[workflows.workflow]]
+name = "Clean Activities DB"
+author = 42064034
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "tsx scripts/clean-activities-db.ts"
