@@ -64,7 +64,11 @@ export default function BookReportExportPage() {
 
     setIsGenerating(true);
     try {
-      const { width, height } = dimensions[config.format];
+      let { width, height } = dimensions[config.format];
+      // Swap width and height for landscape orientation
+      if (config.orientation === "landscape") {
+        [width, height] = [height, width];
+      }
       const pdf = new jsPDF({
         orientation: config.orientation,
         unit: "mm",
