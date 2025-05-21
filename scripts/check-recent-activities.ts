@@ -7,9 +7,10 @@ async function checkRecentActivities() {
   try {
     console.log('Checking 10 most recent activities...');
     
-    const recentActivities = await db
+    const activitiesWithSource = await db
       .select()
       .from(activities)
+      .where(sql`source IS NOT NULL AND source != 'manual'`)
       .orderBy(desc(activities.id))
       .limit(10);
 
