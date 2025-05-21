@@ -96,15 +96,41 @@ export default function BookReportExportPage() {
         pdf.setFillColor(parseInt(config.backgroundColor.slice(1), 16));
         pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, 'F');
 
-        // Add logo
+        // Define page margins and spacing
+        const margin = 20;
+        const headerHeight = 60;
         const logoWidth = 40;
-        const logoHeight = (234/227) * logoWidth; // Maintain aspect ratio
+        const logoHeight = (234/227) * logoWidth;
+
+        // Calculate logo position based on corner selection
         const logoPosition = {
-          topLeft: { x: 10, y: 10 },
-          topRight: { x: pdf.internal.pageSize.width - 50, y: 10 },
-          bottomLeft: { x: 10, y: pdf.internal.pageSize.height - logoHeight - 10 },
-          bottomRight: { x: pdf.internal.pageSize.width - 50, y: pdf.internal.pageSize.height - logoHeight - 10 }
+          topLeft: { 
+            x: margin, 
+            y: margin,
+            textStartX: margin,
+            textStartY: margin + logoHeight + 15
+          },
+          topRight: { 
+            x: pdf.internal.pageSize.width - margin - logoWidth, 
+            y: margin,
+            textStartX: margin,
+            textStartY: margin
+          },
+          bottomLeft: { 
+            x: margin, 
+            y: pdf.internal.pageSize.height - margin - logoHeight,
+            textStartX: margin,
+            textStartY: margin
+          },
+          bottomRight: { 
+            x: pdf.internal.pageSize.width - margin - logoWidth, 
+            y: pdf.internal.pageSize.height - margin - logoHeight,
+            textStartX: margin,
+            textStartY: margin
+          }
         }[config.logoCorner];
+
+        // Add logo
         pdf.addImage(aotLogo, 'PNG', logoPosition.x, logoPosition.y, logoWidth, logoHeight);
 
         // Set font
@@ -112,17 +138,19 @@ export default function BookReportExportPage() {
         pdf.setFontSize(config.fontSize);
         pdf.setTextColor(255, 255, 255);
 
-        // Add activity details
-        pdf.text(activity.name, 20, 20);
+        // Add activity details with proper spacing
+        pdf.setFontSize(16);
+        pdf.text(activity.name, logoPosition.textStartX, logoPosition.textStartY);
         pdf.setFontSize(config.fontSize - 2);
-        pdf.text(`Category: ${activity.category}`, 20, 30);
+        pdf.text(`Category: ${activity.category}`, logoPosition.textStartX, logoPosition.textStartY + 15);
 
-        // Add image if exists
+        // Add image if exists - centered both horizontally and vertically
         if (activity.images && activity.images.length > 0) {
           try {
             const img = await loadImage(activity.images[0].path);
             let imgWidth = 170;
 
+            // Calculate image dimensions based on size setting
             if (config.imageSize === "small") {
               imgWidth = pdf.internal.pageSize.width * 0.2;
             } else if (config.imageSize === "medium") {
@@ -132,10 +160,17 @@ export default function BookReportExportPage() {
             }
 
             const imgHeight = (img.height * imgWidth) / img.width;
+            
+            // Calculate centered position for image
+            const pageHeight = pdf.internal.pageSize.height;
+            const contentStartY = Math.max(logoPosition.textStartY + 30, headerHeight);
+            const availableHeight = pageHeight - contentStartY - margin;
+            const imgX = (pdf.internal.pageSize.width - imgWidth) / 2;
+            const imgY = contentStartY + (availableHeight - imgHeight) / 2;
 
-            // Image container background
+            // Image container background - centered
             pdf.setFillColor(40, 40, 40);
-            pdf.roundedRect(15, 35, imgWidth + 10, imgHeight + 10, 5, 5, 'F');
+            pdf.roundedRect(imgX - 5, imgY - 5, imgWidth + 10, imgHeight + 10, 5, 5, 'F');
 
             if (config.imageMode === "blackAndWhite") {
               const canvas = document.createElement('canvas');
@@ -149,9 +184,9 @@ export default function BookReportExportPage() {
                 imgData.data[p] = imgData.data[p + 1] = imgData.data[p + 2] = avg;
               }
               ctx.putImageData(imgData, 0, 0);
-              pdf.addImage(canvas.toDataURL(), 'JPEG', 20, 40, imgWidth, imgHeight);
+              pdf.addImage(canvas.toDataURL(), 'JPEG', imgX, imgY, imgWidth, imgHeight);
             } else {
-              pdf.addImage(img, 'JPEG', 20, 40, imgWidth, imgHeight);
+              pdf.addImage(img, 'JPEG', imgX, imgY, imgWidth, imgHeight);
             }
           } catch (error) {
             console.error(`Failed to load image for activity ${activity.name}:`, error);
