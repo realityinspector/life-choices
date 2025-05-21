@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { SAMPLE_ACTIVITIES, MORE_SAMPLE_ACTIVITIES } from '@shared/sample-activities';
 import Header from '@/components/header';
 
 // Add a declaration to extend Window interface for our recently seen activities
@@ -29,31 +28,31 @@ export default function WhatsNextPage() {
   useEffect(() => {
     // Initialize cart count
     setCartCount(getCartActivities().length);
-    
+
     // Check if user is logged out in localStorage
     const isLoggedOutFlag = localStorage.getItem('lifechoicesLoggedOut') === 'true';
     if (isLoggedOutFlag) {
       // Clear the logged out flag to allow fallback to localStorage
       console.log("Clearing the logged out flag to allow fallback authentication");
       localStorage.removeItem('lifechoicesLoggedOut');
-      
+
       // Notify user they need to log in again
       toast({
         title: "Session Expired",
         description: "Your session has expired. Please log in again.",
         variant: "default"
       });
-      
+
       // Redirect to login page
       window.location.href = '/';
       return;
     }
-    
+
     // Load the next activity with error handling
     loadNextActivity().catch(error => {
       console.error("Error loading initial activity:", error);
       setLoading(false);
-      
+
       // Show a toast notification for the error
       toast({
         title: "Error",
@@ -67,37 +66,30 @@ export default function WhatsNextPage() {
     // Create AbortController for the fetch request
     const controller = new AbortController();
     const { signal } = controller;
-    
+
     try {
       // Try to fetch shop activities first (includes both DB activities and sample activities)
       const response = await fetch('/api/activities/shop', { signal });
       if (!response.ok) {
         throw new Error('Failed to fetch shop activities');
       }
-      
+
       // Get activities from shop
       const shopActivities = await response.json();
-      
-      // Combine with sample activities for fallback
-      const allPossibleActivities = [
-        ...shopActivities,
-        ...SAMPLE_ACTIVITIES,
-        ...MORE_SAMPLE_ACTIVITIES
-      ];
-      
+
       // Filter out activities that are already in the user's activities
-      const availableActivities = allPossibleActivities.filter(
+      const availableActivities = shopActivities.filter(
         sample => !activities.some(userActivity => 
           userActivity.name.toLowerCase() === sample.name.toLowerCase()
         )
       );
-      
+
       // No available activities left
       if (availableActivities.length === 0) return null;
-      
+
       // Shuffle and pick one
       const shuffled = [...availableActivities].sort(() => Math.random() - 0.5);
-      
+
       // Convert to ActivityInsert if needed
       const selectedActivity = shuffled[0];
       return {
@@ -119,23 +111,7 @@ export default function WhatsNextPage() {
       if (!(error instanceof DOMException && error.name === 'AbortError')) {
         console.error('Error fetching suggestions from shop:', error);
       }
-      
-      // Fallback to sample activities if fetch fails
-      const allSampleActivities = [...SAMPLE_ACTIVITIES, ...MORE_SAMPLE_ACTIVITIES];
-      
-      // Filter out activities that are already in the user's activities
-      const availableActivities = allSampleActivities.filter(
-        sample => !activities.some(userActivity => 
-          userActivity.name.toLowerCase() === sample.name.toLowerCase()
-        )
-      );
-      
-      // No available activities left
-      if (availableActivities.length === 0) return null;
-      
-      // Shuffle and pick one
-      const shuffled = [...availableActivities].sort(() => Math.random() - 0.5);
-      return shuffled[0];
+      return null;
     }
   };
 
@@ -144,27 +120,26 @@ export default function WhatsNextPage() {
     try {
       // Maintain an internal list of activity names we've seen recently
       const recentlySeenActivities = [...(window.recentlySeenActivities || []), ...skipNames];
-      
+
       // Limit the list to the last 10 activities for performance
       if (recentlySeenActivities.length > 10) {
         recentlySeenActivities.splice(0, recentlySeenActivities.length - 10);
       }
-      
+
       // Store this list in window object for persistence between renders
       window.recentlySeenActivities = recentlySeenActivities;
-      
+
       // Add debugging information
       console.debug('Activity data for debugging:', {
         userActivitiesCount: activities.length,
         userActivitiesNames: activities.map(a => a.name),
         databaseActivitiesCount: activities.filter(a => a.id !== undefined).length,
-        sampleActivitiesCount: [...SAMPLE_ACTIVITIES, ...MORE_SAMPLE_ACTIVITIES].length
       });
-      
+
       try {
         // Call getNextActivity with our expanded list of activity names to skip
         const activity = await getNextActivity(recentlySeenActivities, true);
-        
+
         // If we found an activity, add it to our recently seen list
         if (activity) {
           window.recentlySeenActivities.push(activity.name);
@@ -193,7 +168,7 @@ export default function WhatsNextPage() {
           setCurrentSuggestedActivity(null);
         }
       }
-      
+
       setLoading(false);
     } catch (error) {
       console.error('Error in loadNextActivity:', error);
@@ -214,19 +189,19 @@ export default function WhatsNextPage() {
     try {
       // Store activity name before completing
       const completedActivityName = activity.name;
-      
+
       // Complete the activity and show the toast
       await completeActivity(activity.id);
-      
+
       toast({
         title: 'Activity Completed',
         description: `Great job completing "${completedActivityName}"!`,
         variant: 'default',
       });
-      
+
       // Set temporary loading state
       setLoading(true);
-      
+
       // Add a brief delay before loading the next activity to ensure backend has time to update
       setTimeout(async () => {
         try {
@@ -244,7 +219,7 @@ export default function WhatsNextPage() {
         description: "Failed to complete activity. Please try again.",
         variant: "destructive"
       });
-      
+
       // Even if we failed, try to load the next activity
       setLoading(true);
       setTimeout(() => {
@@ -257,19 +232,19 @@ export default function WhatsNextPage() {
     try {
       // Store activity name before skipping
       const skippedActivityName = activity.name;
-      
+
       // Skip the current activity and update its nextDue date
       await skipActivity(activity.id);
-      
+
       toast({
         title: 'Activity Skipped',
         description: `"${skippedActivityName}" has been rescheduled for later.`,
         variant: 'default',
       });
-      
+
       // Set temporary loading state
       setLoading(true);
-      
+
       // Add a brief delay before loading the next activity
       setTimeout(async () => {
         try {
@@ -287,7 +262,7 @@ export default function WhatsNextPage() {
         description: "Failed to skip activity. Please try again.",
         variant: "destructive"
       });
-      
+
       // Even if we failed, try to load the next activity
       setLoading(true);
       setTimeout(async () => {
@@ -305,7 +280,7 @@ export default function WhatsNextPage() {
     try {
       // Store activity name before adding to cart
       const addedActivityName = activity.name;
-      
+
       // Add to cart
       addActivitiesToCart([{
         name: activity.name,
@@ -321,18 +296,18 @@ export default function WhatsNextPage() {
         emoji: activity.emoji,
         clusterId: activity.clusterId
       }]);
-      
+
       setCartCount(getCartActivities().length);
-      
+
       toast({
         title: 'Added to Cart',
         description: `"${addedActivityName}" added to your cart`,
         variant: 'default',
       });
-      
+
       // Set temporary loading state
       setLoading(true);
-      
+
       // Add a brief delay before loading the next activity
       setTimeout(async () => {
         try {
@@ -341,8 +316,7 @@ export default function WhatsNextPage() {
         } catch (loadError) {
           console.error("Error loading next activity after add to cart:", loadError);
           setLoading(false);
-        }
-      }, 1000); // 1 second delay to ensure database updates are processed
+        }      }, 1000); // 1 second delay to ensure database updates are processed
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast({
@@ -350,7 +324,7 @@ export default function WhatsNextPage() {
         description: "Failed to add activity to cart. Please try again.",
         variant: "destructive"
       });
-      
+
       // Even if we failed, we should try to load the next activity
       setLoading(true);
       setTimeout(async () => {
@@ -363,24 +337,24 @@ export default function WhatsNextPage() {
       }, 1000);
     }
   };
-  
+
   const handleAddSuggestedActivity = async (activity: ActivityInsert) => {
     try {
       // Save the activity name before we potentially lose it
       const activityName = activity.name;
-      
+
       // Wait for the activity to be added
       await addActivity(activity);
-      
+
       toast({
         title: 'Activity Added',
         description: `"${activityName}" has been added to your activities.`,
         variant: 'default',
       });
-      
+
       // Set loading state
       setLoading(true);
-      
+
       // Always try to load planned activities first before showing another suggestion
       setTimeout(async () => {
         try {
@@ -397,7 +371,7 @@ export default function WhatsNextPage() {
         description: "Failed to add activity. Please try again.",
         variant: "destructive"
       });
-      
+
       // Even if we failed to add, we should try to load something new
       setLoading(true);
       setTimeout(async () => {
@@ -410,13 +384,13 @@ export default function WhatsNextPage() {
       }, 1000);
     }
   };
-  
+
   const handleToggleCalendarExport = async (activity: Activity) => {
     try {
       // Create a copy of the activity with the toggled exportToCalendar property
       // Use strict equality to handle null/undefined correctly
       const currentExportValue = activity.exportToCalendar === true;
-      
+
       // Prepare minimal update payload with just the necessary fields
       const updatePayload = {
         name: activity.name,
@@ -432,14 +406,14 @@ export default function WhatsNextPage() {
         clusterId: activity.clusterId,
         exportToCalendar: !currentExportValue // Toggle the value
       };
-      
+
       // Update the activity using direct ID-based update
       const updatedActivity = await updateActivityById(activity.id, updatePayload);
-      
+
       if (updatedActivity) {
         // Update the current activity in the state to reflect changes immediately
         setCurrentActivity(updatedActivity);
-        
+
         // Show a toast notification
         toast({
           title: !currentExportValue ? 'Added to Calendar' : 'Removed from Calendar',
@@ -463,14 +437,14 @@ export default function WhatsNextPage() {
   const handleSkipSuggestion = async () => {
     // Set loading state
     setLoading(true);
-    
+
     try {
       // Check for actual planned activities first before showing another suggestion
       // But also keep track of the previously seen suggestion to avoid repeats
       if (currentSuggestedActivity) {
         const skipNames = [...(window.recentlySeenActivities || []), currentSuggestedActivity.name];
         window.recentlySeenActivities = skipNames;
-        
+
         // Try to load a new suggestion directly to avoid loading planned activities again
         // since we already know there are none from the previous check
         const suggestedActivity = await getRandomSuggestedActivity();
@@ -484,7 +458,7 @@ export default function WhatsNextPage() {
       console.error('Error getting next suggestion:', error);
       setCurrentSuggestedActivity(null);
       setLoading(false);
-      
+
       toast({
         title: "Error",
         description: "Failed to find another activity suggestion. Please try again.",
@@ -494,7 +468,7 @@ export default function WhatsNextPage() {
   };
 
   const { userData } = useUser();
-  
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col pb-16">
       {/* Use the consistent Header component with userData */}
@@ -503,7 +477,7 @@ export default function WhatsNextPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center pt-6 px-4 relative">
         <h2 className="text-2xl font-bold mb-6 text-center">What's Next?</h2>
-        
+
         <div className="w-full max-w-md h-[500px] relative flex items-center justify-center">
           {loading ? (
             <div className="text-center py-12">
@@ -537,7 +511,7 @@ export default function WhatsNextPage() {
                 <h3 className="text-xl font-semibold text-gray-800 mb-2">Suggested Activities</h3>
                 <p className="text-gray-500 mb-4">No planned activities right now. Here are some suggestions you might enjoy:</p>
               </div>
-              
+
               <Card className="overflow-hidden border-purple-200 bg-purple-50 shadow-sm">
                 <div className="h-1.5 bg-purple-500" />
                 <CardHeader className="pb-2 pt-3">
@@ -575,7 +549,7 @@ export default function WhatsNextPage() {
                   </Button>
                 </CardFooter>
               </Card>
-              
+
               <div className="flex mt-4 gap-2">
                 <Button 
                   className="flex-1" 
