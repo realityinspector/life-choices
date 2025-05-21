@@ -2,7 +2,7 @@ import { useBook } from "@/context/book-context";
 import { useUser } from "@/context/user-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Download, ArrowLeft } from "lucide-react";
