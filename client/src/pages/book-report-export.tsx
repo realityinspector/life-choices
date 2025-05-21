@@ -20,6 +20,7 @@ type PDFConfig = {
   fontSize: number;
   imageMode: "blackAndWhite";
   logoCorner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
+  imageSize: "small" | "medium" | "large";
 };
 
 const FONT_OPTIONS = ["helvetica", "courier", "times", "symbol", "zapfdingbats", "arial"];
@@ -48,7 +49,8 @@ export default function BookReportExportPage() {
     fontName: "helvetica",
     fontSize: 12,
     imageMode: "blackAndWhite",
-    logoCorner: "topRight"
+    logoCorner: "topRight",
+    imageSize: "medium"
   });
 
   const dimensions = {
@@ -119,7 +121,16 @@ export default function BookReportExportPage() {
         if (activity.images && activity.images.length > 0) {
           try {
             const img = await loadImage(activity.images[0].path);
-            const imgWidth = 170;
+            let imgWidth = 170;
+
+            if (config.imageSize === "small") {
+              imgWidth = pdf.internal.pageSize.width * 0.2;
+            } else if (config.imageSize === "medium") {
+              imgWidth = pdf.internal.pageSize.width * 0.6;
+            } else if (config.imageSize === "large") {
+              imgWidth = pdf.internal.pageSize.width * 0.8;
+            }
+
             const imgHeight = (img.height * imgWidth) / img.width;
 
             // Image container background
@@ -269,8 +280,30 @@ export default function BookReportExportPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Logo Corner</label>
-                <Select
+                  <label className="block text-sm font-medium mb-1">Image Size</label>
+                  <RadioGroup 
+                    value={config.imageSize}
+                    onValueChange={(value: "small" | "medium" | "large") => setConfig({...config, imageSize: value})}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="small" id="size-small" />
+                      <label htmlFor="size-small">Small (20%)</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="medium" id="size-medium" />
+                      <label htmlFor="size-medium">Medium (60%)</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="large" id="size-large" />
+                      <label htmlFor="size-large">Large (80%)</label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Logo Corner</label>
+                  <Select
                   value={config.logoCorner}
                   onValueChange={(value: "topLeft" | "topRight" | "bottomLeft" | "bottomRight") => setConfig({ ...config, logoCorner: value })}
                 >
