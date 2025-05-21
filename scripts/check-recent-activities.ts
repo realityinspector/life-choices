@@ -37,3 +37,29 @@ async function checkRecentActivities() {
 }
 
 checkRecentActivities();
+import { db } from '../server/db';
+import { activities } from '../shared/schema';
+import { desc } from 'drizzle-orm';
+
+async function checkRecentActivities() {
+  try {
+    const recentActivities = await db.select({
+      id: activities.id,
+      name: activities.name,
+      source: activities.source,
+      userId: activities.userId,
+      createdAt: activities.createdAt,
+    })
+    .from(activities)
+    .orderBy(desc(activities.createdAt))
+    .limit(10);
+
+    console.log('Checking 10 most recent activities...');
+    console.log('Database connection established');
+    console.table(recentActivities);
+  } catch (error) {
+    console.error('Error checking recent activities:', error);
+  }
+}
+
+checkRecentActivities();

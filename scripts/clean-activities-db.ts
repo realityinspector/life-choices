@@ -133,3 +133,57 @@ cleanActivitiesDatabase()
     console.error('Database cleanup failed:', error);
     process.exit(1);
   });
+import { db } from '../server/db';
+import { activities } from '../shared/schema';
+import { and, eq, isNull, or } from 'drizzle-orm';
+
+async function cleanActivitiesDb() {
+  try {
+    // First, let's count activities without a source
+    const noSourceCount = await db
+      .select({ count: activities.id })
+      .from(activities)
+      .where(isNull(activities.source));
+
+    console.log(`Found ${noSourceCount.length} activities without source`);
+
+    // Update activities without source to have 'legacy' source
+    await db
+      .update(activities)
+      .set({ source: 'legacy' })
+      .where(isNull(activities.source));
+
+    // Count automated sources
+    const automatedCount = await db
+      .select({ count: activities.id })
+      .from(activities)
+      .where(
+        or(
+          eq(activities.source, 'llm'),
+          eq(activities.source, 'import'),
+          eq(activities.source, 'sample')
+        )
+      );
+
+    console.log(`Found ${automatedCount.length} automated activities`);
+
+    // Option to delete automated activities if needed
+    if (process.env.DELETE_AUTOMATED === 'true') {
+      await db
+        .delete(activities)
+        .where(
+          or(
+            eq(activities.source, 'llm'),
+            eq(activities.source, 'import'),
+            eq(activities.source, 'sample')
+          )
+        );
+      console.log('Deleted automated activities');
+    }
+
+  } catch (error) {
+    console.error('Error cleaning activities:', error);
+  }
+}
+
+cleanActivitiesDb();
