@@ -1,3 +1,4 @@
+
 import { db } from '../server/db';
 import { activities, activityImages } from '../shared/schema';
 import { eq, and, sql, isNull, or } from 'drizzle-orm';
@@ -12,7 +13,7 @@ async function cleanActivitiesDatabase() {
     await db
       .update(activities)
       .set({ source: 'legacy' })
-      .where(sql`${activities.source} IS NULL`);
+      .where(isNull(activities.source));
 
     // Step 1: Get all activities and their images
     console.log('Fetching activities...');
