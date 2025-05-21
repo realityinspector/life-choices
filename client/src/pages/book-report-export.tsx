@@ -3,7 +3,7 @@ import { useUser } from "@/context/user-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup } from "@/components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Download, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
@@ -218,14 +218,15 @@ export default function BookReportExportPage() {
                 <RadioGroup 
                   value={config.orientation}
                   onValueChange={(value: "portrait" | "landscape") => setConfig({...config, orientation: value})}
+                  className="flex gap-4"
                 >
-                  <div className="flex gap-4">
-                    <label>
-                      <input type="radio" value="portrait" /> Portrait
-                    </label>
-                    <label>
-                      <input type="radio" value="landscape" /> Landscape
-                    </label>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="portrait" id="orientation-portrait" />
+                    <label htmlFor="orientation-portrait">Portrait</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="landscape" id="orientation-landscape" />
+                    <label htmlFor="orientation-landscape">Landscape</label>
                   </div>
                 </RadioGroup>
               </div>
