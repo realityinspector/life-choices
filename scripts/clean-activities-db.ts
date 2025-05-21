@@ -12,9 +12,7 @@ async function cleanActivitiesDatabase() {
     await db
       .update(activities)
       .set({ source: 'legacy' })
-      .where(
-        isNull(activities.source)
-      );
+      .where(sql`${activities.source} IS NULL`);
 
     // Step 1: Get all activities and their images
     console.log('Fetching activities...');
