@@ -18,7 +18,7 @@ type PDFConfig = {
   backgroundColor: string;
   fontName: string;
   fontSize: number;
-  imageMode: "blackAndWhite";
+  imageMode: "blackAndWhite" | "color";
   logoCorner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
   imageSize: "small" | "medium" | "large";
 };
@@ -48,7 +48,7 @@ export default function BookReportExportPage() {
     backgroundColor: "#000000",
     fontName: "helvetica",
     fontSize: 12,
-    imageMode: "blackAndWhite",
+    imageMode: "color",
     logoCorner: "topRight",
     imageSize: "medium"
   });
@@ -297,6 +297,24 @@ export default function BookReportExportPage() {
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="large" id="size-large" />
                       <label htmlFor="size-large">Large (80%)</label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Image Color Mode</label>
+                  <RadioGroup 
+                    value={config.imageMode}
+                    onValueChange={(value: "blackAndWhite" | "color") => setConfig({...config, imageMode: value})}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="blackAndWhite" id="mode-bw" />
+                      <label htmlFor="mode-bw">Black & White</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="color" id="mode-color" />
+                      <label htmlFor="mode-color">Full Color</label>
                     </div>
                   </RadioGroup>
                 </div>
