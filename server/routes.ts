@@ -92,7 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // List of admin usernames - add your username here
     const adminUsers = [
       'realityinspector',
-      'admin1',
+      'courtklein',
       'admin2',
       'superadmin'
     ];
@@ -117,9 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // List of admin usernames
       const adminUsers = [
         'realityinspector',
-        'admin1',
-        'admin2',
-        'superadmin'
+        'courtklein'
       ];
 
       const isAdmin = adminUsers.includes(username);

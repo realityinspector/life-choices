@@ -85,9 +85,7 @@ const requireAuth = (req: AuthenticatedRequest, res: Response, next: any) => {
     // List of admin usernames - this should match the list in routes.ts
     const adminUsers = [
   'realityinspector',
-  'admin1',
-  'admin2',
-  'superadmin'
+  'courtklein'
 ];
 
     if (adminUsers.includes(username)) {
