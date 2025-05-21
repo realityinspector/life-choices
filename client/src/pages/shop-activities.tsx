@@ -638,7 +638,7 @@ export default function ShopActivitiesPage() {
         sampleActivitiesCount: enhancedSampleActivities.length + enhancedMoreSampleActivities.length
       });
     }
-  }, [activities, databaseActivities, enhancedSampleActivities, enhancedMoreSampleActivities]);
+  }, [activities, databaseActivities]);
 
   // Use only database activities
   const allActivities = enhancedDatabaseActivities;
