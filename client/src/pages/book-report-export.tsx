@@ -234,9 +234,14 @@ export default function BookReportExportPage() {
                   value={config.fontName}
                   onValueChange={(value) => setConfig({...config, fontName: value})}
                 >
-                  {FONT_OPTIONS.map(font => (
-                    <option key={font} value={font}>{font}</option>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select font" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FONT_OPTIONS.map(font => (
+                      <SelectItem key={font} value={font}>{font}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -257,10 +262,15 @@ export default function BookReportExportPage() {
                   value={config.logoCorner}
                   onValueChange={(value: "topLeft" | "topRight" | "bottomLeft" | "bottomRight") => setConfig({ ...config, logoCorner: value })}
                 >
-                  <option value="topLeft">Top Left</option>
-                  <option value="topRight">Top Right</option>
-                  <option value="bottomLeft">Bottom Left</option>
-                  <option value="bottomRight">Bottom Right</option>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select corner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="topLeft">Top Left</SelectItem>
+                    <SelectItem value="topRight">Top Right</SelectItem>
+                    <SelectItem value="bottomLeft">Bottom Left</SelectItem>
+                    <SelectItem value="bottomRight">Bottom Right</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             </div>
