@@ -1,6 +1,6 @@
 import { db } from '../server/db';
 import { activities } from '../shared/schema';
-import { desc } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 
 async function checkRecentActivities() {
   try {
