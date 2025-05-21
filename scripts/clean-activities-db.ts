@@ -9,11 +9,10 @@ async function cleanActivitiesDatabase() {
   try {
     // First update activities without source
     console.log('Updating activities without source...');
-    const updateResult = await db
+    await db
       .update(activities)
       .set({ source: 'legacy' })
-      .where(isNull(activities.source))
-      .execute();
+      .where(isNull(activities.source));
     
     console.log('Updated activities without source');
 
@@ -53,8 +52,7 @@ async function cleanActivitiesDatabase() {
 
       if (!imagesByActivityId.has(activity.id)) {
         await db.delete(activities)
-          .where(eq(activities.id, activity.id))
-          .execute();
+          .where(eq(activities.id, activity.id));
         deletedNoImages++;
         if (deletedNoImages % 100 === 0) {
           console.log(`Deleted ${deletedNoImages} activities without images so far...`);
@@ -95,8 +93,7 @@ async function cleanActivitiesDatabase() {
           const extraImages = imagesByActivityId.get(keepActivity.id).slice(1);
           for (const img of extraImages) {
             await db.delete(activityImages)
-              .where(eq(activityImages.id, img.id))
-              .execute();
+              .where(eq(activityImages.id, img.id));
           }
         }
 
@@ -105,13 +102,11 @@ async function cleanActivitiesDatabase() {
           // Delete associated images first
           for (const img of imagesByActivityId.get(activity.id)) {
             await db.delete(activityImages)
-              .where(eq(activityImages.id, img.id))
-              .execute();
+              .where(eq(activityImages.id, img.id));
           }
           // Delete the activity
           await db.delete(activities)
-            .where(eq(activities.id, activity.id))
-            .execute();
+            .where(eq(activities.id, activity.id));
           deletedDuplicates++;
         }
 
