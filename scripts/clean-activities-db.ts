@@ -151,7 +151,9 @@ async function cleanActivitiesDb() {
     await db
       .update(activities)
       .set({ source: 'legacy' })
-      .where(isNull(activities.source));
+      .where(
+        eq(activities.source, null)
+      );
 
     // Count automated sources
     const automatedCount = await db
