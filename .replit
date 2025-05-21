@@ -49,3 +49,16 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "tsx scripts/clean-activities-db.ts"
+
+[[workflows.workflow]]
+name = "Database Cleanup"
+author = 42064034
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "tsx scripts/clean-activities-db.ts"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "tsx scripts/dedupe-activities.ts"

@@ -1,9 +1,13 @@
-import { Router, Request } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
 import { ActivityInsert, activitySchema } from '@shared/schema';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { auth } from '../auth';
+import { db } from '../db';
+import { activities } from '../db/schema';
+import { eq, and } from 'drizzle-orm';
+import { createActivity } from '../services/activity';
 
 // Helper function to ensure correct type assertions for ActivityInsert
 function ensureActivityTypes(data: any): ActivityInsert {
@@ -42,7 +46,7 @@ activityRouter.get('/', async (req, res) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   // @ts-ignore - user will always exist due to isAuthenticated check
   const userId = req.user.id;
   const activities = await storage.getActivities(userId);
@@ -66,16 +70,16 @@ activityRouter.post('/', auth, logActivityCreation, async (req, res) => {
       source: req.body.source || 'manual'
     });
 
-    // Check for duplicates
-    const duplicates = await db.select()
-      .from(activities)
-      .where(and(
-        eq(activities.userId, activity.userId),
-        eq(activities.name, activity.name)
-      ));
+    // Check for existing activity with same name
+    const existingActivity = await db.query.activities.findFirst({
+      where: eq(activities.name, activity.name)
+    });
 
-    if (duplicates.length > 0) {
-      return res.status(400).json({ error: 'Activity already exists' });
+    if (existingActivity) {
+      return res.status(409).json({ 
+        error: 'Activity already exists',
+        existingId: existingActivity.id
+      });
     }
 
     const newActivity = await createActivity(activity);
@@ -91,7 +95,7 @@ activityRouter.get('/with-images', async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    
+
     // @ts-ignore - user will always exist due to isAuthenticated check
     const userId = req.user.id;
     const activitiesWithImages = await storage.getActivitiesWithImages(userId);
@@ -107,23 +111,23 @@ activityRouter.get('/shop', async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    
+
     // Fetch all activities without filtering by user
     const allActivities = await storage.getActivities();
-    
+
     // Get query parameters for additional filtering
     const { category, impact, duration } = req.query;
-    
+
     // Apply server-side filtering if requested
     let filteredActivities = [...allActivities];
-    
+
     // Filter by category if specified
     if (category && typeof category === 'string') {
       filteredActivities = filteredActivities.filter(
         activity => activity.category.toLowerCase() === category.toLowerCase()
       );
     }
-    
+
     // Filter by minimum impact if specified
     if (impact && typeof impact === 'string') {
       const minImpact = parseInt(impact, 10);
@@ -133,7 +137,7 @@ activityRouter.get('/shop', async (req, res) => {
         );
       }
     }
-    
+
     // Filter by maximum duration if specified (in minutes)
     if (duration && typeof duration === 'string') {
       const maxDuration = parseInt(duration, 10);
@@ -147,7 +151,7 @@ activityRouter.get('/shop', async (req, res) => {
         });
       }
     }
-    
+
     res.json(filteredActivities);
   } catch (err: unknown) {
     console.error("Error fetching shop activities:", err);
@@ -165,23 +169,23 @@ activityRouter.get('/shop/with-images', async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    
+
     // Pass undefined as userId to fetch all activities with images without filtering
     const activitiesWithImages = await storage.getActivitiesWithImages();
-    
+
     // Get query parameters for additional filtering
     const { category, impact, duration } = req.query;
-    
+
     // Apply server-side filtering if requested
     let filteredActivities = [...activitiesWithImages];
-    
+
     // Filter by category if specified
     if (category && typeof category === 'string') {
       filteredActivities = filteredActivities.filter(
         activity => activity.category.toLowerCase() === category.toLowerCase()
       );
     }
-    
+
     // Filter by minimum impact if specified
     if (impact && typeof impact === 'string') {
       const minImpact = parseInt(impact, 10);
@@ -191,7 +195,7 @@ activityRouter.get('/shop/with-images', async (req, res) => {
         );
       }
     }
-    
+
     // Filter by maximum duration if specified (in minutes)
     if (duration && typeof duration === 'string') {
       const maxDuration = parseInt(duration, 10);
@@ -205,7 +209,7 @@ activityRouter.get('/shop/with-images', async (req, res) => {
         });
       }
     }
-    
+
     res.json(filteredActivities);
   } catch (err: unknown) {
     console.error("Error fetching shop activities with images:", err);
@@ -223,12 +227,12 @@ activityRouter.get('/next', async (req: AuthenticatedRequest, res) => {
     if (!isAuthenticated(req)) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    
+
     const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ message: "Invalid user ID" });
     }
-    
+
     // Check for skipNames query parameter that allows clients
     // to exclude activities with specific names
     const skipNames = req.query.skipNames 
@@ -236,25 +240,25 @@ activityRouter.get('/next', async (req: AuthenticatedRequest, res) => {
         ? req.query.skipNames.map(name => String(name))
         : [String(req.query.skipNames)] 
       : [];
-      
+
     // Also check for skipDuplicates flag - if true, we'll detect and skip activities with the same name
     const skipDuplicates = req.query.skipDuplicates === 'true';
-    
+
     // If we want to skip duplicates, get user's activities to check for duplicates
     let namesToSkip = [...skipNames];
-    
+
     try {
       if (skipDuplicates) {
         // Get all activities for this user to check for duplicates
         const allActivities = await storage.getActivities(userId);
-        
+
         // Group activities by name to find duplicates
         const activitiesByName: Record<string, number> = {};
-        
+
         allActivities.forEach(activity => {
           activitiesByName[activity.name] = (activitiesByName[activity.name] || 0) + 1;
         });
-        
+
         // Add names of duplicate activities to the skip list
         for (const [name, count] of Object.entries(activitiesByName)) {
           if (count > 1 && !namesToSkip.includes(name)) {
@@ -262,17 +266,17 @@ activityRouter.get('/next', async (req: AuthenticatedRequest, res) => {
           }
         }
       }
-      
+
       // Get the next activity, passing the list of activity names to skip
       const nextActivity = await storage.getNextActivity(userId, namesToSkip);
-      
+
       if (!nextActivity) {
         return res.status(404).json({ 
           message: "No activities found",
           suggestion: "show_recommendations" 
         });
       }
-      
+
       res.json(nextActivity);
     } catch (dbError) {
       console.error("Database error fetching activities:", dbError);
@@ -298,7 +302,7 @@ activityRouter.get('/cluster/:clusterId', async (req: AuthenticatedRequest, res)
   if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   const { clusterId } = req.params;
   const activities = await storage.getActivitiesByCluster(parseInt(clusterId));
   res.json(activities);
@@ -309,18 +313,18 @@ activityRouter.post('/', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   try {
     const userId = req.user.id;
     const parsed = activitySchema.parse(req.body);
-    
+
     // IMPORTANT: Set nextDue to a timestamp in the past to ensure it shows up immediately
     // This makes the activity appear as "overdue" so it shows up right away in "What's Next"
     // We subtract 1 day to ensure it's in the past
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const nextDue = yesterday;
-    
+
     // If the request specifically asks for the activity to be scheduled in the future
     // via a query parameter, then calculate the future date
     if (req.query.scheduleForLater === 'true') {
@@ -338,15 +342,15 @@ activityRouter.post('/', async (req: AuthenticatedRequest, res) => {
       // Override the default past date with the future date if scheduled later
       nextDue.setTime(futureDate.getTime());
     }
-    
+
     const typedActivity = ensureActivityTypes(parsed);
-    
+
     const activityData: ActivityInsert & { userId: number, nextDue: Date } = {
       ...typedActivity,
       userId: userId,
       nextDue
     };
-    
+
     const activity = await storage.createActivity(activityData);
     console.log("Created activity:", activity);
     res.json(activity);
@@ -365,26 +369,26 @@ activityRouter.put('/:id', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   const { id } = req.params;
   const userId = req.user.id;
-  
+
   try {
     const activityId = parseInt(id);
     const activity = await storage.getActivity(activityId);
-    
+
     if (!activity) {
       return res.status(404).json({ message: "Activity not found" });
     }
-    
+
     if (activity.userId !== userId) {
       return res.status(403).json({ message: "Not authorized to update this activity" });
     }
-    
+
     const parsed = activitySchema.parse(req.body);
     const typedActivity = ensureActivityTypes(parsed);
     const updatedActivity = await storage.updateActivity(activityId, typedActivity);
-    
+
     res.json(updatedActivity);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -401,22 +405,22 @@ activityRouter.post('/:id/complete', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   const { id } = req.params;
   const userId = req.user.id;
-  
+
   try {
     const activityId = parseInt(id);
     const activity = await storage.getActivity(activityId);
-    
+
     if (!activity) {
       return res.status(404).json({ message: "Activity not found" });
     }
-    
+
     if (activity.userId !== userId) {
       return res.status(403).json({ message: "Not authorized to complete this activity" });
     }
-    
+
     const updatedActivity = await storage.completeActivity(activityId);
     res.json(updatedActivity);
   } catch (error) {
@@ -430,22 +434,22 @@ activityRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   const { id } = req.params;
   const userId = req.user.id;
-  
+
   try {
     const activityId = parseInt(id);
     const activity = await storage.getActivity(activityId);
-    
+
     if (!activity) {
       return res.status(404).json({ message: "Activity not found" });
     }
-    
+
     if (activity.userId !== userId) {
       return res.status(403).json({ message: "Not authorized to delete this activity" });
     }
-    
+
     await storage.deleteActivity(activityId);
     res.json({ success: true });
   } catch (error) {
@@ -459,7 +463,7 @@ activityRouter.delete('/', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   try {
     const userId = req.user.id;
     await storage.deleteAllActivities(userId);
@@ -475,24 +479,24 @@ activityRouter.post('/share', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   try {
     const userId = req.user.id;
     const { activity, recipientEmail } = req.body;
-    
+
     if (!activity || !recipientEmail) {
       return res.status(400).json({ message: "Activity and recipient email are required" });
     }
-    
+
     // First, create the activity
     const parsed = activitySchema.parse(activity);
-    
+
     // IMPORTANT: Set nextDue to a timestamp in the past for shared activities too
     // This makes the activity appear as "overdue" so it shows up right away in "What's Next"
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const nextDue = yesterday;
-    
+
     // If the request specifically asks to schedule for later
     if (req.query.scheduleForLater === 'true') {
       // Set nextDue to the current time first
@@ -509,20 +513,20 @@ activityRouter.post('/share', async (req: AuthenticatedRequest, res) => {
       // Override the default past date with the future date if scheduled later
       nextDue.setTime(futureDate.getTime());
     }
-    
+
     const typedActivity = ensureActivityTypes(parsed);
-    
+
     const activityData: ActivityInsert & { userId: number, nextDue: Date } = {
       ...typedActivity,
       userId: userId,
       nextDue
     };
-    
+
     const createdActivity = await storage.createActivity(activityData);
-    
+
     // Create invitation token for sharing
     const invitationToken = uuidv4();
-    
+
     const invitation = await storage.createActivityInvitation({
       activityId: createdActivity.id,
       senderUserId: userId,
@@ -530,7 +534,7 @@ activityRouter.post('/share', async (req: AuthenticatedRequest, res) => {
       invitationToken,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days expiry
     });
-    
+
     res.json({ 
       success: true,
       activity: createdActivity,
@@ -552,16 +556,16 @@ activityRouter.post('/accept/:token', async (req: AuthenticatedRequest, res) => 
   if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   try {
     const userId = req.user.id;
     const { token } = req.params;
     const success = await storage.acceptActivityInvitation(token, userId);
-    
+
     if (!success) {
       return res.status(404).json({ message: "Invalid or expired invitation" });
     }
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Error accepting activity invitation:', error);
@@ -574,22 +578,22 @@ activityRouter.post('/:id/skip', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req) || !req.user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  
+
   const { id } = req.params;
   const userId = req.user.id;
-  
+
   try {
     const activityId = parseInt(id);
     const activity = await storage.getActivity(activityId);
-    
+
     if (!activity) {
       return res.status(404).json({ message: "Activity not found" });
     }
-    
+
     if (activity.userId !== userId) {
       return res.status(403).json({ message: "Not authorized to skip this activity" });
     }
-    
+
     const updatedActivity = await storage.skipActivity(activityId);
     res.json(updatedActivity);
   } catch (error) {
