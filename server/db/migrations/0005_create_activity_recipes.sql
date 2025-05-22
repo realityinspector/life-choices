@@ -1,3 +1,4 @@
+
 -- Create activity_recipes table
 CREATE TABLE IF NOT EXISTS activity_recipes (
     id SERIAL PRIMARY KEY,
