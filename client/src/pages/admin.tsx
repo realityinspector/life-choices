@@ -92,6 +92,13 @@ export default function AdminDashboard() {
       route: "/admin/activities",
     },
     {
+      title: "Activity Ingredients",
+      description: "Manage ingredients and recipes for activities",
+      icon: <FileText className="h-8 w-8 text-purple-500" />,
+      route: "/admin/recipes",
+      badge: "New"
+    },
+    {
       title: "CSV Import",
       description: "Import activities from CSV with AI-generated images and details",
       icon: <FileText className="h-8 w-8 text-yellow-500" />,
