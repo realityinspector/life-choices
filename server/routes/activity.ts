@@ -8,6 +8,7 @@ import { db } from '../db';
 import { activities } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { createActivity } from '../services/activity';
+import { activityImages } from '@shared/schema';
 
 // Helper function to ensure correct type assertions for ActivityInsert
 function ensureActivityTypes(data: any): ActivityInsert {
@@ -394,9 +395,26 @@ activityRouter.put('/:id', async (req: AuthenticatedRequest, res) => {
       return res.status(403).json({ message: "Not authorized to update this activity" });
     }
 
-    const parsed = activitySchema.parse(req.body);
+    const { imageData, ...activityData } = req.body;
+
+    const parsed = activitySchema.parse(activityData);
     const typedActivity = ensureActivityTypes(parsed);
     const updatedActivity = await storage.updateActivity(activityId, typedActivity);
+
+    // Handle image update if provided
+    if (imageData) {
+      // First remove existing images
+      await db.delete(activityImages).where(eq(activityImages.activityId, parseInt(id)));
+
+      // Then add new image
+      await db.insert(activityImages).values({
+        activityId: parseInt(id),
+        filename: imageData.filename,
+        originalFilename: imageData.originalFilename,
+        path: imageData.path,
+        mimeType: imageData.mimeType
+      });
+    }
 
     res.json(updatedActivity);
   } catch (error) {

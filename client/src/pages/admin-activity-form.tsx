@@ -57,6 +57,23 @@ export default function AdminActivityForm() {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Handle image upload first if there's a file
+      let imageData;
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('image', selectedFile);
+        
+        const imageRes = await apiRequest('/api/activity-images', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!imageRes.ok) {
+          throw new Error('Failed to upload image');
+        }
+        imageData = await imageRes.json();
+      }
+      
       const url = isEditing 
         ? `/api/admin/activities/${activityId}` 
         : '/api/admin/activities';
@@ -64,7 +81,10 @@ export default function AdminActivityForm() {
       const res = await apiRequest(url, {
         method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          imageData
+        })
       });
       
       return res.json();
