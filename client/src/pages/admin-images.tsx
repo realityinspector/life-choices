@@ -607,36 +607,6 @@ export default function AdminImagesPage() {
     }
   });
 
-  // Import activities from CSV mutation
-  const importActivitiesMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest('/api/admin/import-activities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-
-      return res.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: 'Import Successful',
-        description: `Successfully imported ${data.count} activities from CSV.`,
-      });
-      // Refresh activities list
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/activities'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-    },
-    onError: (error) => {
-      console.error('Error importing activities:', error);
-      toast({
-        title: 'Import Error',
-        description: 'Failed to import activities from CSV file.',
-        variant: 'destructive',
-      });
-    }
-  });
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files).map(file => ({
@@ -1052,10 +1022,6 @@ export default function AdminImagesPage() {
     deleteImageMutation.mutate(id);
   };
 
-  const handleImportActivities = () => {
-    importActivitiesMutation.mutate();
-  };
-
   const toggleSearchFocus = (active: boolean) => {
     setSearchActive(active);
     if (active && searchInputRef.current) {
@@ -1168,10 +1134,9 @@ export default function AdminImagesPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="upload">Upload & Match</TabsTrigger>
           <TabsTrigger value="manage">Manage Images</TabsTrigger>
-          <TabsTrigger value="actions">Admin Actions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="upload" className="space-y-4">
@@ -1568,45 +1533,6 @@ export default function AdminImagesPage() {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="actions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Admin Actions</CardTitle>
-              <CardDescription>Special administrative actions for managing activities</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <h3 className="font-medium">Import Default Activities</h3>
-                <p className="text-sm text-gray-500">
-                  Import the default set of activities from the CSV file. This will add all standard activities to the database.
-                </p>
-                <Button 
-                  onClick={handleImportActivities}
-                  disabled={importActivitiesMutation.isPending}
-                  className="flex gap-2"
-                >
-                  {importActivitiesMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Import Activities from CSV
-                </Button>
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-medium">Process Missing Entries with LLM</h3>
-                <p className="text-sm text-gray-500">
-                  Automatically generate activity descriptions and associate images for missing entries using AI.
-                </p>
-                <Button
-                  onClick={handleProcessMissingEntries}
-                  disabled={isProcessingMissing}
-                  className="flex gap-2"
-                >
-                  {isProcessingMissing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  Process All Missing with LLM
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -127,7 +127,7 @@ function calculateLifeImpact(
 export async function importActivities(userId: number): Promise<number> {
   try {
     // Read the CSV file
-    const csvPath = path.join(process.cwd(), 'shared', 'data.csv');
+    const csvPath = path.join(process.cwd(), 'shared', 'this-file-is-not-there-if-you-are-trying-to-use-it-the-file-was-deleted-this-is-a-note-explaining-that.csv');
     const fileContent = fs.readFileSync(csvPath, { encoding: 'utf-8' });
     
     console.log(`Reading CSV file from ${csvPath}`);
@@ -190,7 +190,7 @@ export async function importActivities(userId: number): Promise<number> {
       
       // Determine category based on relationship
       let category = 'Personal';
-      if (relationship.includes('with Anthony') || 
+      if (relationship.includes('with ') || 
           relationship.includes('with Partner')) {
         category = 'Relationship';
       } else if (relationship.includes('with Family') || 

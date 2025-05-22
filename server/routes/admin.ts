@@ -5,7 +5,6 @@ import path from "path";
 import fs from "fs";
 import { Together } from "together-ai";
 import { ActivityImage, InsertActivityImage, Activity } from "../../shared/schema";
-import { importActivities } from "../../scripts/import-activities";
 import { db } from "../db";
 import { activities } from "../../shared/schema";
 
@@ -439,29 +438,6 @@ adminRouter.delete("/activity-image/:id", async (req: AuthenticatedRequest, res)
   }
 });
 
-// Import activities from CSV file
-adminRouter.post("/import-activities", async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    const userId = req.user.id;
-    console.log(`Starting import of activities from CSV for user ${userId}...`);
-
-    const importCount = await importActivities(userId);
-
-    console.log(`Successfully imported ${importCount} activities for user ${userId}`);
-    res.json({ 
-      message: `Successfully imported ${importCount} activities`,
-      count: importCount
-    });
-  } catch (error) {
-    console.error("Error importing activities from CSV:", error);
-    res.status(500).json({ error: "Failed to import activities from CSV", details: error });
-  }
-});
-
 // Get single activity
 adminRouter.get('/activities/:id', async (req: AuthenticatedRequest, res) => {
   if (!isAuthenticated(req)) {
@@ -481,7 +457,7 @@ adminRouter.get('/activities/:id', async (req: AuthenticatedRequest, res) => {
     }
 
     const images = await storage.getActivityImages(id);
-    
+
     // Return combined data
     res.json({
       activity,
