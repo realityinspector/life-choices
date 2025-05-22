@@ -21,6 +21,7 @@ import AdminBackupPage from "@/pages/admin-backup";
 import AdminCSVImportPage from "@/pages/admin-csv-import";
 import AdminDashboard from "@/pages/admin";
 import AdminActivitiesPage from "@/pages/admin-activities";
+import AdminRecipes from "@/pages/admin-recipes";
 import AdminActivityFormPage from "@/pages/admin-activity-form";
 import BottomNavigation from "@/components/bottom-navigation";
 import BookPage from "@/pages/book";
