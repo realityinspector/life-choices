@@ -43,9 +43,18 @@ export default function AdminRecipes() {
     }) => {
       const res = await apiRequest('/api/admin-llm/generate-recipes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'credentials': 'include'
+        },
         body: JSON.stringify(params),
       });
+
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error);
+      }
+
       return res.json();
     },
     onSuccess: (data) => {
@@ -53,6 +62,10 @@ export default function AdminRecipes() {
       setIsProcessing(false);
       // Refresh activities data
       queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+    },
+    onError: (error) => {
+      setIsProcessing(false);
+      console.error('Error generating recipes:', error);
     }
   });
 
