@@ -72,20 +72,22 @@ async function generateRecipeWithRetry(
 }
 
 router.post("/generate-recipes", async (req: AuthenticatedRequest, res) => {
+  // Set JSON content type header
+  res.setHeader('Content-Type', 'application/json');
+  
   try {
-    try {
-      if (!req.user) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
+    if (!req.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
-      // Validate request body before processing
-      if (!req.body) {
-        return res.status(400).json({ error: "Missing request body" });
-      }
+    // Validate request body before processing
+    if (!req.body) {
+      return res.status(400).json({ error: "Missing request body" });
+    }
 
-      if (!Array.isArray(req.body.activityIds)) {
-        return res.status(400).json({ error: "Invalid request: activityIds must be an array" });
-      }
+    if (!Array.isArray(req.body.activityIds)) {
+      return res.status(400).json({ error: "Invalid request: activityIds must be an array" });
+    }
 
     const { activityIds, globalPrompt } = z.object({
       activityIds: z.array(z.number()),

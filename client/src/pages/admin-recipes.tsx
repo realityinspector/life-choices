@@ -55,13 +55,16 @@ export default function AdminRecipes() {
         });
 
         const responseText = await res.text();
-        let data;
+        console.log('Response headers:', Object.fromEntries(res.headers.entries()));
         
         try {
-          data = JSON.parse(responseText);
+          if (!responseText.trim()) {
+            throw new Error('Empty response from server');
+          }
+          return JSON.parse(responseText);
         } catch (e) {
-          console.error('Failed to parse response:', responseText);
-          throw new Error(`Invalid JSON response (${res.status}): ${responseText.substring(0, 100)}`);
+          console.error('Failed to parse response:', responseText.substring(0, 500));
+          throw new Error(`Server response error: ${e.message}`);
         }
 
         if (!res.ok) {
