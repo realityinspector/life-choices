@@ -4,6 +4,7 @@ import { z } from "zod";
 import { storage } from "../storage";
 import { togetherAIService } from "../services/together-ai";
 import { ActivityRecipe } from "@shared/schema";
+import { AuthenticatedRequest } from "../auth";
 import fs from "fs";
 import path from "path";
 
@@ -41,36 +42,41 @@ async function generateRecipeWithRetry(
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error("Empty response from LLM");
 
-      // Parse and validate JSON response
-      const parsed = JSON.parse(content);
-      if (!parsed.recipes || !Array.isArray(parsed.recipes)) {
-        throw new Error("Invalid JSON structure");
-      }
+      try {
+        const parsed = JSON.parse(content);
+        if (!parsed.recipes || !Array.isArray(parsed.recipes)) {
+          throw new Error("Invalid JSON structure");
+        }
 
-      // Convert to ActivityRecipe format
-      return parsed.recipes.map((recipe: any, index: number) => ({
-        activityId: activity.id,
-        phase: recipe.phase.toLowerCase(),
-        title: recipe.title,
-        description: recipe.description,
-        orderIndex: recipe.order || index + 1
-      }));
+        return parsed.recipes.map((recipe: any, index: number) => ({
+          activityId: activity.id,
+          phase: recipe.phase.toLowerCase(),
+          title: recipe.title,
+          description: recipe.description,
+          orderIndex: recipe.order || index + 1
+        }));
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        throw new Error("Invalid JSON response from LLM");
+      }
     } catch (error) {
       attempt++;
       if (attempt === maxRetries) {
-        console.error(`Failed to generate recipes for activity ${activity.name} after ${maxRetries} attempts`);
+        console.error(`Failed to generate recipes for activity ${activity.name} after ${maxRetries} attempts:`, error);
         return null;
       }
-      // Exponential backoff
-      const delay = baseDelay * Math.pow(2, attempt);
-      await sleep(delay);
+      await sleep(baseDelay * Math.pow(2, attempt));
     }
   }
   return null;
 }
 
-router.post("/generate-recipes", async (req, res) => {
+router.post("/generate-recipes", async (req: AuthenticatedRequest, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
     const { activityIds, globalPrompt } = z.object({
       activityIds: z.array(z.number()),
       globalPrompt: z.string().optional()
@@ -78,36 +84,45 @@ router.post("/generate-recipes", async (req, res) => {
 
     const results = [];
     let processed = 0;
+    const batchSize = 5;
 
-    for (const activityId of activityIds) {
-      const activity = await storage.getActivity(activityId);
-      if (!activity) continue;
-
-      console.log(`Processing activity: ${activity.name} (${processed + 1}/${activityIds.length})`);
-
-      // Generate recipes
-      const recipes = await generateRecipeWithRetry(activity, globalPrompt);
-      if (recipes) {
-        // Save recipes to database
-        for (const recipe of recipes) {
-          await storage.createActivityRecipe(recipe);
+    // Process activities in batches
+    for (let i = 0; i < activityIds.length; i += batchSize) {
+      const batch = activityIds.slice(i, i + batchSize);
+      const batchPromises = batch.map(async (activityId) => {
+        const activity = await storage.getActivity(activityId);
+        if (!activity) {
+          return {
+            activityId,
+            status: "failed",
+            error: "Activity not found"
+          };
         }
-        results.push({
-          activityId,
-          status: "success",
-          recipeCount: recipes.length
-        });
-      } else {
-        results.push({
+
+        const recipes = await generateRecipeWithRetry(activity, globalPrompt);
+        if (recipes) {
+          await Promise.all(recipes.map(recipe => storage.createActivityRecipe(recipe)));
+          return {
+            activityId,
+            status: "success",
+            recipeCount: recipes.length
+          };
+        }
+        return {
           activityId,
           status: "failed",
           error: "Failed to generate recipes"
-        });
-      }
+        };
+      });
 
-      processed++;
-      // Add delay between processing
-      await sleep(300);
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      processed += batch.length;
+
+      // Add delay between batches
+      if (i + batchSize < activityIds.length) {
+        await sleep(1000);
+      }
     }
 
     res.json({
@@ -116,7 +131,10 @@ router.post("/generate-recipes", async (req, res) => {
     });
   } catch (error) {
     console.error("Error generating recipes:", error);
-    res.status(500).json({ error: "Failed to generate recipes" });
+    res.status(500).json({ 
+      error: "Failed to generate recipes",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 });
 

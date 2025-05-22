@@ -44,28 +44,52 @@ export default function AdminRecipes() {
       const res = await apiRequest('/api/admin-llm/generate-recipes', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'credentials': 'include'
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(params),
       });
 
+      const data = await res.json().catch(e => {
+        throw new Error('Failed to parse server response');
+      });
+
       if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error);
+        throw new Error(data.error || 'Failed to generate recipes');
       }
 
-      return res.json();
+      return data;
+    },
+    onMutate: (variables) => {
+      setIsProcessing(true);
+      setProgress({ current: 0, total: variables.activityIds.length });
     },
     onSuccess: (data) => {
       setProgress({ current: 0, total: 0 });
       setIsProcessing(false);
+      
+      // Show success message with results
+      const successful = data.results.filter(r => r.status === 'success').length;
+      const failed = data.results.filter(r => r.status === 'failed').length;
+      
+      toast({
+        title: "Recipe Generation Complete",
+        description: `Successfully generated ${successful} recipes. ${failed} failed.`,
+        variant: successful ? "default" : "destructive"
+      });
+
       // Refresh activities data
       queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       setIsProcessing(false);
-      console.error('Error generating recipes:', error);
+      setProgress({ current: 0, total: 0 });
+      
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate recipes",
+        variant: "destructive"
+      });
     }
   });
 
