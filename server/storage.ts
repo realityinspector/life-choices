@@ -104,6 +104,19 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
+interface Recipe {
+  activityId: number;
+  name: string;
+  description: string;
+  ingredients: string[];
+  instructions: string[];
+  prepTime: number;
+  cookTime: number;
+  servings: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  tags: string[];
+}
+
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
@@ -687,32 +700,25 @@ export class DatabaseStorage implements IStorage {
     const result = await db.insert(llmMessages).values(message).returning();
     return result[0];
   }
-  async createActivity(activityData: ActivityInsert & { userId: number }): Promise<Activity> {
-    const result = await db.insert(activities).values({...activityData, source: activityData.source || 'manual'}).returning();
 
-    // Get the calling source from the stack trace
-    const stack = new Error().stack || '';
-    const callingFile = stack.split('\n')[2]?.trim() || 'unknown';
-
-    // Dynamically import activity logger
-    import('./services/logger').then(({ activityLogger }) => {
-      // Log the activity creation
-      activityLogger.log(
-        result[0].id,
-        result[0].name,
-        result[0].userId,
-        callingFile
-      );
-    });
-
-    return result[0];
-  }
-
-  async createActivityRecipe(recipe: InsertActivityRecipe): Promise<ActivityRecipe> {
-    const [newRecipe] = await db.insert(activityRecipes)
-      .values(recipe)
-      .returning();
-    return newRecipe;
+  async createActivityRecipe(recipe: Recipe): Promise<void> {
+    try {
+      await db.insert(activityRecipes).values({
+        activity_id: recipe.activityId,
+        name: recipe.name,
+        description: recipe.description,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        prep_time: recipe.prepTime,
+        cook_time: recipe.cookTime,
+        servings: recipe.servings,
+        difficulty: recipe.difficulty,
+        tags: recipe.tags
+      });
+    } catch (error) {
+      console.error('Error creating activity recipe:', error);
+      throw error;
+    }
   }
 
   async getActivityRecipes(activityId: number): Promise<ActivityRecipe[]> {

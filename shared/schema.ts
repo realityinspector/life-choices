@@ -289,22 +289,20 @@ export const bookActivitiesUniqueConstraint = uniqueIndex('book_activities_uniqu
 
 // Book types
 // Activity Recipes schema
-export const activityRecipes = pgTable("activity_recipes", {
-  id: serial("id").primaryKey(),
-  activityId: integer("activity_id").references(() => activities.id, { onDelete: "cascade" }),
-  phase: text("phase").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  orderIndex: integer("order_index").notNull(),
-  createdBy: integer("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const activityRecipeSchema = createInsertSchema(activityRecipes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const activityRecipes = pgTable('activity_recipes', {
+  id: serial('id').primaryKey(),
+  activityId: integer('activity_id').notNull().references(() => activities.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  ingredients: text('ingredients').array().notNull(),
+  instructions: text('instructions').array().notNull(),
+  prepTime: integer('prep_time').notNull(),
+  cookTime: integer('cook_time').notNull(),
+  servings: integer('servings').notNull(),
+  difficulty: text('difficulty', { enum: ['easy', 'medium', 'hard'] }).notNull(),
+  tags: text('tags').array().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
 export type ActivityRecipe = typeof activityRecipes.$inferSelect;

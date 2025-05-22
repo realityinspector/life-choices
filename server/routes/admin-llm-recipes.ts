@@ -18,21 +18,23 @@ const systemPrompts = JSON.parse(
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function generateRecipeWithRetry(
-  activity: any,
-  globalPrompt: string = "",
-  maxRetries: number = 3
-): Promise<ActivityRecipe[] | null> {
-  let attempt = 0;
-  const baseDelay = 300;
-
-  while (attempt < maxRetries) {
+async function generateRecipeWithRetry(activity: Activity, retries = 3): Promise<Recipe> {
+  for (let i = 0; i < retries; i++) {
     try {
-      const prompt = `${systemPrompts.activityRecipes.systemPrompt}\n\n${globalPrompt}\n\n` + 
-        systemPrompts.activityRecipes.userPromptTemplate
-          .replace("{name}", activity.name)
-          .replace("{category}", activity.category)
-          .replace("{description}", activity.description || "");
+      const prompt = `Generate a recipe for the activity "${activity.name}" in the following JSON format:
+{
+  "name": "string",
+  "description": "string",
+  "ingredients": ["string"],
+  "instructions": ["string"],
+  "prepTime": number,
+  "cookTime": number,
+  "servings": number,
+  "difficulty": "easy" | "medium" | "hard",
+  "tags": ["string"]
+}
+
+Ensure the response is valid JSON and follows this exact structure.`;
 
       const response = await togetherAIService.client.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
@@ -40,45 +42,48 @@ async function generateRecipeWithRetry(
         temperature: 0.7,
         max_tokens: 1000
       });
-
-      const content = response.choices[0]?.message?.content;
-      if (!content) throw new Error("Empty response from LLM");
+      
+      // Clean the response to ensure it's valid JSON
+      const cleanedResponse = response.choices[0]?.message?.content?.trim()
+        .replace(/^```json\s*/, '') // Remove JSON code block markers
+        .replace(/\s*```$/, '')
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control characters
 
       try {
-        // Clean the response - remove markdown code blocks if present
-        let cleanContent = content.trim();
-        if (cleanContent.startsWith('```json')) {
-          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/```\s*$/, '');
-        } else if (cleanContent.startsWith('```')) {
-          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/```\s*$/, '');
+        const recipe = JSON.parse(cleanedResponse);
+        
+        // Validate the recipe structure
+        if (!recipe.name || !recipe.description || !Array.isArray(recipe.ingredients) || 
+            !Array.isArray(recipe.instructions) || typeof recipe.prepTime !== 'number' || 
+            typeof recipe.cookTime !== 'number' || typeof recipe.servings !== 'number' || 
+            !['easy', 'medium', 'hard'].includes(recipe.difficulty) || !Array.isArray(recipe.tags)) {
+          throw new Error('Invalid recipe structure');
         }
 
-        const parsed = JSON.parse(cleanContent);
-        if (!parsed.recipes || !Array.isArray(parsed.recipes)) {
-          throw new Error("Invalid JSON structure");
-        }
-
-        return parsed.recipes.map((recipe: any, index: number) => ({
-          activityId: activity.id,
-          phase: recipe.phase.toLowerCase(),
-          title: recipe.title,
-          description: recipe.description,
-          orderIndex: recipe.order || index + 1
-        }));
+        return {
+          ...recipe,
+          activityId: activity.id
+        };
       } catch (parseError) {
-        console.error("JSON parse error:", parseError);
-        throw new Error("Invalid JSON response from LLM");
+        console.error('JSON parse error:', parseError);
+        console.error('Raw response:', response.choices[0]?.message?.content);
+        console.error('Cleaned response:', cleanedResponse);
+        
+        if (i === retries - 1) {
+          throw new Error(`Failed to parse LLM response after ${retries} attempts`);
+        }
+        continue;
       }
     } catch (error) {
-      attempt++;
-      if (attempt === maxRetries) {
-        console.error(`Failed to generate recipes for activity ${activity.name} after ${maxRetries} attempts:`, error);
-        return null;
+      console.error(`Attempt ${i + 1} failed:`, error);
+      if (i === retries - 1) {
+        throw error;
       }
-      await sleep(baseDelay * Math.pow(2, attempt));
+      // Wait before retrying
+      await sleep(1000 * (i + 1));
     }
   }
-  return null;
+  throw new Error('Failed to generate recipe after all retries');
 }
 
 router.post("/generate-recipes", async (req: AuthenticatedRequest, res) => {
@@ -121,13 +126,13 @@ router.post("/generate-recipes", async (req: AuthenticatedRequest, res) => {
           };
         }
 
-        const recipes = await generateRecipeWithRetry(activity, globalPrompt);
-        if (recipes) {
-          await Promise.all(recipes.map(recipe => storage.createActivityRecipe(recipe)));
+        const recipe = await generateRecipeWithRetry(activity);
+        if (recipe) {
+          await storage.createActivityRecipe(recipe);
           return {
             activityId,
             status: "success",
-            recipeCount: recipes.length
+            recipeCount: 1
           };
         }
         return {
