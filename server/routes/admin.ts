@@ -137,6 +137,10 @@ adminRouter.use(requireAuth);
 
 // Get all activities for dropdown selection - separate from user's activities
 adminRouter.get("/activities", async (req: AuthenticatedRequest, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
   try {
     // Get all activities from database, ordered by ID
     const dbActivities = await db.select()

@@ -21,7 +21,9 @@ export default function AdminRecipes() {
     queryKey: ['/api/admin/activities'],
     queryFn: async () => {
       try {
-        const res = await apiRequest('/api/admin/activities');
+        const res = await apiRequest('/api/admin/activities', {
+          credentials: 'include'
+        });
         if (!res.ok) {
           throw new Error(`Failed to fetch activities: ${res.status}`);
         }
