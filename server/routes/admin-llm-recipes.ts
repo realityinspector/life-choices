@@ -73,14 +73,19 @@ async function generateRecipeWithRetry(
 
 router.post("/generate-recipes", async (req: AuthenticatedRequest, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
 
-    // Validate request body before processing
-    if (!req.body || !Array.isArray(req.body.activityIds)) {
-      return res.status(400).json({ error: "Invalid request: activityIds must be an array" });
-    }
+      // Validate request body before processing
+      if (!req.body) {
+        return res.status(400).json({ error: "Missing request body" });
+      }
+
+      if (!Array.isArray(req.body.activityIds)) {
+        return res.status(400).json({ error: "Invalid request: activityIds must be an array" });
+      }
 
     const { activityIds, globalPrompt } = z.object({
       activityIds: z.array(z.number()),
@@ -136,9 +141,23 @@ router.post("/generate-recipes", async (req: AuthenticatedRequest, res) => {
     });
   } catch (error) {
     console.error("Error generating recipes:", error);
-    res.status(500).json({ 
-      error: "Failed to generate recipes",
-      details: error instanceof Error ? error.message : "Unknown error"
+    // Ensure we always return JSON even for unexpected errors
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: "Failed to generate recipes",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  }
+});
+
+// Add error handler for this route
+router.use((err: any, req: any, res: any, next: any) => {
+  console.error("Recipe generation error:", err);
+  if (!res.headersSent) {
+    res.status(500).json({
+      error: "Internal server error",
+      details: err instanceof Error ? err.message : "Unknown error"
     });
   }
 });

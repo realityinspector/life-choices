@@ -47,29 +47,28 @@ export default function AdminRecipes() {
         const res = await apiRequest('/api/admin-llm/generate-recipes', {
           method: 'POST',
           headers: { 
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
           },
           credentials: 'include',
           body: JSON.stringify(params),
         });
 
         const responseText = await res.text();
+        let data;
         
-        if (!res.ok) {
-          try {
-            const errorJson = JSON.parse(responseText);
-            throw new Error(errorJson.error || 'Failed to generate recipes');
-          } catch (e) {
-            throw new Error(`Server error (${res.status}): ${responseText.substring(0, 100)}`);
-          }
-        }
-
         try {
-          return JSON.parse(responseText);
+          data = JSON.parse(responseText);
         } catch (e) {
           console.error('Failed to parse response:', responseText);
-          throw new Error('Server returned invalid JSON');
+          throw new Error(`Invalid JSON response (${res.status}): ${responseText.substring(0, 100)}`);
         }
+
+        if (!res.ok) {
+          throw new Error(data.error || data.details || 'Failed to generate recipes');
+        }
+
+        return data;
       } catch (error) {
         throw error instanceof Error ? error : new Error('Network request failed');
       }
