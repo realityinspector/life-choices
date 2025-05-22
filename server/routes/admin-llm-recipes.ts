@@ -45,7 +45,15 @@ async function generateRecipeWithRetry(
       if (!content) throw new Error("Empty response from LLM");
 
       try {
-        const parsed = JSON.parse(content);
+        // Clean the response - remove markdown code blocks if present
+        let cleanContent = content.trim();
+        if (cleanContent.startsWith('```json')) {
+          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+        } else if (cleanContent.startsWith('```')) {
+          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/```\s*$/, '');
+        }
+
+        const parsed = JSON.parse(cleanContent);
         if (!parsed.recipes || !Array.isArray(parsed.recipes)) {
           throw new Error("Invalid JSON structure");
         }
