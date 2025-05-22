@@ -1,3 +1,4 @@
+
 import type { Config } from 'drizzle-kit';
 
 if (!process.env.DATABASE_URL) {
@@ -7,8 +8,8 @@ if (!process.env.DATABASE_URL) {
 export default {
   schema: '../shared/schema.ts',
   out: './db/migrations',
-  dialect: 'postgresql',
+  driver: 'pg',
   dbCredentials: {
     connectionString: process.env.DATABASE_URL,
   },
-} satisfies Config; 
+} satisfies Config;
