@@ -119,6 +119,7 @@ function Router() {
       <Route path="/admin/llm" component={AdminLLMPage} />
       <Route path="/admin/backup" component={AdminBackupPage} />
       <Route path="/admin/csv-import" component={AdminCSVImportPage} />
+      <Route path="/admin/recipes" component={AdminRecipes} />
       
       <Route path="/book" component={BookPage} />
       <Route path="/book-report" component={BookReportPage} />
