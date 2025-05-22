@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Alert } from "@/components/ui/alert";
-import Link from "next/link";
+import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
 export default function AdminRecipes() {
