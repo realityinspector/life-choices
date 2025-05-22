@@ -30,7 +30,7 @@ CREATE TRIGGER update_activity_recipes_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Add indexes after table is created
+-- Add indexes after table and trigger are created
 CREATE INDEX idx_activity_recipes_activity_id ON activity_recipes(activity_id);
 CREATE INDEX idx_activity_recipes_difficulty ON activity_recipes(difficulty);
 CREATE INDEX idx_activity_recipes_tags ON activity_recipes USING GIN (tags);
