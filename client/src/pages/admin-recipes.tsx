@@ -52,15 +52,21 @@ export default function AdminRecipes() {
         body: JSON.stringify(params),
       });
 
-      const data = await res.json().catch(e => {
-        throw new Error('Failed to parse server response');
-      });
-
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to generate recipes');
+        const errorText = await res.text();
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || 'Failed to generate recipes');
+        } catch (e) {
+          throw new Error(`Server error: ${res.status}`);
+        }
       }
 
-      return data;
+      try {
+        return await res.json();
+      } catch (e) {
+        throw new Error('Invalid JSON response from server');
+      }
     },
     onMutate: (variables) => {
       setIsProcessing(true);

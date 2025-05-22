@@ -77,6 +77,11 @@ router.post("/generate-recipes", async (req: AuthenticatedRequest, res) => {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    // Validate request body before processing
+    if (!req.body || !Array.isArray(req.body.activityIds)) {
+      return res.status(400).json({ error: "Invalid request: activityIds must be an array" });
+    }
+
     const { activityIds, globalPrompt } = z.object({
       activityIds: z.array(z.number()),
       globalPrompt: z.string().optional()
