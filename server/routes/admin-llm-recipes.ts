@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { z } from "zod";
 import { storage } from "../storage";
@@ -164,4 +163,4 @@ router.use((err: any, req: any, res: any, next: any) => {
   }
 });
 
-export default router;
+export const adminLLMRecipesRouter = router;

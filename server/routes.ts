@@ -20,6 +20,7 @@ import activityImageRouter from './routes/activity-image';
 import llmRouter from './routes/llm';
 import backupRouter from './routes/backup';
 import csvImportRouter from './routes/csv-import';
+import { adminLLMRecipesRouter } from "./routes/admin-llm-recipes";
 
 // Type guard to check if user is authenticated
 function isAuthenticated(req: Request): boolean {
@@ -58,6 +59,7 @@ router.use('/api/clusters', clusterRouter);
 // Admin routes
 router.use('/api/admin', adminRouter);
 router.use('/api/admin-llm', adminLLMRouter);
+router.use('/api/admin-llm', adminLLMRecipesRouter);
 router.use('/api/admin-backup', adminBackupRouter);
 
 export default router;
