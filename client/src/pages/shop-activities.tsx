@@ -557,11 +557,32 @@ export default function ShopActivitiesPage() {
     queryFn: async ({ signal }) => {
       try {
         const res = await apiRequest('/api/activities/shop/with-images', { signal });
-        return res.json();
+        if (!res.ok) {
+          if (res.status === 401) {
+            // Handle authentication error
+            console.error('Authentication error - session may have expired');
+            // Clear any stale session data
+            localStorage.removeItem('lifechoicesUserData');
+            localStorage.removeItem('lifechoicesActivities');
+            localStorage.removeItem('lifechoicesCart');
+            // Redirect to login
+            window.location.href = '/';
+            return [];
+          }
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        return data;
       } catch (error) {
         // Only log non-abort errors (abort errors are expected during unmounting)
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
           console.error('Error fetching shop activities with images:', error);
+          // Show error toast
+          toast({
+            title: "Error",
+            description: "Failed to load activities. Please try logging in again.",
+            variant: "destructive"
+          });
         }
         return [];
       }

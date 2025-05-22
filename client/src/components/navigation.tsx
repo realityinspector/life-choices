@@ -64,7 +64,7 @@ const Navigation = ({ currentPath }: NavigationProps) => {
   if (isAdmin) {
     utilityButtons.push({
       label: "Admin",
-      path: "/admin/images",
+      path: "/admin",
       icon: <Settings className="h-4 w-4 mr-2" />,
     });
   }

@@ -167,7 +167,15 @@ activityRouter.get('/shop', async (req, res) => {
 activityRouter.get('/shop/with-images', async (req, res) => {
   try {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
+      console.error('Authentication failed:', {
+        session: req.session,
+        cookies: req.headers.cookie,
+        user: req.user
+      });
+      return res.status(401).json({ 
+        message: "Not authenticated",
+        error: "session_expired"
+      });
     }
 
     // Pass undefined as userId to fetch all activities with images without filtering
@@ -216,7 +224,8 @@ activityRouter.get('/shop/with-images', async (req, res) => {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     res.status(500).json({ 
       error: "Failed to fetch shop activities with images",
-      details: errorMessage
+      details: errorMessage,
+      type: "server_error"
     });
   }
 });

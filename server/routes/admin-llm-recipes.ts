@@ -6,11 +6,14 @@ import { ActivityRecipe } from "@shared/schema";
 import { AuthenticatedRequest } from "../auth";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
 const router = Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const systemPrompts = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "../config/llm-prompts.json"), "utf-8")
+  fs.readFileSync(path.join("server/config/llm-prompts.json"), "utf-8")
 );
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

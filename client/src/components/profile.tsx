@@ -186,7 +186,7 @@ const Profile = ({}: ProfileProps) => {
                 Image Management
               </a>
               <a 
-                href="/admin/images" 
+                href="/admin" 
                 className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Settings className="h-5 w-5 mr-2" />
