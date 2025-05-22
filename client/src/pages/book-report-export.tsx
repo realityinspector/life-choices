@@ -231,21 +231,22 @@ export default function BookReportExportPage() {
             pdf.setFillColor(40, 40, 40);
             pdf.roundedRect(imgX - 5, imgY - 5, imgWidth + 10, imgHeight + 10, 5, 5, 'F');
 
-            if (config.imageMode === "blackAndWhite") {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext('2d')!;
-              ctx.drawImage(img, 0, 0);
-              const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-              for (let p = 0; p < imgData.data.length; p += 4) {
-                const avg = (imgData.data[p] + imgData.data[p + 1] + imgData.data[p + 2]) / 3;
-                imgData.data[p] = imgData.data[p + 1] = imgData.data[p + 2] = avg;
+            try {
+              if (config.imageMode === "blackAndWhite") {
+                // Use a simpler grayscale filter for deployed environment
+                pdf.setFillColor(220, 220, 220);
+                pdf.rect(imgX, imgY, imgWidth, imgHeight, 'F');
+                pdf.addImage(img.src, 'JPEG', imgX, imgY, imgWidth, imgHeight, null, 'SLOW');
+              } else {
+                pdf.addImage(img.src, 'JPEG', imgX, imgY, imgWidth, imgHeight, null, 'SLOW');
               }
-              ctx.putImageData(imgData, 0, 0);
-              pdf.addImage(canvas.toDataURL(), 'JPEG', imgX, imgY, imgWidth, imgHeight);
-            } else {
-              pdf.addImage(img, 'JPEG', imgX, imgY, imgWidth, imgHeight);
+            } catch (imageError) {
+              console.error('Error adding image to PDF:', imageError);
+              // Fallback to placeholder if image fails
+              pdf.setFillColor(200, 200, 200);
+              pdf.rect(imgX, imgY, imgWidth, imgHeight, 'F');
+              pdf.setTextColor(100, 100, 100);
+              pdf.text('Image unavailable', imgX + imgWidth/2, imgY + imgHeight/2, { align: 'center' });
             }
           } catch (error) {
             console.error(`Failed to load image for activity ${activity.name}:`, error);
