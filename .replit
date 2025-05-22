@@ -58,3 +58,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "tsx scripts/consolidate-duplicate-activities.ts"
+
+[[workflows.workflow]]
+name = "Consolidate Duplicates"
+author = 42064034
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "tsx scripts/consolidate-duplicate-activities.ts"
