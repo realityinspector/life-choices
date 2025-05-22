@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Activity, ActivityInsert } from "@shared/schema";
@@ -10,7 +9,28 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft, Upload, ExternalLink } from "lucide-react";
+
+// Thumbnail component for the toast
+const ImageThumbnail = ({ src, label }: { src: string | null, label: string }) => {
+  if (!src) return null;
+  
+  return (
+    <div className="flex flex-col items-center mr-4">
+      <div className="text-xs text-gray-500 mb-1">{label}</div>
+      <div className="w-20 h-20 border rounded overflow-hidden relative">
+        <img 
+          src={src} 
+          alt={label} 
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2VlZWVlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTk5OTkiPlVuYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+          }}
+        />
+      </div>
+    </div>
+  );
+};
 
 export default function AdminActivityForm() {
   const [location, navigate] = useLocation();
@@ -32,6 +52,8 @@ export default function AdminActivityForm() {
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 
   // Fetch activity if editing
   const { data: activityData } = useQuery<{activity: Activity, images: any[]}>({
@@ -47,50 +69,66 @@ export default function AdminActivityForm() {
   });
 
   const activity = activityData?.activity;
+  const images = activityData?.images || [];
 
   useEffect(() => {
     if (activity) {
       setFormData(activity);
     }
-  }, [activity]);
+    
+    // Set the current image URL if there are images
+    if (images && images.length > 0) {
+      const currentImage = images[0]; // Using the first image
+      const imageUrl = currentImage.fullUrl || currentImage.path;
+      setCurrentImageUrl(imageUrl);
+      console.log("Current activity image URL:", imageUrl);
+    } else {
+      setCurrentImageUrl(null);
+      console.log("No current image for this activity");
+    }
+  }, [activity, images]);
 
-  // Save mutation
+  // Verify image is accessible
+  const verifyImageExists = async (imagePath: string) => {
+    try {
+      console.log(`Verifying image exists at: ${imagePath}`);
+      const response = await fetch(imagePath);
+      const isOk = response.ok;
+      console.log(`Image verification result: ${isOk ? 'Success' : 'Failed'} (Status: ${response.status})`);
+      return isOk;
+    } catch (error) {
+      console.error("Error verifying image:", error);
+      return false;
+    }
+  };
+
+  // Save mutation - only saves activity data, image upload is handled separately
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // Handle image upload first if there's a file
-      let imageData;
-      if (selectedFile && (isEditing ? activityId : formData.id)) {
-        const formData = new FormData();
-        formData.append('image', selectedFile);
-        formData.append('activityId', isEditing ? activityId : formData.id.toString());
-        
-        const imageRes = await apiRequest('/api/activity-images', {
-          method: 'POST',
-          body: formData
+      setIsUploading(true);
+      try {
+        // Save the activity to get its ID if creating a new one
+        const url = isEditing 
+          ? `/api/admin/activities/${activityId}` 
+          : '/api/admin/activities';
+          
+        const res = await apiRequest(url, {
+          method: isEditing ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
         });
         
-        if (!imageRes.ok) {
-          throw new Error('Failed to upload image');
+        if (!res.ok) {
+          throw new Error('Failed to save activity');
         }
-        imageData = await imageRes.json();
-      }
-      
-      const url = isEditing 
-        ? `/api/admin/activities/${activityId}` 
-        : '/api/admin/activities';
         
-      const res = await apiRequest(url, {
-        method: isEditing ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          imageData
-        })
-      });
-      
-      return res.json();
+        const savedActivity = await res.json();
+        return { activity: savedActivity };
+      } finally {
+        setIsUploading(false);
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/activities'] });
       toast({
         title: 'Success',
@@ -98,10 +136,10 @@ export default function AdminActivityForm() {
       });
       navigate('/admin/activities');
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: 'Error',
-        description: `Failed to ${isEditing ? 'update' : 'create'} activity`,
+        description: error.message || `Failed to ${isEditing ? 'update' : 'create'} activity`,
         variant: 'destructive',
       });
     }
@@ -132,6 +170,22 @@ export default function AdminActivityForm() {
         </CardHeader>
         <CardContent>
           <form className="space-y-4">
+            {currentImageUrl && (
+              <div>
+                <Label>Current Image</Label>
+                <div className="mt-2 w-32 h-32 border rounded overflow-hidden">
+                  <img 
+                    src={currentImageUrl} 
+                    alt="Current activity image" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2VlZWVlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTk5OTkiPlVuYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            
             <div>
               <Label>Name</Label>
               <Input 
@@ -234,11 +288,123 @@ export default function AdminActivityForm() {
 
             <div>
               <Label>Activity Image</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={e => setSelectedFile(e.target.files?.[0] || null)}
-              />
+              <div className="flex flex-col space-y-2">
+                <div className="flex space-x-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                    className="flex-grow"
+                  />
+                  {selectedFile && (
+                    <Button 
+                      type="button" 
+                      onClick={async () => {
+                        if (!activityId || activityId === 'new') {
+                          toast({
+                            title: "Error",
+                            description: "Please save the activity first before uploading an image",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        
+                        setIsUploading(true);
+                        try {
+                          // Create form data for the image upload
+                          const imageFormData = new FormData();
+                          imageFormData.append('image', selectedFile);
+                          imageFormData.append('activityId', activityId.toString());
+                          
+                          console.log(`Uploading image for activity ID: ${activityId}`);
+                          console.log(`Previous image URL: ${currentImageUrl || 'None'}`);
+                          
+                          // Upload the image
+                          const imageRes = await apiRequest('/api/activity-images', {
+                            method: 'POST',
+                            body: imageFormData
+                          });
+                          
+                          if (!imageRes.ok) {
+                            throw new Error('Failed to upload image');
+                          }
+                          
+                          const uploadedImage = await imageRes.json();
+                          console.log("Image upload response:", uploadedImage);
+                          
+                          // Get the new image URL
+                          const newImageUrl = uploadedImage.fullUrl || uploadedImage.path;
+                          console.log(`New image URL: ${newImageUrl}`);
+                          
+                          // Verify the image is accessible
+                          const imageExists = await verifyImageExists(newImageUrl);
+                          
+                          if (!imageExists) {
+                            console.error(`Image verification failed: Image at ${newImageUrl} is not accessible`);
+                            toast({
+                              title: "Image Upload Warning",
+                              description: "Image was uploaded but may not be accessible. Please check the console for details.",
+                              variant: "destructive",
+                            });
+                          } else {
+                            console.log(`Image verification success: Image at ${newImageUrl} is accessible`);
+                            
+                            // Update the current image URL state to display the new image immediately
+                            setCurrentImageUrl(newImageUrl);
+                            
+                            toast({
+                              title: "Image Uploaded Successfully",
+                              description: (
+                                <div className="flex flex-col space-y-3">
+                                  <div className="flex">
+                                    <ImageThumbnail src={currentImageUrl} label="Before" />
+                                    <ImageThumbnail src={newImageUrl} label="After" />
+                                  </div>
+                                  <div>
+                                    <div className="text-sm">File: {uploadedImage.originalFilename}</div>
+                                    <div className="text-sm">Path: {uploadedImage.path}</div>
+                                    <div className="text-sm text-green-600 font-medium">Activity now uses this image</div>
+                                    <a 
+                                      href={newImageUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-blue-500 hover:underline flex items-center mt-1"
+                                    >
+                                      View Image <ExternalLink className="h-3 w-3 ml-1" />
+                                    </a>
+                                  </div>
+                                </div>
+                              ),
+                            });
+                            
+                            // Refresh the activity data to get updated images
+                            queryClient.invalidateQueries({ queryKey: ['/api/admin/activities', activityId] });
+                          }
+                        } catch (error) {
+                          console.error("Error uploading image:", error);
+                          toast({
+                            title: "Error",
+                            description: error instanceof Error ? error.message : "Failed to upload image",
+                            variant: "destructive",
+                          });
+                        } finally {
+                          setIsUploading(false);
+                          setSelectedFile(null);
+                        }
+                      }}
+                      disabled={isUploading || !selectedFile}
+                    >
+                      {isUploading ? 'Uploading...' : 'Upload Now'}
+                    </Button>
+                  )}
+                </div>
+                {selectedFile && (
+                  <div className="text-sm text-green-500 flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    New image selected: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+                  </div>
+                )}
+              </div>
             </div>
           </form>
         </CardContent>
@@ -246,8 +412,18 @@ export default function AdminActivityForm() {
           <Button variant="outline" onClick={() => navigate('/admin/activities')}>
             Cancel
           </Button>
-          <Button onClick={() => saveMutation.mutate()}>
-            {isEditing ? 'Update Activity' : 'Create Activity'}
+          <Button 
+            onClick={() => saveMutation.mutate()} 
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <>
+                <Upload className="mr-2 h-4 w-4 animate-spin" />
+                {isEditing ? 'Updating...' : 'Creating...'}
+              </>
+            ) : (
+              isEditing ? 'Update Activity' : 'Create Activity'
+            )}
           </Button>
         </CardFooter>
       </Card>

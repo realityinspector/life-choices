@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import path from "path";
+import fs from "fs";
 
 const app = express();
 
@@ -19,6 +21,23 @@ app.use((req, res, next) => {
 // Parse JSON and URL-encoded bodies
 app.use(express.json({limit: '50mb'}));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+
+// Set up static file serving for uploads directory
+const uploadsPath = path.join(process.cwd(), "uploads");
+console.log(`Setting up static file serving for uploads directory: ${uploadsPath}`);
+try {
+  // Ensure uploads directory exists
+  if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
+    console.log(`Created uploads directory: ${uploadsPath}`);
+  }
+  
+  // Serve uploaded files
+  app.use('/uploads', express.static(uploadsPath));
+  console.log("Static file serving for uploads configured successfully");
+} catch (error) {
+  console.error(`Error setting up static file serving for uploads: ${error}`);
+}
 
 // Request logging middleware
 app.use((req, res, next) => {

@@ -336,10 +336,12 @@ export class DatabaseStorage implements IStorage {
         if (!map[image.activityId]) {
           map[image.activityId] = [];
         }
-        // Clean the image path by removing workspace prefix
+        // Clean the image path by removing workspace prefix and ensuring it starts with a slash
         const cleanedImage = {
           ...image,
-          path: image.path.replace('/home/runner/workspace', '')
+          path: image.path.replace('/home/runner/workspace', ''),
+          // Ensure path starts with a slash
+          ...(image.path && !image.path.startsWith('/') && { path: `/${image.path}` })
         };
         map[image.activityId].push(cleanedImage);
       }

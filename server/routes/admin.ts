@@ -460,12 +460,29 @@ adminRouter.get('/activities/:id', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ message: "Activity not found" });
     }
 
+    // Get images and add full URLs
     const images = await storage.getActivityImages(id);
+    
+    // Get the base URL from the request
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers.host;
+    const baseUrl = `${protocol}://${host}`;
+    
+    // Add full URL to each image
+    const imagesWithFullUrls = images.map(image => ({
+      ...image,
+      fullUrl: `${baseUrl}${image.path.startsWith('/') ? '' : '/'}${image.path}`
+    }));
+    
+    console.log(`Retrieved activity ${id} with ${imagesWithFullUrls.length} images`);
+    if (imagesWithFullUrls.length > 0) {
+      console.log(`Image URLs: ${imagesWithFullUrls.map(img => img.fullUrl).join(', ')}`);
+    }
 
     // Return combined data
     res.json({
       activity,
-      images
+      images: imagesWithFullUrls
     });
   } catch (error) {
     console.error('Error fetching activity:', error);

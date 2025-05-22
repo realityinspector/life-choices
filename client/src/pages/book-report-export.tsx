@@ -72,11 +72,13 @@ export default function BookReportExportPage() {
 
     setIsGenerating(true);
     try {
+      console.log('Starting PDF generation...');
       let { width, height } = dimensions[config.format];
       // Swap width and height for landscape orientation
       if (config.orientation === "landscape") {
         [width, height] = [height, width];
       }
+      console.log('Creating jsPDF instance with dimensions:', { width, height, orientation: config.orientation });
       const pdf = new jsPDF({
         orientation: config.orientation,
         unit: "mm",
@@ -85,15 +87,29 @@ export default function BookReportExportPage() {
         putOnlyUsedFonts: true,
         floatPrecision: 16
       });
+      console.log('jsPDF instance created successfully');
 
       // Load AOT logo
+      console.log('Loading AOT logo...');
       const aotLogo = new Image();
+      aotLogo.crossOrigin = "anonymous"; // Add cross-origin attribute
       aotLogo.src = '/src/images/aot-logo.png';
-      await new Promise((resolve) => {
+      await new Promise((resolve, reject) => {
         aotLogo.onload = resolve;
+        aotLogo.onerror = (e) => {
+          console.error('Error loading AOT logo:', e);
+          reject(new Error('Failed to load AOT logo'));
+        };
+        // Add timeout to prevent hanging
+        setTimeout(() => reject(new Error('Timeout loading AOT logo')), 5000);
+      }).catch(err => {
+        console.warn('AOT logo loading issue:', err.message);
+        // Continue without the logo rather than failing completely
       });
+      console.log('AOT logo loaded or timed out');
 
       // Process each activity
+      console.log(`Processing ${bookActivitiesList.length} activities...`);
       for (let i = 0; i < bookActivitiesList.length; i++) {
         const activity = bookActivitiesList[i];
 
@@ -199,6 +215,7 @@ export default function BookReportExportPage() {
         // Add image if exists - centered both horizontally and vertically
         if (activity.images && activity.images.length > 0) {
           try {
+            console.log(`Processing image for activity: ${activity.name}`);
             const img = await loadImage(activity.images[0].path);
             let imgWidth = 170;
 
@@ -212,6 +229,7 @@ export default function BookReportExportPage() {
             }
 
             const imgHeight = (img.height * imgWidth) / img.width;
+            console.log(`Image dimensions: ${imgWidth}x${imgHeight}`);
 
             // Calculate centered position for image
             const pageHeight = pdf.internal.pageSize.height;
@@ -229,52 +247,110 @@ export default function BookReportExportPage() {
 
             // Image container background - centered
             pdf.setFillColor(40, 40, 40);
-            pdf.roundedRect(imgX - 5, imgY - 5, imgWidth + 10, imgHeight + 10, 5, 5, 'F');
+            try {
+              pdf.roundedRect(imgX - 5, imgY - 5, imgWidth + 10, imgHeight + 10, 5, 5, 'F');
+            } catch (rectError) {
+              console.warn('Error creating rounded rectangle, using normal rectangle:', rectError);
+              pdf.rect(imgX - 5, imgY - 5, imgWidth + 10, imgHeight + 10, 'F');
+            }
 
             try {
               if (config.imageMode === "blackAndWhite") {
                 // Use a simpler grayscale filter for deployed environment
                 pdf.setFillColor(220, 220, 220);
                 pdf.rect(imgX, imgY, imgWidth, imgHeight, 'F');
-                pdf.addImage(img.src, 'JPEG', imgX, imgY, imgWidth, imgHeight, null, 'SLOW');
+                console.log('Adding black and white image to PDF...');
+                pdf.addImage(img, 'JPEG', imgX, imgY, imgWidth, imgHeight, undefined, 'SLOW');
               } else {
-                pdf.addImage(img.src, 'JPEG', imgX, imgY, imgWidth, imgHeight, null, 'SLOW');
+                console.log('Adding color image to PDF...');
+                pdf.addImage(img, 'JPEG', imgX, imgY, imgWidth, imgHeight, undefined, 'SLOW');
               }
+              console.log('Image added successfully');
             } catch (imageError) {
               console.error('Error adding image to PDF:', imageError);
               // Fallback to placeholder if image fails
               pdf.setFillColor(200, 200, 200);
               pdf.rect(imgX, imgY, imgWidth, imgHeight, 'F');
               pdf.setTextColor(100, 100, 100);
-              pdf.text('Image unavailable', imgX + imgWidth/2, imgY + imgHeight/2, { align: 'center' });
+              try {
+                pdf.text('Image unavailable', imgX + imgWidth/2, imgY + imgHeight/2, { align: 'center' });
+              } catch (textError) {
+                console.warn('Could not add fallback text:', textError);
+              }
             }
           } catch (error) {
-            console.error(`Failed to load image for activity ${activity.name}:`, error);
+            console.error(`Failed to process image for activity ${activity.name}:`, error);
+            // Continue with next activity rather than failing the whole PDF
           }
         }
       }
 
       const filename = `${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`;
-      pdf.save(filename);
+      console.log('Saving PDF to file:', filename);
+      try {
+        pdf.save(filename);
+        console.log('PDF saved successfully');
+      } catch (saveError) {
+        console.error('Error saving PDF:', saveError);
+        throw saveError;
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
+      // Show more detailed error information
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
     } finally {
       setIsGenerating(false);
     }
   };
 
   const loadImage = (src: string): Promise<HTMLImageElement> => {
+    console.log(`Attempting to load image: ${src}`);
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = (e) => {
-        console.error(`Failed to load image: ${src}`, e);
-        reject(new Error(`Failed to load image: ${src}`));
+      
+      // Apply a proper URL to the image path if it's a relative path
+      const fullSrc = src.startsWith('http') ? src : 
+                     src.startsWith('/') ? `${window.location.origin}${src}` : 
+                     `${window.location.origin}/${src}`;
+      
+      console.log(`Using full image path: ${fullSrc}`);
+      
+      img.onload = () => {
+        console.log(`Successfully loaded image: ${fullSrc}`);
+        resolve(img);
       };
-      img.src = src;
+      
+      img.onerror = (e) => {
+        console.error(`Failed to load image: ${fullSrc}`, e);
+        // Create a fallback image rather than failing
+        const fallbackImg = new Image();
+        fallbackImg.width = 300;
+        fallbackImg.height = 200;
+        // Set properties that jspdf can use
+        fallbackImg.src = '';
+        console.log('Using fallback image placeholder');
+        resolve(fallbackImg);
+      };
+      
+      // Set the source last after all event handlers are set up
+      img.src = fullSrc;
+      
       // Add timeout to avoid hanging
-      setTimeout(() => reject(new Error(`Timeout loading image: ${src}`)), 10000);
+      setTimeout(() => {
+        if (!img.complete) {
+          console.warn(`Timeout loading image: ${fullSrc}`);
+          const fallbackImg = new Image();
+          fallbackImg.width = 300;
+          fallbackImg.height = 200;
+          fallbackImg.src = '';
+          resolve(fallbackImg);
+        }
+      }, 5000);
     });
   };
 
