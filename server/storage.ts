@@ -3,7 +3,7 @@ import { UserData, ActivityInsert, User, Activity, users, activities, InsertUser
   eventCategories, lifeEvents, userLifeEvents, SystemPrompt, InsertSystemPrompt, systemPrompts,
   LLMConversation, InsertLLMConversation, llmConversations, LLMMessage, InsertLLMMessage, llmMessages,
   ActivityCluster, InsertActivityCluster, activityClusters, ActivityInvitation, InsertActivityInvitation, activityInvitations,
-  ActivityImage, InsertActivityImage, activityImages } from "@shared/schema";
+  ActivityImage, InsertActivityImage, activityImages, ActivityRecipe, InsertActivityRecipe, activityRecipes } from "@shared/schema";
 import { eq, and, isNull, desc, or, lte, gt } from "drizzle-orm";
 import session from "express-session";
 import pgSessionPkg from "connect-pg-simple";
@@ -95,6 +95,10 @@ export interface IStorage {
   getLLMMessages(conversationId: number): Promise<LLMMessage[]>;
   getLLMMessage(id: number): Promise<LLMMessage | undefined>;
   createLLMMessage(message: InsertLLMMessage): Promise<LLMMessage>;
+
+  // Activity recipe methods
+  createActivityRecipe(recipe: InsertActivityRecipe): Promise<ActivityRecipe>;
+  getActivityRecipes(activityId: number): Promise<ActivityRecipe[]>;
 
   // Session store
   sessionStore: session.Store;
@@ -702,6 +706,20 @@ export class DatabaseStorage implements IStorage {
     });
 
     return result[0];
+  }
+
+  async createActivityRecipe(recipe: InsertActivityRecipe): Promise<ActivityRecipe> {
+    const [newRecipe] = await db.insert(activityRecipes)
+      .values(recipe)
+      .returning();
+    return newRecipe;
+  }
+
+  async getActivityRecipes(activityId: number): Promise<ActivityRecipe[]> {
+    return db.select()
+      .from(activityRecipes)
+      .where(eq(activityRecipes.activityId, activityId))
+      .orderBy(activityRecipes.orderIndex);
   }
 }
 
