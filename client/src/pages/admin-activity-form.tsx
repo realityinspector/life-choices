@@ -59,9 +59,10 @@ export default function AdminActivityForm() {
     mutationFn: async () => {
       // Handle image upload first if there's a file
       let imageData;
-      if (selectedFile) {
+      if (selectedFile && (isEditing ? activityId : formData.id)) {
         const formData = new FormData();
         formData.append('image', selectedFile);
+        formData.append('activityId', isEditing ? activityId : formData.id.toString());
         
         const imageRes = await apiRequest('/api/activity-images', {
           method: 'POST',
