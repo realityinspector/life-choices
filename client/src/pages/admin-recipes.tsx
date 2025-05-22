@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Activity } from "@shared/schema";
@@ -44,38 +45,21 @@ export default function AdminRecipes() {
       globalPrompt?: string,
       individualPrompts?: Record<number, string>
     }) => {
-      try {
-        const res = await apiRequest('/api/admin-llm/generate-recipes', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify(params),
-        });
+      const res = await apiRequest('/api/admin-llm/generate-recipes', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(params)
+      });
 
-        const responseText = await res.text();
-        console.log('Response headers:', Object.fromEntries(res.headers.entries()));
-        
-        try {
-          if (!responseText.trim()) {
-            throw new Error('Empty response from server');
-          }
-          return JSON.parse(responseText);
-        } catch (e) {
-          console.error('Failed to parse response:', responseText.substring(0, 500));
-          throw new Error(`Server response error: ${e.message}`);
-        }
-
-        if (!res.ok) {
-          throw new Error(data.error || data.details || 'Failed to generate recipes');
-        }
-
-        return data;
-      } catch (error) {
-        throw error instanceof Error ? error : new Error('Network request failed');
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error: ${errorText}`);
       }
+
+      return res.json();
     },
     onMutate: (variables) => {
       setIsProcessing(true);
@@ -85,7 +69,6 @@ export default function AdminRecipes() {
       setProgress({ current: 0, total: 0 });
       setIsProcessing(false);
       
-      // Show success message with results
       const successful = data.results.filter(r => r.status === 'success').length;
       const failed = data.results.filter(r => r.status === 'failed').length;
       
@@ -95,7 +78,6 @@ export default function AdminRecipes() {
         variant: successful ? "default" : "destructive"
       });
 
-      // Refresh activities data
       queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
     },
     onError: (error: Error) => {
@@ -113,13 +95,14 @@ export default function AdminRecipes() {
   const handleGenerateRecipes = async () => {
     if (!activities || selectedActivities.size === 0) return;
 
-    setIsProcessing(true);
-    setProgress({ current: 0, total: selectedActivities.size });
-
-    await generateRecipesMutation.mutateAsync({
-      activityIds: Array.from(selectedActivities),
-      globalPrompt: globalPrompt || undefined
-    });
+    try {
+      await generateRecipesMutation.mutateAsync({
+        activityIds: Array.from(selectedActivities),
+        globalPrompt: globalPrompt || undefined
+      });
+    } catch (error) {
+      console.error('Recipe generation error:', error);
+    }
   };
 
   const handleSelectAll = () => {
@@ -142,14 +125,14 @@ export default function AdminRecipes() {
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold mb-4">Admin: Recipe Management</h1>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/admin" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Admin Dashboard
-            </Link>
-          </Button>
-        </div>
+        <h1 className="text-2xl font-bold mb-4">Admin: Recipe Management</h1>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/admin" className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Admin Dashboard
+          </Link>
+        </Button>
+      </div>
 
       <Card className="p-4 mb-4">
         <h2 className="text-lg font-semibold mb-2">Global System Prompt</h2>
