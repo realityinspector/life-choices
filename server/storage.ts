@@ -704,13 +704,13 @@ export class DatabaseStorage implements IStorage {
   async createActivityRecipe(recipe: Recipe): Promise<void> {
     try {
       await db.insert(activityRecipes).values({
-        activity_id: recipe.activityId,
+        activityId: recipe.activityId,
         name: recipe.name,
         description: recipe.description,
         ingredients: recipe.ingredients,
         instructions: recipe.instructions,
-        prep_time: recipe.prepTime,
-        cook_time: recipe.cookTime,
+        prepTime: recipe.prepTime,
+        cookTime: recipe.cookTime,
         servings: recipe.servings,
         difficulty: recipe.difficulty,
         tags: recipe.tags
