@@ -43,29 +43,35 @@ export default function AdminRecipes() {
       globalPrompt?: string,
       individualPrompts?: Record<number, string>
     }) => {
-      const res = await apiRequest('/api/admin-llm/generate-recipes', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(params),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        try {
-          const errorJson = JSON.parse(errorText);
-          throw new Error(errorJson.error || 'Failed to generate recipes');
-        } catch (e) {
-          throw new Error(`Server error: ${res.status}`);
-        }
-      }
-
       try {
-        return await res.json();
-      } catch (e) {
-        throw new Error('Invalid JSON response from server');
+        const res = await apiRequest('/api/admin-llm/generate-recipes', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(params),
+        });
+
+        const responseText = await res.text();
+        
+        if (!res.ok) {
+          try {
+            const errorJson = JSON.parse(responseText);
+            throw new Error(errorJson.error || 'Failed to generate recipes');
+          } catch (e) {
+            throw new Error(`Server error (${res.status}): ${responseText.substring(0, 100)}`);
+          }
+        }
+
+        try {
+          return JSON.parse(responseText);
+        } catch (e) {
+          console.error('Failed to parse response:', responseText);
+          throw new Error('Server returned invalid JSON');
+        }
+      } catch (error) {
+        throw error instanceof Error ? error : new Error('Network request failed');
       }
     },
     onMutate: (variables) => {
