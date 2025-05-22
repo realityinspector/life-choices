@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Activity } from "@shared/schema";
@@ -9,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Alert } from "@/components/ui/alert";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export default function AdminRecipes() {
   const [globalPrompt, setGlobalPrompt] = useState("");
@@ -47,7 +48,7 @@ export default function AdminRecipes() {
 
   const handleGenerateRecipes = async () => {
     if (!activities || selectedActivities.size === 0) return;
-    
+
     setIsProcessing(true);
     setProgress({ current: 0, total: selectedActivities.size });
 
@@ -76,8 +77,16 @@ export default function AdminRecipes() {
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-4">Generate Activity Recipes</h1>
-      
+      <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold mb-4">Admin: Recipe Management</h1>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Admin Dashboard
+            </Link>
+          </Button>
+        </div>
+
       <Card className="p-4 mb-4">
         <h2 className="text-lg font-semibold mb-2">Global System Prompt</h2>
         <Textarea 
