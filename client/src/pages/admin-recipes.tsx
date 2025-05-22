@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Activity } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +13,7 @@ import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
 export default function AdminRecipes() {
+  const { toast } = useToast();
   const [globalPrompt, setGlobalPrompt] = useState("");
   const [selectedActivities, setSelectedActivities] = useState<Set<number>>(new Set());
   const [progress, setProgress] = useState<{current: number; total: number}>({ current: 0, total: 0 });
