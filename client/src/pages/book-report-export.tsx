@@ -80,7 +80,10 @@ export default function BookReportExportPage() {
       const pdf = new jsPDF({
         orientation: config.orientation,
         unit: "mm",
-        format: [width, height]
+        format: [width, height],
+        compress: true,
+        putOnlyUsedFonts: true,
+        floatPrecision: 16
       });
 
       // Load AOT logo
@@ -264,8 +267,13 @@ export default function BookReportExportPage() {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => resolve(img);
-      img.onerror = reject;
+      img.onerror = (e) => {
+        console.error(`Failed to load image: ${src}`, e);
+        reject(new Error(`Failed to load image: ${src}`));
+      };
       img.src = src;
+      // Add timeout to avoid hanging
+      setTimeout(() => reject(new Error(`Timeout loading image: ${src}`)), 10000);
     });
   };
 
