@@ -18,10 +18,18 @@ export default function AdminRecipes() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const { data: activities } = useQuery<Activity[]>({
-    queryKey: ['/api/activities'],
+    queryKey: ['/api/admin/activities'],
     queryFn: async () => {
-      const res = await apiRequest('/api/activities');
-      return res.json();
+      try {
+        const res = await apiRequest('/api/admin/activities');
+        if (!res.ok) {
+          throw new Error(`Failed to fetch activities: ${res.status}`);
+        }
+        return res.json();
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+        throw error;
+      }
     }
   });
 
