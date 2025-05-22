@@ -148,18 +148,22 @@ export function BookProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const selectBook = (book: Book | null) => {
+  const selectBook = async (book: Book | null) => {
     setCurrentBook(book);
     if (book) {
-      const bookActivitySet = bookActivities.get(book.id);
-      if (bookActivitySet) {
-        const activities = new Set(bookActivitySet);
-        setSelectedActivities(activities);
+      try {
+        const response = await apiRequest(`/api/books/${book.id}`);
+        const data = await response.json();
+        const activityIds = new Set(data.activities.map((a: Activity) => a.id));
+        setSelectedActivities(new Set());
         setBookActivities(prev => {
           const newMap = new Map(prev);
-          newMap.set(book.id, activities);
+          newMap.set(book.id, activityIds);
           return newMap;
         });
+      } catch (err) {
+        console.error('Error loading book activities:', err);
+        setError('Failed to load book activities');
       }
     } else {
       setSelectedActivities(new Set());
