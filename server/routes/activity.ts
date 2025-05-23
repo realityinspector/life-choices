@@ -656,3 +656,30 @@ activityRouter.post('/:id/skip', async (req: AuthenticatedRequest, res) => {
     res.status(500).json({ message: "Failed to skip activity" });
   }
 });
+
+// Get shared activity by token (public access, no authentication required)
+activityRouter.get('/shared/:token', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    
+    if (!token) {
+      return res.status(400).json({ message: "Token is required" });
+    }
+
+    const sharedActivity = await storage.getSharedActivityByToken(token);
+    
+    if (!sharedActivity) {
+      return res.status(404).json({ message: "Shared activity not found or expired" });
+    }
+
+    res.json({ 
+      success: true,
+      activity: sharedActivity 
+    });
+  } catch (error) {
+    console.error('Error fetching shared activity:', error);
+    res.status(500).json({ message: "Failed to fetch shared activity" });
+  }
+});
+
+export default activityRouter;

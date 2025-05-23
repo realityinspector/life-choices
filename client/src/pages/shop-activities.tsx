@@ -102,7 +102,7 @@ const ActivityCard = ({
       return;
     }
 
-    const shareableUrl = `https://lifechoices.app/share/${activity.name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 8)}`;
+    const shareableUrl = `https://lifechoices-aotlabs.replit.app/share/${activity.name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 8)}`;
     setShareUrl(shareableUrl);
 
     toast({
@@ -562,7 +562,7 @@ function completeActivityData(activities: EnhancedActivityInsert[]): Required<En
 }
 
 export default function ShopActivitiesPage() {
-  const { userData, activities, addActivity, completeUserActivity, addActivitiesToCart, getCartActivities, isAdmin } = useUser();
+  const { userData, activities, addActivity, completeActivity, addActivitiesToCart, getCartActivities, isAdmin } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCart, setShowCart] = useState(false);
@@ -778,7 +778,7 @@ export default function ShopActivitiesPage() {
   };
 
   const handleCompleteActivity = (activity: Activity) => {
-    completeUserActivity(activity.id);
+    completeActivity(activity.id);
 
     toast({
       title: "Activity Completed",

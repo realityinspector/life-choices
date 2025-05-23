@@ -63,7 +63,7 @@ const ActivityCard = ({
       return;
     }
     
-    const shareableUrl = `https://lifechoices.app/share/${activity.name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 8)}`;
+    const shareableUrl = `https://lifechoices-aotlabs.replit.app/share/${activity.name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(2, 8)}`;
     setShareUrl(shareableUrl);
     
     toast({

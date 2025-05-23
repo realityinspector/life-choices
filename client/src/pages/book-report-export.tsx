@@ -65,7 +65,7 @@ export default function BookReportExportPage() {
       const res = await apiRequest('/api/activities/shop/with-images', { signal });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
-      
+
       // Process the received data to ensure recipes have proper ingredient arrays
       return data.map((activity: any) => {
         if (activity.recipes && activity.recipes.length > 0) {
@@ -90,34 +90,35 @@ export default function BookReportExportPage() {
     enabled: !!currentBook
   });
 
+  // Better default configuration for a nice looking PDF
   const [config, setConfig] = useState<PDFConfig>({
     orientation: "portrait",
     format: "letter",
-    backgroundColor: "#000000",
+    backgroundColor: "#FFFFFF",  // White background for clean look
     fontName: "helvetica",
     fontSize: 12,
     imageMode: "color",
     logoCorner: "topRight",
     imageSize: "medium",
-    logoSize: "medium",
+    logoSize: "small",
     logoAsWatermark: false,
-    textColor: "#FFFFFF",
+    textColor: "#333333",  // Dark gray for better readability
     // Ingredient display options
     showIngredients: true,
-    ingredientFontSize: 10,
+    ingredientFontSize: 11,
     ingredientPlacement: "belowImage",
     ingredientPillStyle: "rounded",
-    ingredientTextColor: "#000000",
-    ingredientBgColor: "#FFFFFF",
+    ingredientTextColor: "#333333",
+    ingredientBgColor: "#F3F4F6",  // Light gray background
     // Instructions display options
     showInstructions: true,
-    instructionsFontSize: 10,
-    instructionsPlacement: "afterIngredients",
+    instructionsFontSize: 11,
+    instructionsPlacement: "belowImage",
     // Advanced styling options
-    primaryColor: "#000000",
-    secondaryColor: "#FFFFFF",
-    accentColor: "#000000",
-    surfaceColor: "#FFFFFF",
+    primaryColor: "#2563EB",  // Nice blue
+    secondaryColor: "#F59E0B",  // Amber
+    accentColor: "#10B981",  // Green
+    surfaceColor: "#F9FAFB",  // Very light gray
     adaptiveTextSizing: true,
     showPageNumbers: true,
     contentDensity: "normal",
@@ -146,7 +147,7 @@ export default function BookReportExportPage() {
       if (config.orientation === "landscape") {
         [width, height] = [height, width];
       }
-      console.log('Creating jsPDF instance with dimensions:', { width, height, orientation: config.orientation });
+
       const pdf = new jsPDF({
         orientation: config.orientation,
         unit: "mm",
@@ -155,10 +156,8 @@ export default function BookReportExportPage() {
         putOnlyUsedFonts: true,
         floatPrecision: 16
       });
-      console.log('jsPDF instance created successfully');
 
       // Load AOT logo
-      console.log('Loading AOT logo...');
       const aotLogo = new Image();
       aotLogo.crossOrigin = "anonymous";
       aotLogo.src = '/src/images/aot-logo.png';
@@ -166,55 +165,31 @@ export default function BookReportExportPage() {
         aotLogo.onload = resolve;
         aotLogo.onerror = (e) => {
           console.error('Error loading AOT logo:', e);
-          reject(new Error('Failed to load AOT logo'));
+          resolve(null); // Continue without logo
         };
-        setTimeout(() => reject(new Error('Timeout loading AOT logo')), 5000);
-      }).catch(err => {
-        console.warn('AOT logo loading issue:', err.message);
+        setTimeout(() => resolve(null), 5000);
       });
-      console.log('AOT logo loaded or timed out');
 
-      // Modern color palette
+      // Parse colors helper
+      const parseColor = (hex: string) => {
+        const r = parseInt(hex.slice(1,3), 16);
+        const g = parseInt(hex.slice(3,5), 16); 
+        const b = parseInt(hex.slice(5,7), 16);
+        return { r, g, b };
+      };
+
       const colors = {
-        primary: config.primaryColor === "#000000" 
-          ? { r: 33, g: 150, b: 243 }  // Default blue if black was selected
-          : { r: parseInt(config.primaryColor.slice(1,3), 16), 
-              g: parseInt(config.primaryColor.slice(3,5), 16), 
-              b: parseInt(config.primaryColor.slice(5,7), 16) },
-        
-        secondary: config.secondaryColor === "#FFFFFF" 
-          ? { r: 255, g: 193, b: 7 }  // Default amber if white was selected
-          : { r: parseInt(config.secondaryColor.slice(1,3), 16), 
-              g: parseInt(config.secondaryColor.slice(3,5), 16), 
-              b: parseInt(config.secondaryColor.slice(5,7), 16) },
-        
-        background: config.backgroundColor === "#000000" 
-          ? { r: 15, g: 15, b: 15 }  // Near black for better contrast
-          : { r: parseInt(config.backgroundColor.slice(1,3), 16), 
-              g: parseInt(config.backgroundColor.slice(3,5), 16), 
-              b: parseInt(config.backgroundColor.slice(5,7), 16) },
-        
-        surface: config.surfaceColor === "#FFFFFF"
-          ? { r: 30, g: 30, b: 30 }  // Dark surface if white was selected (for contrast)
-          : { r: parseInt(config.surfaceColor.slice(1,3), 16), 
-              g: parseInt(config.surfaceColor.slice(3,5), 16), 
-              b: parseInt(config.surfaceColor.slice(5,7), 16) },
-        
-        onSurface: config.textColor === "#FFFFFF" 
-          ? { r: 255, g: 255, b: 255 }  // White text on dark
-          : { r: parseInt(config.textColor.slice(1,3), 16), 
-              g: parseInt(config.textColor.slice(3,5), 16), 
-              b: parseInt(config.textColor.slice(5,7), 16) },
-        
-        accent: config.accentColor === "#000000"
-          ? { r: 100, g: 255, b: 218 }  // Default teal accent
-          : { r: parseInt(config.accentColor.slice(1,3), 16), 
-              g: parseInt(config.accentColor.slice(3,5), 16), 
-              b: parseInt(config.accentColor.slice(5,7), 16) }
+        background: parseColor(config.backgroundColor),
+        text: parseColor(config.textColor),
+        primary: parseColor(config.primaryColor),
+        secondary: parseColor(config.secondaryColor),
+        surface: parseColor(config.surfaceColor),
+        accent: parseColor(config.accentColor),
+        ingredientBg: parseColor(config.ingredientBgColor),
+        ingredientText: parseColor(config.ingredientTextColor)
       };
 
       // Process each activity
-      console.log(`Processing ${bookActivitiesList.length} activities...`);
       for (let i = 0; i < bookActivitiesList.length; i++) {
         const activity = bookActivitiesList[i];
 
@@ -222,172 +197,354 @@ export default function BookReportExportPage() {
           pdf.addPage();
         }
 
-        // Define format variables first to avoid initialization errors
         const pageWidth = pdf.internal.pageSize.width;
         const pageHeight = pdf.internal.pageSize.height;
         const isPhone = config.format === "phone";
-        const margin = isPhone ? 10 : 25;
-        const contentWidth = pageWidth - (2 * margin);
 
-        // Page background - white like web version
-        pdf.setFillColor(255, 255, 255);
+        // Responsive margins
+        const margin = isPhone ? 10 : 20;
+        const contentWidth = pageWidth - (2 * margin);
+        const spacing = config.contentDensity === "compact" ? 5 : 
+                       config.contentDensity === "spacious" ? 15 : 10;
+
+        // Fill background
+        pdf.setFillColor(colors.background.r, colors.background.g, colors.background.b);
         pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-        
-        // Add thin decorative header bar for branding
-        pdf.setFillColor(colors.primary.r, colors.primary.g, colors.primary.b);
-        pdf.rect(0, 0, pageWidth, isPhone ? 8 : 12, 'F');
-        
-        // Setup card-like container like web layout
-        const cardY = margin + (isPhone ? 8 : 12);
-        const cardHeight = pageHeight - cardY - margin;
-        
-        // Card background - white with subtle shadow
-        pdf.setFillColor(248, 248, 248);
-        pdf.roundedRect(margin, cardY, contentWidth, cardHeight, 5, 5, 'F');
-        
-        // Add a subtle border to card
-        pdf.setDrawColor(220, 220, 220);
-        pdf.setLineWidth(0.5);
-        pdf.roundedRect(margin, cardY, contentWidth, cardHeight, 5, 5, 'S');
-        
-        // Content starting position
-        let currentY = cardY + (isPhone ? 15 : 25);
-        
-        // Add logo in top right corner of card
-        const logoSize = isPhone ? 20 : 35;
-        const logoHeight = (234/227) * logoSize;
-        const logoX = pageWidth - margin - logoSize - 15;
-        const logoY = cardY + 15;
-        
-        try {
-          // Add logo
-          pdf.addImage(aotLogo, 'PNG', logoX, logoY, logoSize, logoHeight);
-        } catch (error) {
-          console.warn('Failed to add logo:', error);
-        }
-        
-        // Modern typography for title - dark text like web
-        pdf.setFont(config.fontName, 'bold');
-        pdf.setFontSize(isPhone ? 16 : 20);
-        pdf.setTextColor(50, 50, 50);
-        
-        // Title text
-        const titleLines = pdf.splitTextToSize(activity.name, contentWidth * 0.7);
-        titleLines.forEach((line: string, index: number) => {
-          pdf.text(line, margin + 15, currentY + (index * (isPhone ? 7 : 10)));
-        });
-        currentY += titleLines.length * (isPhone ? 7 : 10) + 10;
-        
-        // Category with subtle chip design like web
-        if (activity.category) {
-          pdf.setFontSize(isPhone ? 10 : 12);
-          pdf.setFont(config.fontName, 'normal');
-          const categoryText = activity.category;
-          
-          // Add "Category:" label like web
-          pdf.setTextColor(100, 100, 100);
-          pdf.text("Category:", margin + 15, currentY);
-          
-          // Category value
-          pdf.setTextColor(50, 50, 50);
-          pdf.text(categoryText, margin + 80, currentY);
-          currentY += isPhone ? 15 : 20;
-        }
-        
-        // Add a separator line 
-        pdf.setDrawColor(230, 230, 230);
-        pdf.setLineWidth(0.5);
-        pdf.line(margin + 15, currentY, margin + contentWidth - 15, currentY);
-        currentY += isPhone ? 15 : 20;
-        
-        // Add instructions section ONCE before image (like web layout)
-        if (activity.recipes && activity.recipes.length > 0 && activity.recipes[0]?.instructions) {
-          // Add "Instructions:" label like web
-          pdf.setFont(config.fontName, 'medium');
-          pdf.setFontSize(isPhone ? 12 : 14);
-          pdf.setTextColor(50, 50, 50);
-          pdf.text("Instructions:", margin + 15, currentY);
-          currentY += isPhone ? 10 : 15;
-          
-          // Instructions content in gray container like web
-          pdf.setFillColor(245, 245, 245);
-          
-          // Get cleaned instructions text
-          const cleanInstructions = activity.recipes[0].instructions.replace(/^\*+\s*/, '').trim();
-          
-          // Split text to fit
-          pdf.setFont(config.fontName, 'normal');
-          pdf.setFontSize(isPhone ? 10 : 12);
-          const textWidth = contentWidth - 40;
-          const lines = pdf.splitTextToSize(cleanInstructions, textWidth);
-          
-          // Calculate how many lines fit
-          const lineHeight = (isPhone ? 10 : 12) * 1.2;
-          const maxLines = config.instructionMaxLines || Math.min(8, lines.length);
-          const displayLines = lines.length > maxLines ? lines.slice(0, maxLines - 1) : lines;
-          
-          // Gray container for instructions like web
-          const instrHeight = Math.max(30, displayLines.length * lineHeight + 20);
-          pdf.roundedRect(margin + 15, currentY, contentWidth - 30, instrHeight, 3, 3, 'F');
-          
-          // Add text
-          pdf.setTextColor(80, 80, 80);
-          displayLines.forEach((line, index) => {
-            pdf.text(line, margin + 25, currentY + 15 + (index * lineHeight));
-          });
-          
-          // Add ellipsis if content was truncated
-          if (lines.length > maxLines) {
-            pdf.text("...", margin + 25, currentY + 15 + ((maxLines - 1) * lineHeight));
+
+        // Calculate logo dimensions and position first for adaptive layout
+        let logoInfo = null;
+        if (aotLogo && aotLogo.complete) {
+          const logoSizes = { small: 20, medium: 30, large: 40 };
+          const logoWidth = logoSizes[config.logoSize];
+          const logoHeight = (234/227) * logoWidth;
+
+          // Add padding for the black background
+          const bgPadding = 4;
+          const bgWidth = logoWidth + (bgPadding * 2);
+          const bgHeight = logoHeight + (bgPadding * 2);
+
+          let logoX = margin;
+          let logoY = margin;
+          let bgX = logoX - bgPadding;
+          let bgY = logoY - bgPadding;
+
+          if (config.logoCorner === "topRight") {
+            logoX = pageWidth - margin - logoWidth;
+            bgX = logoX - bgPadding;
+          } else if (config.logoCorner === "bottomLeft") {
+            logoY = pageHeight - margin - logoHeight;
+            bgY = logoY - bgPadding;
+          } else if (config.logoCorner === "bottomRight") {
+            logoX = pageWidth - margin - logoWidth;
+            logoY = pageHeight - margin - logoHeight;
+            bgX = logoX - bgPadding;
+            bgY = logoY - bgPadding;
           }
-          
-          currentY += instrHeight + (isPhone ? 15 : 20);
+
+          logoInfo = {
+            logoX, logoY, logoWidth, logoHeight,
+            bgX, bgY, bgWidth, bgHeight
+          };
         }
-        
-        // Add image if available
+
+        let currentY = margin;
+
+        // Calculate adaptive content area based on logo position
+        let titleContentWidth = contentWidth;
+        let titleStartY = currentY;
+
+        if (logoInfo) {
+          const isTopLogo = config.logoCorner === "topLeft" || config.logoCorner === "topRight";
+          const isRightLogo = config.logoCorner === "topRight" || config.logoCorner === "bottomRight";
+
+          if (isTopLogo) {
+            // If logo is at top, ensure content starts below it or doesn't overlap
+            const logoBottomY = logoInfo.bgY + logoInfo.bgHeight + spacing;
+            if (isRightLogo) {
+              // Logo is top-right, reduce title width and check vertical clearance
+              titleContentWidth = contentWidth - logoInfo.bgWidth - spacing;
+            } else {
+              // Logo is top-left, move content start point if needed
+              titleStartY = Math.max(currentY, logoBottomY);
+            }
+          } else if (isRightLogo) {
+            // Logo is bottom-right, reduce content width but don't affect top positioning
+            titleContentWidth = contentWidth - logoInfo.bgWidth - spacing;
+          }
+        }
+
+        currentY = titleStartY;
+
+        // Add header with title (with adaptive width)
+        const titleFontSize = isPhone ? 18 : 24;
+        pdf.setFont(config.fontName, 'bold');
+        pdf.setFontSize(titleFontSize);
+        pdf.setTextColor(colors.text.r, colors.text.g, colors.text.b);
+
+        // Wrap title text with adaptive width
+        const titleLines = pdf.splitTextToSize(activity.name, titleContentWidth);
+        titleLines.forEach((line: string, index: number) => {
+          pdf.text(line, margin, currentY + (index + 1) * (titleFontSize * 0.4));
+        });
+        currentY += titleLines.length * (titleFontSize * 0.4) + spacing;
+
+        // Add logo in corner with black rounded background
+        if (logoInfo) {
+          // Draw black rounded square background
+          pdf.setFillColor(0, 0, 0); // Black background
+          pdf.roundedRect(logoInfo.bgX, logoInfo.bgY, logoInfo.bgWidth, logoInfo.bgHeight, 3, 3, 'F');
+
+          if (config.logoAsWatermark) {
+            pdf.saveGraphicsState();
+            pdf.setGState(new pdf.GState({ opacity: 0.2 }));
+          }
+
+          pdf.addImage(aotLogo, 'PNG', logoInfo.logoX, logoInfo.logoY, logoInfo.logoWidth, logoInfo.logoHeight);
+
+          if (config.logoAsWatermark) {
+            pdf.restoreGraphicsState();
+          }
+        }
+
+        // Category section
+        if (activity.category) {
+          pdf.setFont(config.fontName, 'normal');
+          pdf.setFontSize(config.fontSize);
+          pdf.setTextColor(colors.primary.r, colors.primary.g, colors.primary.b);
+          pdf.text(`Category: ${activity.category}`, margin, currentY);
+          currentY += spacing;
+        }
+
+        // Divider line
+        pdf.setDrawColor(colors.surface.r, colors.surface.g, colors.surface.b);
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, currentY, pageWidth - margin, currentY);
+        currentY += spacing;
+
+        // Instructions section (if placement is before image)
+        if (config.showInstructions && activity.recipes?.[0]?.instructions && 
+            config.instructionsPlacement !== "belowImage") {
+          pdf.setFont(config.fontName, 'bold');
+          pdf.setFontSize(config.instructionsFontSize + 2);
+          pdf.setTextColor(colors.text.r, colors.text.g, colors.text.b);
+          pdf.text("Instructions:", margin, currentY);
+          currentY += spacing / 2;
+
+          // Instructions content
+          pdf.setFont(config.fontName, 'normal');
+          pdf.setFontSize(config.instructionsFontSize);
+          const instructionText = activity.recipes[0].instructions.replace(/^\*+\s*/, '').trim();
+          const instructionLines = pdf.splitTextToSize(instructionText, contentWidth);
+
+          const maxLines = config.instructionMaxLines || instructionLines.length;
+          const displayLines = instructionLines.slice(0, maxLines);
+
+          displayLines.forEach((line: string) => {
+            pdf.text(line, margin, currentY);
+            currentY += config.instructionsFontSize * 0.4;
+          });
+
+          if (instructionLines.length > maxLines) {
+            pdf.text("...", margin, currentY);
+            currentY += config.instructionsFontSize * 0.4;
+          }
+
+          currentY += spacing;
+        }
+
+        // Add image with strict no-overlap positioning
         if (activity.images && activity.images.length > 0) {
           try {
             const img = await loadImage(activity.images[0].path);
-            
-            // Calculate image dimensions
-            const imgMaxWidth = contentWidth - 30;
-            const imgMaxHeight = 150;
-            
-            let imgWidth = imgMaxWidth;
-            let imgHeight = (img.height * imgWidth) / img.width;
-            
-            // Adjust if too tall
-            if (imgHeight > imgMaxHeight) {
-              imgHeight = imgMaxHeight;
-              imgWidth = (img.width * imgHeight) / img.height;
+            if (img && img.complete && img.width > 0) {
+              // Start with full content area
+              let availableWidth = contentWidth;
+              let availableHeight = pageHeight - currentY - margin - 40;
+              let contentStartX = margin;
+              let imageStartY = currentY;
+
+              // If logo exists, create exclusion zones
+              if (logoInfo) {
+                const logoLeft = logoInfo.bgX;
+                const logoRight = logoInfo.bgX + logoInfo.bgWidth;
+                const logoTop = logoInfo.bgY;
+                const logoBottom = logoInfo.bgY + logoInfo.bgHeight;
+
+                // Check if current image position would intersect with logo
+                const imageLeft = margin;
+                const imageRight = pageWidth - margin;
+                const imageTop = currentY;
+
+                // Calculate initial image dimensions to check for overlap
+                const tempImageSizes = {
+                  small: { width: contentWidth * 0.5, maxHeight: 80 },
+                  medium: { width: contentWidth * 0.8, maxHeight: 120 },
+                  large: { width: contentWidth, maxHeight: 160 }
+                };
+
+                const tempSizeConfig = tempImageSizes[config.imageSize];
+                let tempImgWidth = tempSizeConfig.width;
+                let tempImgHeight = (img.height * tempImgWidth) / img.width;
+
+                if (tempImgHeight > tempSizeConfig.maxHeight) {
+                  tempImgHeight = tempSizeConfig.maxHeight;
+                  tempImgWidth = (img.width * tempImgHeight) / img.height;
+                }
+
+                const imageBottom = imageTop + tempImgHeight;
+                const imageCenterX = margin + (contentWidth - tempImgWidth) / 2;
+                const imageLeftEdge = imageCenterX;
+                const imageRightEdge = imageCenterX + tempImgWidth;
+
+                // Check for overlap and adjust accordingly
+                const horizontalOverlap = !(imageRightEdge < logoLeft || imageLeftEdge > logoRight);
+                const verticalOverlap = !(imageBottom < logoTop || imageTop > logoBottom);
+
+                if (horizontalOverlap && verticalOverlap) {
+                  // There is overlap - we need to fix this
+
+                  if (config.logoCorner === "topLeft") {
+                    // Move image to the right of logo or below it
+                    const spaceToRight = pageWidth - margin - logoRight - spacing;
+                    const spaceBelow = pageHeight - logoBottom - spacing - margin;
+
+                    if (spaceToRight >= tempImgWidth * 0.5) {
+                      // Move to right of logo
+                      contentStartX = logoRight + spacing;
+                      availableWidth = pageWidth - contentStartX - margin;
+                    } else {
+                      // Move below logo
+                      imageStartY = logoBottom + spacing;
+                      availableHeight = pageHeight - imageStartY - margin - 40;
+                    }
+                  }
+                  else if (config.logoCorner === "topRight") {
+                    // Move image to the left of logo or below it
+                    const spaceToLeft = logoLeft - margin - spacing;
+                    const spaceBelow = pageHeight - logoBottom - spacing - margin;
+
+                    if (spaceToLeft >= tempImgWidth * 0.5) {
+                      // Keep left aligned but reduce width
+                      availableWidth = logoLeft - margin - spacing;
+                    } else {
+                      // Move below logo
+                      imageStartY = logoBottom + spacing;
+                      availableHeight = pageHeight - imageStartY - margin - 40;
+                    }
+                  }
+                  else if (config.logoCorner === "bottomLeft") {
+                    // Move image to the right of logo or above it
+                    const spaceToRight = pageWidth - margin - logoRight - spacing;
+                    const spaceAbove = logoTop - currentY - spacing;
+
+                    if (spaceToRight >= tempImgWidth * 0.5) {
+                      // Move to right of logo
+                      contentStartX = logoRight + spacing;
+                      availableWidth = pageWidth - contentStartX - margin;
+                    } else if (spaceAbove >= tempImgHeight) {
+                      // Keep current position but reduce height
+                      availableHeight = logoTop - currentY - spacing;
+                    } else {
+                      // Force to right with smaller size
+                      contentStartX = logoRight + spacing;
+                      availableWidth = pageWidth - contentStartX - margin;
+                    }
+                  }
+                  else if (config.logoCorner === "bottomRight") {
+                    // Move image to the left of logo or above it
+                    const spaceToLeft = logoLeft - margin - spacing;
+                    const spaceAbove = logoTop - currentY - spacing;
+
+                    if (spaceToLeft >= tempImgWidth * 0.5) {
+                      // Reduce width to fit left of logo
+                      availableWidth = logoLeft - margin - spacing;
+                    } else if (spaceAbove >= tempImgHeight) {
+                      // Keep current position but reduce height
+                      availableHeight = logoTop - currentY - spacing;
+                    } else {
+                      // Force smaller width
+                      availableWidth = logoLeft - margin - spacing;
+                    }
+                  }
+                }
+              }
+
+              // Now calculate final image size with safe dimensions
+              const imageSizes = {
+                small: { width: Math.min(availableWidth * 0.5, availableWidth), maxHeight: Math.min(80, availableHeight * 0.3) },
+                medium: { width: Math.min(availableWidth * 0.8, availableWidth), maxHeight: Math.min(120, availableHeight * 0.5) },
+                large: { width: availableWidth, maxHeight: Math.min(160, availableHeight * 0.7) }
+              };
+
+              const sizeConfig = imageSizes[config.imageSize];
+              let imgWidth = Math.max(sizeConfig.width, 50); // Minimum width
+              let imgHeight = (img.height * imgWidth) / img.width;
+
+              if (imgHeight > sizeConfig.maxHeight) {
+                imgHeight = sizeConfig.maxHeight;
+                imgWidth = (img.width * imgHeight) / img.height;
+              }
+
+              // Center the image within the available safe space
+              const imgX = contentStartX + Math.max(0, (availableWidth - imgWidth) / 2);
+
+              // Update currentY to the calculated safe image start position
+              currentY = imageStartY;
+
+              // Add frame/shadow if needed
+              if (config.imageFrameStyle === "border") {
+                pdf.setDrawColor(colors.surface.r, colors.surface.g, colors.surface.b);
+                pdf.setLineWidth(1);
+                pdf.rect(imgX - 2, currentY - 2, imgWidth + 4, imgHeight + 4, 'S');
+              } else if (config.imageFrameStyle === "shadow") {
+                pdf.setFillColor(230, 230, 230);
+                pdf.rect(imgX + 2, currentY + 2, imgWidth, imgHeight, 'F');
+              }
+
+              pdf.addImage(img, 'JPEG', imgX, currentY, imgWidth, imgHeight);
+              currentY += imgHeight + spacing;
             }
-            
-            const imgX = margin + (contentWidth - imgWidth) / 2;
-            const imgY = currentY;
-            
-            // Add the image
-            pdf.addImage(img, 'JPEG', imgX, imgY, imgWidth, imgHeight);
-            
-            currentY = imgY + imgHeight + (isPhone ? 15 : 20);
           } catch (error) {
             console.error('Failed to add image:', error);
-            currentY += 10;
           }
         }
-        
-        // Activity Steps section following web layout
-        if (config.showIngredients && activity.recipes && activity.recipes.length > 0 && activity.recipes[0]?.ingredients) {
-          // Add "Activity Steps:" label like web
-          pdf.setFont(config.fontName, 'medium');
-          pdf.setFontSize(isPhone ? 12 : 14);
-          pdf.setTextColor(50, 50, 50);
-          pdf.text("Activity Steps:", margin + 15, currentY);
-          currentY += isPhone ? 10 : 15;
-          
-          // Format ingredients as simple list like web layout
+
+        // Instructions section (if placement is below image)
+        if (config.showInstructions && activity.recipes?.[0]?.instructions && 
+            config.instructionsPlacement === "belowImage") {
+          pdf.setFont(config.fontName, 'bold');
+          pdf.setFontSize(config.instructionsFontSize + 2);
+          pdf.setTextColor(colors.text.r, colors.text.g, colors.text.b);
+          pdf.text("Instructions:", margin, currentY);
+          currentY += spacing / 2;
+
+          // Instructions content
+          pdf.setFont(config.fontName, 'normal');
+          pdf.setFontSize(config.instructionsFontSize);
+          const instructionText = activity.recipes[0].instructions.replace(/^\*+\s*/, '').trim();
+          const instructionLines = pdf.splitTextToSize(instructionText, contentWidth);
+
+          const maxLines = config.instructionMaxLines || instructionLines.length;
+          const displayLines = instructionLines.slice(0, maxLines);
+
+          displayLines.forEach((line: string) => {
+            pdf.text(line, margin, currentY);
+            currentY += config.instructionsFontSize * 0.4;
+          });
+
+          if (instructionLines.length > maxLines) {
+            pdf.text("...", margin, currentY);
+            currentY += config.instructionsFontSize * 0.4;
+          }
+
+          currentY += spacing;
+        }
+
+        // Activity Steps (Ingredients) section
+        if (config.showIngredients && activity.recipes?.[0]?.ingredients) {
           const ingredients = activity.recipes[0].ingredients;
           let ingredientsArray: string[] = [];
-          
+
           // Parse ingredients
           if (typeof ingredients === 'string') {
             try {
@@ -399,132 +556,107 @@ export default function BookReportExportPage() {
           } else if (Array.isArray(ingredients)) {
             ingredientsArray = ingredients;
           }
-          
-          // Prepare a container for steps if needed
+
           if (ingredientsArray.length > 0) {
-            // Display ingredients as simple text list like web
+            // Title for ingredients section
+            pdf.setFont(config.fontName, 'bold');
+            pdf.setFontSize(config.ingredientFontSize + 2);
+            pdf.setTextColor(colors.text.r, colors.text.g, colors.text.b);
+            pdf.text("Activity Steps:", margin, currentY);
+            currentY += spacing;
+
+            // Draw each ingredient/step
             pdf.setFont(config.fontName, 'normal');
-            pdf.setFontSize(isPhone ? 10 : 12);
-            pdf.setTextColor(80, 80, 80);
-            
+            pdf.setFontSize(config.ingredientFontSize);
+
             ingredientsArray.forEach((ingredient, index) => {
-              if (!ingredient) return;
+              if (!ingredient || typeof ingredient !== 'string') return;
+
               const cleanedIngredient = ingredient.replace(/^\*+\s*/, '').trim();
-              
-              // Create circle number for step (same as in the web view)
-              pdf.setFillColor(colors.primary.r, colors.primary.g, colors.primary.b);
-              const circleRadius = isPhone ? 6 : 8;
-              pdf.circle(margin + 20, currentY - 3, circleRadius, 'F');
-              
-              // Add step number in circle
-              pdf.setTextColor(255, 255, 255);
-              pdf.setFontSize(isPhone ? 8 : 10);
-              pdf.text(`${index + 1}`, margin + 20, currentY, { align: 'center' });
-              
-              // Draw step text
-              pdf.setTextColor(80, 80, 80);
-              pdf.setFontSize(isPhone ? 10 : 12);
-              const stepTextX = margin + 35;
-              const availableWidth = contentWidth - 40;
+
+              // Calculate wrapped text first
+              const stepTextX = margin + 15; // Reduced from 20 to 15 for smaller circles
+              const availableWidth = contentWidth - 20; // Adjusted for smaller spacing
               const lines = pdf.splitTextToSize(cleanedIngredient, availableWidth);
-              
-              // Draw each line of step text
+
+              // Draw background pill if not outlined style
+              if (config.ingredientPillStyle !== "outlined") {
+                const pillHeight = lines.length * (config.ingredientFontSize * 0.4) + 6;
+                pdf.setFillColor(colors.ingredientBg.r, colors.ingredientBg.g, colors.ingredientBg.b);
+
+                if (config.ingredientPillStyle === "rounded") {
+                  pdf.roundedRect(margin, currentY - 4, contentWidth, pillHeight, 3, 3, 'F');
+                } else {
+                  pdf.rect(margin, currentY - 4, contentWidth, pillHeight, 'F');
+                }
+              }
+
+              // Draw smaller number circles or bullets
+              if (config.listStyle === "numbers") {
+                pdf.setFillColor(colors.primary.r, colors.primary.g, colors.primary.b);
+                pdf.circle(margin + 6, currentY, 4, 'F'); // Reduced from 6 radius to 4
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(config.ingredientFontSize - 3); // Reduced font size for smaller circle
+                pdf.text(`${index + 1}`, margin + 6, currentY + 1.5, { align: 'center' });
+              } else if (config.listStyle === "bullets") {
+                pdf.setFillColor(colors.primary.r, colors.primary.g, colors.primary.b);
+                pdf.circle(margin + 6, currentY, 2, 'F'); // Reduced from 3 radius to 2
+              }
+
+              // Draw text
+              pdf.setTextColor(colors.ingredientText.r, colors.ingredientText.g, colors.ingredientText.b);
+              pdf.setFontSize(config.ingredientFontSize);
               lines.forEach((line, lineIndex) => {
-                pdf.text(line, stepTextX, currentY + (lineIndex * (isPhone ? 6 : 8)));
+                pdf.text(line, stepTextX, currentY + (lineIndex * (config.ingredientFontSize * 0.4)));
               });
-              
-              // Calculate space needed for this step
-              const stepHeight = Math.max(circleRadius * 2, lines.length * (isPhone ? 6 : 8));
-              currentY += stepHeight + (isPhone ? 10 : 12);
+
+              currentY += lines.length * (config.ingredientFontSize * 0.4) + spacing / 2;
             });
+
+            currentY += spacing;
           }
         }
-        
-        // Add a separator line at the bottom
-        currentY += isPhone ? 5 : 10;
-        pdf.setDrawColor(230, 230, 230);
-        pdf.setLineWidth(0.5);
-        pdf.line(margin + 15, currentY, margin + contentWidth - 15, currentY);
-        
-        // Add page number if enabled
+
+        // Page number
         if (config.showPageNumbers) {
-          pdf.setFontSize(isPhone ? 8 : 10);
+          pdf.setFont(config.fontName, 'normal');
+          pdf.setFontSize(10);
           pdf.setTextColor(150, 150, 150);
-          
-          // Create page number with border like web view
-          const pageNumText = `${i + 1} / ${bookActivitiesList.length}`;
-          const textWidth = pdf.getStringUnitWidth(pageNumText) * pdf.getFontSize() / pdf.internal.scaleFactor;
-          const numX = (pageWidth - textWidth) / 2;
-          const numY = pageHeight - 20;
-          
-          pdf.text(pageNumText, numX, numY);
+          const pageText = `Page ${i + 1} of ${bookActivitiesList.length}`;
+          const textWidth = pdf.getTextWidth(pageText);
+          pdf.text(pageText, (pageWidth - textWidth) / 2, pageHeight - 10);
         }
       }
 
       const filename = `${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`;
-      console.log('Saving PDF to file:', filename);
-      try {
-        pdf.save(filename);
-        console.log('PDF saved successfully');
-      } catch (saveError) {
-        console.error('Error saving PDF:', saveError);
-        throw saveError;
-      }
+      pdf.save(filename);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      // Show more detailed error information
-      if (error instanceof Error) {
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
     } finally {
       setIsGenerating(false);
     }
   };
 
   const loadImage = (src: string): Promise<HTMLImageElement> => {
-    console.log(`Attempting to load image: ${src}`);
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
-      
-      // Apply a proper URL to the image path if it's a relative path
+
       const fullSrc = src.startsWith('http') ? src : 
                      src.startsWith('/') ? `${window.location.origin}${src}` : 
                      `${window.location.origin}/${src}`;
-      
-      console.log(`Using full image path: ${fullSrc}`);
-      
-      img.onload = () => {
-        console.log(`Successfully loaded image: ${fullSrc}`);
-        resolve(img);
+
+      img.onload = () => resolve(img);
+      img.onerror = () => {
+        console.error(`Failed to load image: ${fullSrc}`);
+        resolve(null as any);
       };
-      
-      img.onerror = (e) => {
-        console.error(`Failed to load image: ${fullSrc}`, e);
-        // Create a fallback image rather than failing
-        const fallbackImg = new Image();
-        fallbackImg.width = 300;
-        fallbackImg.height = 200;
-        // Set properties that jspdf can use
-        fallbackImg.src = '';
-        console.log('Using fallback image placeholder');
-        resolve(fallbackImg);
-      };
-      
-      // Set the source last after all event handlers are set up
+
       img.src = fullSrc;
-      
-      // Add timeout to avoid hanging
+
       setTimeout(() => {
         if (!img.complete) {
-          console.warn(`Timeout loading image: ${fullSrc}`);
-          const fallbackImg = new Image();
-          fallbackImg.width = 300;
-          fallbackImg.height = 200;
-          fallbackImg.src = '';
-          resolve(fallbackImg);
+          resolve(null as any);
         }
       }, 5000);
     });
@@ -541,7 +673,7 @@ export default function BookReportExportPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col p-6">
-      <div className="max-w-4xl mx-auto w-full">
+      <div className="max-w-6xl mx-auto w-full">
         <Button
           variant="ghost"
           className="mb-4"
@@ -553,7 +685,7 @@ export default function BookReportExportPage() {
 
         <h1 className="text-2xl font-bold mb-6">Export PDF Configuration</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="p-6">
             <h2 className="text-lg font-semibold mb-4">PDF Settings</h2>
 
@@ -567,11 +699,11 @@ export default function BookReportExportPage() {
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="letter" id="format-letter" />
-                    <label htmlFor="format-letter">Letter</label>
+                    <label htmlFor="format-letter">Letter (8.5" × 11")</label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="phone" id="format-phone" />
-                    <label htmlFor="format-phone">Phone</label>
+                    <label htmlFor="format-phone">Phone (Mobile)</label>
                   </div>
                 </RadioGroup>
               </div>
@@ -594,13 +726,32 @@ export default function BookReportExportPage() {
                 </RadioGroup>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Background Color</label>
-                <Input 
-                  type="color"
-                  value={config.backgroundColor}
-                  onChange={(e) => setConfig({...config, backgroundColor: e.target.value})}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Background Color</label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type="color"
+                      value={config.backgroundColor}
+                      onChange={(e) => setConfig({...config, backgroundColor: e.target.value})}
+                      className="h-10 w-20"
+                    />
+                    <span className="text-sm text-gray-600">{config.backgroundColor}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Text Color</label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type="color"
+                      value={config.textColor}
+                      onChange={(e) => setConfig({...config, textColor: e.target.value})}
+                      className="h-10 w-20"
+                    />
+                    <span className="text-sm text-gray-600">{config.textColor}</span>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -632,382 +783,149 @@ export default function BookReportExportPage() {
               </div>
 
               <div>
-                  <label className="block text-sm font-medium mb-1">Image Size</label>
+                <label className="block text-sm font-medium mb-1">Image Settings</label>
+                <div className="space-y-2 pl-4">
                   <RadioGroup 
                     value={config.imageSize}
                     onValueChange={(value: "small" | "medium" | "large") => setConfig({...config, imageSize: value})}
-                    className="flex gap-4"
                   >
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="small" id="size-small" />
-                      <label htmlFor="size-small">Small (20%)</label>
+                      <RadioGroupItem value="small" id="img-small" />
+                      <label htmlFor="img-small">Small</label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="medium" id="size-medium" />
-                      <label htmlFor="size-medium">Medium (60%)</label>
+                      <RadioGroupItem value="medium" id="img-medium" />
+                      <label htmlFor="img-medium">Medium</label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="large" id="size-large" />
-                      <label htmlFor="size-large">Large (80%)</label>
+                      <RadioGroupItem value="large" id="img-large" />
+                      <label htmlFor="img-large">Large</label>
                     </div>
                   </RadioGroup>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Image Color Mode</label>
-                  <RadioGroup 
-                    value={config.imageMode}
-                    onValueChange={(value: "blackAndWhite" | "color") => setConfig({...config, imageMode: value})}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="blackAndWhite" id="mode-bw" />
-                      <label htmlFor="mode-bw">Black & White</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="color" id="mode-color" />
-                      <label htmlFor="mode-color">Full Color</label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Logo Corner</label>
-                  <Select
-                  value={config.logoCorner}
-                  onValueChange={(value: "topLeft" | "topRight" | "bottomLeft" | "bottomRight") => setConfig({ ...config, logoCorner: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select corner" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="topLeft">Top Left</SelectItem>
-                    <SelectItem value="topRight">Top Right</SelectItem>
-                    <SelectItem value="bottomLeft">Bottom Left</SelectItem>
-                    <SelectItem value="bottomRight">Bottom Right</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               <div>
-                  <label className="block text-sm font-medium mb-1">Logo Size</label>
+                <label className="block text-sm font-medium mb-1">Logo Settings</label>
+                <div className="space-y-2 pl-4">
+                  <Select
+                    value={config.logoCorner}
+                    onValueChange={(value: "topLeft" | "topRight" | "bottomLeft" | "bottomRight") => 
+                      setConfig({ ...config, logoCorner: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select corner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="topLeft">Top Left</SelectItem>
+                      <SelectItem value="topRight">Top Right</SelectItem>
+                      <SelectItem value="bottomLeft">Bottom Left</SelectItem>
+                      <SelectItem value="bottomRight">Bottom Right</SelectItem>
+                    </SelectContent>
+                  </Select>
+
                   <RadioGroup 
                     value={config.logoSize}
-                    onValueChange={(value: "small" | "medium" | "large") => setConfig({...config, logoSize: value})}
-                    className="flex gap-4"
+                    onValueChange={(value: "small" | "medium" | "large") => 
+                      setConfig({...config, logoSize: value})}
+                    className="mt-2"
                   >
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="small" id="logo-size-small" />
-                      <label htmlFor="logo-size-small">Small</label>
+                      <RadioGroupItem value="small" id="logo-small" />
+                      <label htmlFor="logo-small">Small</label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="medium" id="logo-size-medium" />
-                      <label htmlFor="logo-size-medium">Medium</label>
+                      <RadioGroupItem value="medium" id="logo-medium" />
+                      <label htmlFor="logo-medium">Medium</label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="large" id="logo-size-large" />
-                      <label htmlFor="logo-size-large">Large</label>
+                      <RadioGroupItem value="large" id="logo-large" />
+                      <label htmlFor="logo-large">Large</label>
                     </div>
                   </RadioGroup>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Logo as Watermark</label>
-                  <RadioGroup 
-                    value={config.logoAsWatermark.toString()}
-                    onValueChange={(value: string) => setConfig({...config, logoAsWatermark: value === 'true'})}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="false" id="watermark-false" />
-                      <label htmlFor="watermark-false">No</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="true" id="watermark-true" />
-                      <label htmlFor="watermark-true">Yes</label>
-                    </div>
-                  </RadioGroup>
-                </div>
+              <div className="pt-4 border-t">
+                <h3 className="text-md font-semibold mb-3">Content Settings</h3>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Text Color</label>
-                  <Input 
-                    type="color"
-                    value={config.textColor}
-                    onChange={(e) => setConfig({...config, textColor: e.target.value})}
-                  />
-                </div>
-
-                {/* Ingredient Display Options Section */}
-                <div className="pt-4 border-t border-gray-200">
-                  <h3 className="text-md font-semibold mb-3">Ingredient Display Options</h3>
-                  
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Show Ingredients</label>
-                    <RadioGroup 
-                      value={config.showIngredients.toString()}
-                      onValueChange={(value: string) => setConfig({...config, showIngredients: value === 'true'})}
-                      className="flex gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="true" id="show-ingredients-true" />
-                        <label htmlFor="show-ingredients-true">Yes</label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="false" id="show-ingredients-false" />
-                        <label htmlFor="show-ingredients-false">No</label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {config.showIngredients && (
-                    <>
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium mb-1">Ingredient Font Size</label>
-                        <Input 
-                          type="number"
-                          value={config.ingredientFontSize}
-                          onChange={(e) => setConfig({...config, ingredientFontSize: Number(e.target.value)})}
-                          min={6}
-                          max={18}
-                        />
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium mb-1">Ingredient Placement</label>
-                        <Select 
-                          value={config.ingredientPlacement}
-                          onValueChange={(value: "belowTitle" | "belowImage" | "bottomOfPage") => 
-                            setConfig({...config, ingredientPlacement: value})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select placement" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="belowTitle">Below Title</SelectItem>
-                            <SelectItem value="belowImage">Below Image</SelectItem>
-                            <SelectItem value="bottomOfPage">Bottom of Page</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium mb-1">Ingredient Pill Style</label>
-                        <Select 
-                          value={config.ingredientPillStyle}
-                          onValueChange={(value: "rounded" | "square" | "outlined") => 
-                            setConfig({...config, ingredientPillStyle: value})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select style" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="rounded">Rounded</SelectItem>
-                            <SelectItem value="square">Square</SelectItem>
-                            <SelectItem value="outlined">Outlined</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium mb-1">Ingredient Text Color</label>
-                        <Input 
-                          type="color"
-                          value={config.ingredientTextColor}
-                          onChange={(e) => setConfig({...config, ingredientTextColor: e.target.value})}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Ingredient Background Color</label>
-                        <Input 
-                          type="color"
-                          value={config.ingredientBgColor}
-                          onChange={(e) => setConfig({...config, ingredientBgColor: e.target.value})}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Instructions Display Options Section */}
-                <div className="pt-4 border-t border-gray-200">
-                  <h3 className="text-md font-semibold mb-3">Instructions Display Options</h3>
-                  
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Show Instructions</label>
-                    <RadioGroup 
-                      value={config.showInstructions.toString()}
-                      onValueChange={(value: string) => setConfig({...config, showInstructions: value === 'true'})}
-                      className="flex gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="true" id="show-instructions-true" />
-                        <label htmlFor="show-instructions-true">Yes</label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="false" id="show-instructions-false" />
-                        <label htmlFor="show-instructions-false">No</label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {config.showInstructions && (
-                    <>
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium mb-1">Instructions Font Size</label>
-                        <Input 
-                          type="number"
-                          value={config.instructionsFontSize}
-                          onChange={(e) => setConfig({...config, instructionsFontSize: Number(e.target.value)})}
-                          min={6}
-                          max={18}
-                        />
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium mb-1">Instructions Placement</label>
-                        <Select 
-                          value={config.instructionsPlacement}
-                          onValueChange={(value: "afterIngredients" | "belowImage" | "bottomOfPage") => 
-                            setConfig({...config, instructionsPlacement: value})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select placement" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="afterIngredients">After Ingredients</SelectItem>
-                            <SelectItem value="belowImage">Below Image</SelectItem>
-                            <SelectItem value="bottomOfPage">Bottom of Page</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Advanced Styling Options Section */}
-                <div className="pt-4 border-t border-gray-200">
-                  <h3 className="text-md font-semibold mb-3">Advanced Styling</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Primary Color</label>
-                      <Input 
-                        type="color"
-                        value={config.primaryColor}
-                        onChange={(e) => setConfig({...config, primaryColor: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Accent Color</label>
-                      <Input 
-                        type="color"
-                        value={config.accentColor}
-                        onChange={(e) => setConfig({...config, accentColor: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Surface Color</label>
-                      <Input 
-                        type="color"
-                        value={config.surfaceColor}
-                        onChange={(e) => setConfig({...config, surfaceColor: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium mb-1">Content Density</label>
-                    <Select 
-                      value={config.contentDensity}
-                      onValueChange={(value: "compact" | "normal" | "spacious") => 
-                        setConfig({...config, contentDensity: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select density" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="compact">Compact</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="spacious">Spacious</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium mb-1">Image Frame Style</label>
-                    <Select 
-                      value={config.imageFrameStyle}
-                      onValueChange={(value: "shadow" | "border" | "none") => 
-                        setConfig({...config, imageFrameStyle: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select style" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="shadow">Shadow</SelectItem>
-                        <SelectItem value="border">Border</SelectItem>
-                        <SelectItem value="none">None</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium mb-1">List Style</label>
-                    <Select 
-                      value={config.listStyle}
-                      onValueChange={(value: "numbers" | "bullets" | "none") => 
-                        setConfig({...config, listStyle: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select style" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="numbers">Numbers</SelectItem>
-                        <SelectItem value="bullets">Bullets</SelectItem>
-                        <SelectItem value="none">No Markers</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-sm font-medium">Adaptive Text Sizing</span>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Show Instructions</span>
                     <Checkbox
-                      checked={config.adaptiveTextSizing}
+                      checked={config.showInstructions}
                       onCheckedChange={(checked) => 
-                        setConfig({...config, adaptiveTextSizing: checked === true})}
-                      id="adaptive-text"
+                        setConfig({...config, showInstructions: checked === true})}
                     />
                   </div>
-                  
-                  <div className="flex items-center justify-between mt-3">
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Show Activity Steps</span>
+                    <Checkbox
+                      checked={config.showIngredients}
+                      onCheckedChange={(checked) => 
+                        setConfig({...config, showIngredients: checked === true})}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Show Page Numbers</span>
                     <Checkbox
                       checked={config.showPageNumbers}
                       onCheckedChange={(checked) => 
                         setConfig({...config, showPageNumbers: checked === true})}
-                      id="show-page-numbers"
                     />
-                  </div>
-                  
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium mb-1">Max Instruction Lines</label>
-                    <Input 
-                      type="number"
-                      value={config.instructionMaxLines?.toString() || ""}
-                      onChange={(e) => setConfig({
-                        ...config, 
-                        instructionMaxLines: e.target.value ? Number(e.target.value) : null
-                      })}
-                      placeholder="Auto"
-                      min={1}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Leave empty for automatic fitting</p>
                   </div>
                 </div>
+              </div>
+
+              <div className="pt-4 border-t">
+                <h3 className="text-md font-semibold mb-3">Style Settings</h3>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Primary Color</label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        type="color"
+                        value={config.primaryColor}
+                        onChange={(e) => setConfig({...config, primaryColor: e.target.value})}
+                        className="h-10 w-20"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Surface Color</label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        type="color"
+                        value={config.surfaceColor}
+                        onChange={(e) => setConfig({...config, surfaceColor: e.target.value})}
+                        className="h-10 w-20"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label className="block text-sm font-medium mb-1">Content Density</label>
+                  <Select 
+                    value={config.contentDensity}
+                    onValueChange={(value: "compact" | "normal" | "spacious") => 
+                      setConfig({...config, contentDensity: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select density" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="compact">Compact</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="spacious">Spacious</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
             <Button
@@ -1016,130 +934,121 @@ export default function BookReportExportPage() {
               className="w-full mt-6"
             >
               <Download className="h-4 w-4 mr-2" />
-              {isGenerating ? 'Generating...' : 'Generate PDF'}
+              {isGenerating ? 'Generating PDF...' : 'Generate PDF'}
             </Button>
           </Card>
 
           <div ref={previewRef}>
             <h2 className="text-lg font-semibold mb-4">Preview</h2>
-            <div className="space-y-4">
-              {bookActivitiesList.map(activity => (
-                <Card key={activity.id} className="p-4">
-                  <h3 className="font-medium">{activity.name}</h3>
-                  <p className="text-sm text-gray-600">Category: {activity.category}</p>
-                  
-                  {/* Show ingredients if enabled and placement is belowTitle */}
-                  {config.showIngredients && 
-                   config.ingredientPlacement === "belowTitle" && 
-                   activity.recipes && 
-                   activity.recipes.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-sm font-medium">Activity Steps:</p>
-                      <div className="space-y-1 mt-1">
-                        {activity.recipes[0]?.ingredients.map((ingredient, idx) => (
-                          <div 
-                            key={idx}
-                            className={`text-xs p-1 ${
-                              config.ingredientPillStyle === "outlined" 
-                                ? "border border-solid" 
-                                : config.ingredientPillStyle === "rounded"
-                                  ? "rounded-md"
-                                  : ""
-                            }`}
-                            style={{
-                              backgroundColor: config.ingredientPillStyle !== "outlined" ? config.ingredientBgColor : "transparent",
-                              color: config.ingredientTextColor,
-                              borderColor: config.ingredientPillStyle === "outlined" ? config.ingredientBgColor : "transparent"
-                            }}
-                          >
-                            {typeof ingredient === 'string' ? ingredient : JSON.stringify(ingredient)}
-                          </div>
-                        ))}
+            <div className="space-y-4 max-h-[800px] overflow-y-auto border rounded-lg p-4 bg-white">
+              {bookActivitiesList.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No activities selected for this book</p>
+              ) : (
+                bookActivitiesList.map(activity => (
+                  <Card key={activity.id} className="p-6" style={{ backgroundColor: config.backgroundColor }}>
+                    <h3 className="font-bold text-xl mb-2" style={{ color: config.textColor }}>
+                      {activity.name}
+                    </h3>
+
+                    {activity.category && (
+                      <p className="text-sm mb-3" style={{ color: config.primaryColor }}>
+                        Category: {activity.category}
+                      </p>
+                    )}
+
+                    <hr className="my-3" style={{ borderColor: config.surfaceColor }} />
+
+                    {/* Instructions */}
+                    {config.showInstructions && activity.recipes?.[0]?.instructions && (
+                      <div className="mb-4">
+                        <h4 className="font-semibold mb-2" style={{ color: config.textColor }}>
+                          Instructions:
+                        </h4>
+                        <p className="text-sm" style={{ color: config.textColor, opacity: 0.9 }}>
+                          {activity.recipes[0].instructions}
+                        </p>
                       </div>
-                      
-                      {/* Show instructions after ingredients if enabled */}
-                      {config.showInstructions && 
-                       config.instructionsPlacement === "afterIngredients" && 
-                       activity.recipes && 
-                       activity.recipes.length > 0 && 
-                       activity.recipes[0]?.instructions && (
-                        <div className="mt-3">
-                          <p className="text-sm font-medium">Instructions:</p>
-                          <div className="text-xs p-2 mt-1 bg-gray-100 rounded-md">
-                            {activity.recipes[0].instructions}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* SINGLE INSTRUCTIONS SECTION - Show only once */}
-                  {activity.recipes && 
-                   activity.recipes.length > 0 && 
-                   activity.recipes[0]?.instructions && (
-                    <div className="mt-3 border-t pt-3">
-                      <p className="text-sm font-medium">Instructions:</p>
-                      <div className="text-xs p-2 mt-1 bg-gray-100 rounded-md">
-                        {activity.recipes[0].instructions}
+                    )}
+
+                    {/* Image */}
+                    {activity.images?.[0] && (
+                      <div className="mb-4">
+                        <img 
+                          src={activity.images[0].path} 
+                          alt={activity.name}
+                          className={`rounded-md w-full object-cover ${
+                            config.imageSize === 'small' ? 'max-h-32' : 
+                            config.imageSize === 'medium' ? 'max-h-48' : 
+                            'max-h-64'
+                          }`}
+                          style={{
+                            filter: config.imageMode === 'blackAndWhite' ? 'grayscale(100%)' : 'none',
+                            boxShadow: config.imageFrameStyle === 'shadow' ? '0 4px 6px rgba(0,0,0,0.1)' : 'none',
+                            border: config.imageFrameStyle === 'border' ? '2px solid #e5e7eb' : 'none'
+                          }}
+                        />
                       </div>
-                    </div>
-                  )}
-                  
-                  {activity.images && activity.images[0] && (
-                    <div className="mt-2">
-                      <img 
-                        src={activity.images[0].path} 
-                        alt={activity.name}
-                        className="mt-2 rounded-md"
-                        crossOrigin="anonymous"
-                      />
-                      
-                      {/* Show ingredients if enabled and placement is belowImage */}
-                      {config.showIngredients && 
-                       config.ingredientPlacement === "belowImage" && 
-                       activity.recipes && 
-                       activity.recipes.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-sm font-medium">Activity Steps:</p>
-                          <div className="space-y-1 mt-1">
-                            {activity.recipes[0]?.ingredients.map((ingredient, idx) => (
+                    )}
+
+                    {/* Activity Steps */}
+                    {config.showIngredients && activity.recipes?.[0]?.ingredients && (
+                      <div className="mt-4">
+                        <h4 className="font-semibold mb-2" style={{ color: config.textColor }}>
+                          Activity Steps:
+                        </h4>
+                        <div className="space-y-2">
+                          {(() => {
+                            const ingredients = activity.recipes[0].ingredients;
+                            let ingredientsArray: string[] = [];
+
+                            if (typeof ingredients === 'string') {
+                              try {
+                                const parsed = JSON.parse(ingredients);
+                                ingredientsArray = Array.isArray(parsed) ? parsed : [ingredients];
+                              } catch (e) {
+                                ingredientsArray = [ingredients];
+                              }
+                            } else if (Array.isArray(ingredients)) {
+                              ingredientsArray = ingredients;
+                            }
+
+                            return ingredientsArray.map((ingredient, idx) => (
                               <div 
                                 key={idx}
-                                className={`text-xs p-1 ${
-                                  config.ingredientPillStyle === "outlined" 
-                                    ? "border border-solid" 
-                                    : config.ingredientPillStyle === "rounded"
-                                      ? "rounded-md"
-                                      : ""
+                                className={`flex items-start gap-3 p-2 ${
+                                  config.ingredientPillStyle === 'rounded' ? 'rounded-md' : ''
                                 }`}
                                 style={{
-                                  backgroundColor: config.ingredientPillStyle !== "outlined" ? config.ingredientBgColor : "transparent",
-                                  color: config.ingredientTextColor,
-                                  borderColor: config.ingredientPillStyle === "outlined" ? config.ingredientBgColor : "transparent"
+                                  backgroundColor: config.ingredientPillStyle !== 'outlined' ? config.ingredientBgColor : 'transparent',
+                                  border: config.ingredientPillStyle === 'outlined' ? `1px solid ${config.ingredientBgColor}` : 'none'
                                 }}
                               >
-                                {typeof ingredient === 'string' ? ingredient : JSON.stringify(ingredient)}
+                                {config.listStyle === 'numbers' && (
+                                  <span 
+                                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs text-white"
+                                    style={{ backgroundColor: config.primaryColor }}
+                                  >
+                                    {idx + 1}
+                                  </span>
+                                )}
+                                {config.listStyle === 'bullets' && (
+                                  <span 
+                                    className="flex-shrink-0 w-2 h-2 rounded-full mt-1.5"
+                                    style={{ backgroundColor: config.primaryColor }}
+                                  />
+                                )}
+                                <span className="text-sm" style={{ color: config.ingredientTextColor }}>
+                                  {typeof ingredient === 'string' ? ingredient.replace(/^\*+\s*/, '').trim() : ''}
+                                </span>
                               </div>
-                            ))}
-                          </div>
+                            ));
+                          })()}
                         </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* SINGLE INSTRUCTIONS SECTION - Show only once */}
-                  {activity.recipes && 
-                   activity.recipes.length > 0 && 
-                   activity.recipes[0]?.instructions && (
-                    <div className="mt-3 border-t pt-3">
-                      <p className="text-sm font-medium">Instructions:</p>
-                      <div className="text-xs p-2 mt-1 bg-gray-100 rounded-md">
-                        {activity.recipes[0].instructions}
                       </div>
-                    </div>
-                  )}
-                </Card>
-              ))}
+                    )}
+                  </Card>
+                ))
+              )}
             </div>
           </div>
         </div>

@@ -144,7 +144,7 @@ export default function CalendarPage() {
 
       icalContent.push(
         'BEGIN:VEVENT',
-        `UID:${activity.id}@lifechoices.app`,
+        `UID:${activity.id}@lifechoices-aotlabs.replit.app`,
         `SUMMARY:${activity.name}`,
         `DESCRIPTION:${activity.category} - Impact: ${activity.lifeImpact}`,
         `DTSTART:${formatDate(startDate)}`,

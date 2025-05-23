@@ -53,6 +53,7 @@ export interface IStorage {
   acceptActivityInvitation(token: string, userId: number): Promise<boolean>;
   deleteActivityInvitation(id: number): Promise<void>;
   getSentInvitations(userId: number): Promise<ActivityInvitation[]>;
+  getSharedActivityByToken(token: string): Promise<ActivityInsert | undefined>;
 
   // Event category methods
   getEventCategories(): Promise<EventCategory[]>;
@@ -456,6 +457,49 @@ export class DatabaseStorage implements IStorage {
     return db.select()
       .from(activityInvitations)
       .where(eq(activityInvitations.senderUserId, userId));
+  }
+
+  async getSharedActivityByToken(token: string): Promise<ActivityInsert | undefined> {
+    try {
+      // First, get the invitation by token
+      const invitation = await this.getActivityInvitationByToken(token);
+      
+      if (!invitation) {
+        return undefined;
+      }
+      
+      // Check if the invitation has expired
+      if (invitation.expiresAt && new Date() > invitation.expiresAt) {
+        return undefined;
+      }
+      
+      // Get the activity associated with this invitation
+      const activity = await this.getActivity(invitation.activityId);
+      
+      if (!activity) {
+        return undefined;
+      }
+      
+      // Convert Activity to ActivityInsert format for sharing
+      const activityInsert: ActivityInsert = {
+        name: activity.name,
+        category: activity.category,
+        frequency: activity.frequency,
+        frequencyUnit: activity.frequencyUnit,
+        duration: activity.duration,
+        durationUnit: activity.durationUnit,
+        lifeImpact: activity.lifeImpact,
+        color: activity.color,
+        priority: activity.priority,
+        exportToCalendar: activity.exportToCalendar,
+        emoji: activity.emoji
+      };
+      
+      return activityInsert;
+    } catch (error) {
+      console.error('Error getting shared activity by token:', error);
+      return undefined;
+    }
   }
 
   // Activity image methods

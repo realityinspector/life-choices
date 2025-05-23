@@ -27,6 +27,7 @@ import BottomNavigation from "@/components/bottom-navigation";
 import BookPage from "@/pages/book";
 import BookReportPage from "@/pages/book-report";
 import BookReportExportPage from "@/pages/book-report-export";
+import SharedActivityPage from "@/pages/shared-activity";
 import { BookProvider } from "@/context/book-context";
 
 // Set the document title
@@ -44,7 +45,7 @@ function Router() {
   const isAdminRoute = adminRoutes.some(route => location.startsWith(route));
 
   // Check if we're on a free route
-  const isOnFreeRoute = freeRoutes.includes(location);
+  const isOnFreeRoute = freeRoutes.includes(location) || location.startsWith("/share/");
 
   // If the user is not set up and not on a free route or admin route, redirect to login
   if (!isUserSetup && !isOnFreeRoute && !isAdminRoute) {
@@ -57,6 +58,9 @@ function Router() {
       {/* Only show landing page if user is not logged in */}
       {!isUserSetup && <Route path="/" component={LandingPageWrapper} />}
       <Route path="/login" component={LoginPage} />
+      
+      {/* Shared activity page - accessible without authentication */}
+      <Route path="/share/:token" component={SharedActivityPage} />
       
       {/* Main app - for authenticated users */}
       {isUserSetup && (
@@ -104,7 +108,6 @@ function Router() {
       {/* Shopping and social features */}
       {isUserSetup && <Route path="/shop-activities" component={ShopActivitiesPage} />}
       {isUserSetup && <Route path="/cart" component={CartPage} />}
-      {isUserSetup && <Route path="/share" component={CartPage} />} {/* Temporary, will be replaced with dedicated share page */}
       
       {/* Analytics */}
       {isUserSetup && <Route path="/analytics" component={AnalyticsPage} />}
@@ -141,7 +144,8 @@ function AppContent() {
   
   // Login/landing routes - don't show bottom nav
   const noNavRoutes = ["/login", "/shared-activity"];
-  const shouldShowNav = isUserSetup && !isAdminRoute && !noNavRoutes.includes(location);
+  const isShareRoute = location.startsWith("/share/");
+  const shouldShowNav = isUserSetup && !isAdminRoute && !noNavRoutes.includes(location) && !isShareRoute;
   
   return (
     <div className="flex flex-col min-h-screen">
