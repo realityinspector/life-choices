@@ -65,6 +65,7 @@ export default function BookReportExportPage() {
       const res = await apiRequest('/api/activities/shop/with-images', { signal });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
+      console.log('Fetched activities with images:', data.length);
 
       // Process the received data to ensure recipes have proper ingredient arrays
       return data.map((activity: any) => {
@@ -134,14 +135,16 @@ export default function BookReportExportPage() {
   };
 
   const bookActivityIds = currentBook ? bookActivities.get(currentBook.id) || new Set() : new Set();
+  console.log('Book activity IDs:', Array.from(bookActivityIds));
   const bookActivitiesList = activitiesWithImages.filter(activity => bookActivityIds.has(activity.id));
+  console.log('Filtered book activities:', bookActivitiesList.length);
 
   const generatePDF = async () => {
     if (!previewRef.current || !currentBook || bookActivitiesList.length === 0) return;
 
     setIsGenerating(true);
     try {
-      console.log('Starting PDF generation...');
+      console.log('Starting PDF generation for', bookActivitiesList.length, 'activities');
       let { width, height } = dimensions[config.format];
       // Swap width and height for landscape orientation
       if (config.orientation === "landscape") {
