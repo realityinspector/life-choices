@@ -231,7 +231,10 @@ export default function BookReportExportPage() {
       // Process each activity starting on new page
       for (let i = 0; i < bookActivitiesList.length; i++) {
         const activity = bookActivitiesList[i];
+        
+        // Add new page and reset coordinate system
         pdf.addPage();
+        currentY = margin; // Reset Y position for new page
 
         const pageWidth = pdf.internal.pageSize.width;
         const pageHeight = pdf.internal.pageSize.height;
