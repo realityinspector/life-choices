@@ -496,20 +496,43 @@ export default function BookPage() {
                         size="sm"
                         onClick={async (e) => {
                           e.stopPropagation();
-                          // Fetch activity details including recipes
-                          const response = await apiRequest(`/api/activity-recipes/${activity.id}`);
-                          const details = await response.json();
-                          
-                          setSelectedActivityForImage({
-                            id: activity.id,
-                            name: activity.name,
-                            imageUrl: activityImage?.path || null,
-                            description: activity.description,
-                            category: activity.category,
-                            instructions: details.instructions,
-                            ingredients: details.ingredients
-                          });
-                          setImageGeneratorOpen(true);
+                          try {
+                            // Fetch activity details including recipes
+                            const response = await apiRequest(`/api/activity-recipes/${activity.id}`, {
+                              ignoreStatuses: [404]
+                            });
+                            
+                            let recipeDetails = {
+                              instructions: '',
+                              ingredients: []
+                            };
+                            
+                            if (response.ok) {
+                              recipeDetails = await response.json();
+                            }
+                            
+                            setSelectedActivityForImage({
+                              id: activity.id,
+                              name: activity.name,
+                              imageUrl: activityImage?.path || null,
+                              description: activity.description,
+                              category: activity.category,
+                              instructions: recipeDetails.instructions,
+                              ingredients: recipeDetails.ingredients
+                            });
+                            setImageGeneratorOpen(true);
+                          } catch (error) {
+                            console.error('Error fetching recipe:', error);
+                            // Still open modal without recipe data
+                            setSelectedActivityForImage({
+                              id: activity.id,
+                              name: activity.name,
+                              imageUrl: activityImage?.path || null,
+                              description: activity.description,
+                              category: activity.category
+                            });
+                            setImageGeneratorOpen(true);
+                          }
                         }}
                       >
                         <RefreshCw className="h-4 w-4" />
