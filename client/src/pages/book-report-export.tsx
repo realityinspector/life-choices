@@ -157,6 +157,9 @@ export default function BookReportExportPage() {
         floatPrecision: 16
       });
 
+      const pageWidth = pdf.internal.pageSize.width;
+      const pageHeight = pdf.internal.pageSize.height;
+
       // Load AOT logo
       const aotLogo = new Image();
       aotLogo.crossOrigin = "anonymous";
