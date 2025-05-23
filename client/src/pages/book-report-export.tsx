@@ -159,6 +159,7 @@ export default function BookReportExportPage() {
 
       const pageWidth = pdf.internal.pageSize.width;
       const pageHeight = pdf.internal.pageSize.height;
+      let currentY = 0; // Initialize currentY at the start
 
       // Load AOT logo
       const aotLogo = new Image();
