@@ -198,7 +198,7 @@ export default function BookReportExportPage() {
       pdf.setFont(config.fontName, 'bold');
       pdf.setFontSize(32);
       pdf.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-      
+
       // Center the title
       const titleWidth = pdf.getTextWidth(coverTitle);
       const titleX = (pageWidth - titleWidth) / 2;
@@ -218,31 +218,31 @@ export default function BookReportExportPage() {
         const logoHeight = (234/227) * logoWidth;
         const logoX = (pageWidth - logoWidth) / 2;
         const logoY = titleY - 100;
-        
+
         // Black background for logo
         pdf.setFillColor(0, 0, 0);
         const bgPadding = 8;
         pdf.roundedRect(logoX - bgPadding, logoY - bgPadding, 
                        logoWidth + (bgPadding * 2), 
                        logoHeight + (bgPadding * 2), 3, 3, 'F');
-        
+
         pdf.addImage(aotLogo, 'PNG', logoX, logoY, logoWidth, logoHeight);
       }
 
       // Process each activity starting on new page
       for (let i = 0; i < bookActivitiesList.length; i++) {
         const activity = bookActivitiesList[i];
-        
+
         // Add new page and reset coordinate system
         pdf.addPage();
-        
+
         const pageWidth = pdf.internal.pageSize.width;
         const pageHeight = pdf.internal.pageSize.height;
         const isPhone = config.format === "phone";
 
         // Responsive margins
         const margin = isPhone ? 10 : 20;
-        currentY = margin; // Reset Y position for new page with defined margin
+        let currentY = margin; // Reset Y position for new page
         const contentWidth = pageWidth - (2 * margin);
         const spacing = config.contentDensity === "compact" ? 5 : 
                        config.contentDensity === "spacious" ? 15 : 10;
@@ -287,7 +287,7 @@ export default function BookReportExportPage() {
           };
         }
 
-        let currentY = margin;
+        
 
         // Calculate adaptive content area based on logo position
         let titleContentWidth = contentWidth;
