@@ -190,7 +190,7 @@ activityRouter.get('/shop/with-images', async (req, res) => {
       // Ingredients are already parsed to arrays in getActivityRecipes method
       return recipe;
     });
-    
+
     // Add recipes to activities
     const activitiesWithImagesAndRecipes = activitiesWithImages.map(activity => {
       // Find recipes with names that match or are similar to the activity name
@@ -201,7 +201,7 @@ activityRouter.get('/shop/with-images', async (req, res) => {
         return recipeNameLower.includes(activityNameLower) || 
                activityNameLower.includes(recipeNameLower);
       });
-      
+
       return {
         ...activity,
         recipes: matchingRecipes.length > 0 ? matchingRecipes : undefined
@@ -579,6 +579,9 @@ activityRouter.post('/share', async (req: AuthenticatedRequest, res) => {
 
     // Create invitation token for sharing
     const invitationToken = uuidv4();
+    const deploymentUrl = process.env.REPL_SLUG ? 
+      `https://${process.env.REPL_SLUG}.replit.app` : 
+      'http://localhost:5000';
 
     const invitation = await storage.createActivityInvitation({
       activityId: createdActivity.id,
@@ -592,7 +595,8 @@ activityRouter.post('/share', async (req: AuthenticatedRequest, res) => {
       success: true,
       activity: createdActivity,
       invitation,
-      invitationToken
+      invitationToken,
+      shareUrl: `${deploymentUrl}/share/${createdActivity.name.toLowerCase().replace(/\s+/g, '-')}-${invitationToken}`
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
