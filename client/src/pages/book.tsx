@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, BookOpen, Trash2, Edit2, Check, Image } from "lucide-react";
+import { Search, Plus, BookOpen, Trash2, Edit2, Check, Image, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ImageGeneratorModal } from "@/components/ui/image-generator-modal";
 
