@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Upload, ExternalLink } from "lucide-react";
+import { ArrowLeft, Upload, ExternalLink, Edit, Plus, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 // Thumbnail component for the toast
 const ImageThumbnail = ({ src, label }: { src: string | null, label: string }) => {
@@ -39,6 +41,9 @@ export default function AdminActivityForm() {
   const activityId = location.split('/').pop();
   const isEditing = activityId !== 'new';
 
+  // Validate activityId
+  const isValidActivityId = isEditing && activityId && !isNaN(Number(activityId));
+
   const [formData, setFormData] = useState<Partial<ActivityInsert>>({
     name: '',
     category: '',
@@ -54,18 +59,90 @@ export default function AdminActivityForm() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  
+  // Recipe ingredients dialog state
+  const [isIngredientsDialogOpen, setIsIngredientsDialogOpen] = useState(false);
+  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [newIngredient, setNewIngredient] = useState("");
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isSavingIngredients, setIsSavingIngredients] = useState(false);
+
+  // Instructions state
+  const [instructions, setInstructions] = useState('');
 
   // Fetch activity if editing
-  const { data: activityData } = useQuery<{activity: Activity, images: any[]}>({
+  const { data: activityData, isError: activityError, isLoading: isActivityLoading } = useQuery<{activity: Activity, images: any[]}>({
     queryKey: ['/api/admin/activities', activityId],
     queryFn: async () => {
       const res = await apiRequest(`/api/admin/activities/${activityId}`);
       if (!res.ok) {
-        throw new Error('Failed to fetch activity');
+        // Check if response is HTML instead of JSON (common error case)
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+          throw new Error('Received HTML instead of JSON. You may need to log in again or the server may be experiencing issues.');
+        }
+        throw new Error(`Failed to fetch activity: ${res.status} ${res.statusText}`);
       }
-      return res.json();
+      
+      try {
+        const data = await res.json();
+        return data;
+      } catch (error) {
+        console.error('Error parsing JSON response:', error);
+        throw new Error('Invalid response format from server. Please try again later.');
+      }
     },
-    enabled: isEditing
+    enabled: isEditing && isValidActivityId,
+    retry: 1 // Only retry once to avoid excessive requests on error
+  });
+
+  // Query to fetch activity recipes
+  const { data: recipes = [], isError: recipeError } = useQuery({
+    queryKey: ['/api/admin/activities', activityId, 'recipes'],
+    queryFn: async () => {
+      const res = await apiRequest(`/api/activity-recipes/by-activity/${activityId}`);
+      if (!res.ok) {
+        // Check if response is HTML instead of JSON (common error case)
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+          console.error('Received HTML instead of JSON when fetching recipes');
+          return []; // Return empty array instead of breaking
+        }
+        console.error(`Failed to fetch recipes: ${res.status} ${res.statusText}`);
+        return [];
+      }
+      
+      try {
+        return await res.json();
+      } catch (error) {
+        console.error('Error parsing recipe JSON response:', error);
+        return []; // Return empty array as fallback
+      }
+    },
+    enabled: isEditing && isValidActivityId,
+    retry: 1, // Only retry once
+    onSuccess: (data) => {
+      if (data.length > 0) {
+        // Set ingredients from the first recipe
+        const ingredientsData = data[0].ingredients;
+        if (typeof ingredientsData === 'string') {
+          try {
+            // Try to parse as JSON string
+            setIngredients(JSON.parse(ingredientsData));
+          } catch (e) {
+            // If parsing fails, treat as a comma-separated list or single item
+            setIngredients(ingredientsData.split(',').map(i => i.trim()));
+          }
+        } else if (Array.isArray(ingredientsData)) {
+          setIngredients(ingredientsData);
+        }
+        
+        // Set instructions from the first recipe
+        if (data[0].instructions) {
+          setInstructions(data[0].instructions);
+        }
+      }
+    }
   });
 
   const activity = activityData?.activity;
@@ -145,6 +222,104 @@ export default function AdminActivityForm() {
     }
   });
 
+  // Mutation to save ingredients
+  const saveIngredientsMutation = useMutation({
+    mutationFn: async (ingredients: string[]) => {
+      setIsSavingIngredients(true);
+      try {
+        if (recipes && recipes.length > 0) {
+          // Update existing recipe
+          const recipeId = recipes[0].id;
+          const res = await apiRequest(`/api/activity-recipes/${recipeId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ingredients,
+              instructions
+            })
+          });
+          
+          if (!res.ok) {
+            throw new Error('Failed to update recipe ingredients');
+          }
+          
+          return await res.json();
+        } else {
+          // Create a new recipe with these ingredients
+          const recipeName = `${activity?.name || 'Activity'} Plan`;
+          const res = await apiRequest('/api/activity-recipes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: recipeName,
+              ingredients,
+              instructions,
+              activityId: parseInt(activityId)
+            })
+          });
+          
+          if (!res.ok) {
+            throw new Error('Failed to create recipe ingredients');
+          }
+          
+          return await res.json();
+        }
+      } finally {
+        setIsSavingIngredients(false);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/activities', activityId, 'recipes'] });
+      toast({
+        title: 'Success',
+        description: 'Ingredients saved successfully',
+      });
+      setIsIngredientsDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save ingredients',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Handle adding a new ingredient
+  const handleAddIngredient = () => {
+    if (newIngredient.trim()) {
+      if (editingIndex !== null) {
+        // Update existing ingredient
+        const updatedIngredients = [...ingredients];
+        updatedIngredients[editingIndex] = newIngredient.trim();
+        setIngredients(updatedIngredients);
+        setEditingIndex(null);
+      } else {
+        // Add new ingredient
+        setIngredients([...ingredients, newIngredient.trim()]);
+      }
+      setNewIngredient("");
+    }
+  };
+
+  // Handle removing an ingredient
+  const handleRemoveIngredient = (index: number) => {
+    const updatedIngredients = [...ingredients];
+    updatedIngredients.splice(index, 1);
+    setIngredients(updatedIngredients);
+  };
+
+  // Handle editing an ingredient
+  const handleEditIngredient = (index: number) => {
+    setNewIngredient(ingredients[index]);
+    setEditingIndex(index);
+  };
+
+  // Save ingredients
+  const handleSaveIngredients = () => {
+    saveIngredientsMutation.mutate(ingredients);
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
@@ -156,13 +331,183 @@ export default function AdminActivityForm() {
             {isEditing ? 'Modify existing activity' : 'Create a new activity'}
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/admin/activities">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Link>
-        </Button>
+        <div className="flex space-x-2">
+          {isEditing && (
+            <Button 
+              variant="outline" 
+              onClick={() => setIsIngredientsDialogOpen(true)}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Ingredients
+            </Button>
+          )}
+          <Button variant="outline" asChild>
+            <Link href="/admin/activities">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      {/* Error handling */}
+      {activityError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+          <div className="flex">
+            <div className="py-1">
+              <svg className="h-6 w-6 text-red-500 mr-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold">Error Loading Activity</p>
+              <p className="text-sm">There was a problem loading the activity data. You may need to log in again or try refreshing the page.</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => navigate('/admin/activities')}
+              >
+                Return to Activities List
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invalid activity ID error */}
+      {isEditing && !isValidActivityId && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+          <div className="flex">
+            <div className="py-1">
+              <svg className="h-6 w-6 text-red-500 mr-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold">Invalid Activity ID</p>
+              <p className="text-sm">The activity ID "{activityId}" is not valid. Please select a valid activity to edit.</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => navigate('/admin/activities')}
+              >
+                Return to Activities List
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {isActivityLoading && isEditing && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-6">
+          <div className="flex items-center">
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Loading activity data...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Ingredients Editing Dialog */}
+      <Dialog open={isIngredientsDialogOpen} onOpenChange={setIsIngredientsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Activity Ingredients</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Input
+                placeholder="Add a new ingredient or step"
+                value={newIngredient}
+                onChange={(e) => setNewIngredient(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddIngredient();
+                  }
+                }}
+              />
+              <Button type="button" size="sm" onClick={handleAddIngredient}>
+                {editingIndex !== null ? (
+                  <>Update</>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            <div className="max-h-[300px] overflow-y-auto space-y-2">
+              {ingredients.length === 0 ? (
+                <div className="text-center text-muted-foreground py-4">
+                  No ingredients added yet. Add some above.
+                </div>
+              ) : (
+                ingredients.map((ingredient, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center justify-between p-2 bg-muted rounded-md"
+                  >
+                    <span className="text-sm">{ingredient}</span>
+                    <div className="flex space-x-1">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-7 w-7"
+                        onClick={() => handleEditIngredient(index)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => handleRemoveIngredient(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="instructions">Instructions</Label>
+              <Textarea
+                id="instructions"
+                placeholder="Enter detailed instructions here..."
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="sm:justify-end">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsIngredientsDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveIngredients}
+              disabled={isSavingIngredients}
+            >
+              {isSavingIngredients ? 'Saving...' : 'Save Ingredients'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
@@ -186,11 +531,40 @@ export default function AdminActivityForm() {
               </div>
             )}
             
+            {/* Show current ingredients if they exist */}
+            {isEditing && ingredients.length > 0 && (
+              <div>
+                <Label>Current Ingredients</Label>
+                <div className="mt-2 space-y-1">
+                  {ingredients.slice(0, 3).map((ingredient, index) => (
+                    <div key={index} className="px-2 py-1 bg-gray-100 rounded-md text-sm">
+                      {ingredient.length > 42 ? `${ingredient.substring(0, 42)}...` : ingredient}
+                    </div>
+                  ))}
+                  {ingredients.length > 3 && (
+                    <div className="px-2 py-1 bg-gray-100 rounded-md text-sm text-muted-foreground">
+                      +{ingredients.length - 3} more ingredients...
+                    </div>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setIsIngredientsDialogOpen(true)}
+                    className="mt-2"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Ingredients
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label>Name</Label>
               <Input 
                 value={formData.name} 
                 onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                disabled={isActivityLoading || activityError || (isEditing && !isValidActivityId)}
               />
             </div>
 
@@ -199,6 +573,7 @@ export default function AdminActivityForm() {
               <Select 
                 value={formData.category}
                 onValueChange={value => setFormData(prev => ({ ...prev, category: value }))}
+                disabled={isActivityLoading || activityError || (isEditing && !isValidActivityId)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
@@ -220,6 +595,7 @@ export default function AdminActivityForm() {
                   type="number"
                   value={formData.frequency}
                   onChange={e => setFormData(prev => ({ ...prev, frequency: parseInt(e.target.value) }))}
+                  disabled={isActivityLoading || activityError || (isEditing && !isValidActivityId)}
                 />
               </div>
               <div>
@@ -227,6 +603,7 @@ export default function AdminActivityForm() {
                 <Select 
                   value={formData.frequencyUnit}
                   onValueChange={value => setFormData(prev => ({ ...prev, frequencyUnit: value as any }))}
+                  disabled={isActivityLoading || activityError || (isEditing && !isValidActivityId)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -247,6 +624,7 @@ export default function AdminActivityForm() {
                   type="number"
                   value={formData.duration}
                   onChange={e => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
+                  disabled={isActivityLoading || activityError || (isEditing && !isValidActivityId)}
                 />
               </div>
               <div>
@@ -254,6 +632,7 @@ export default function AdminActivityForm() {
                 <Select 
                   value={formData.durationUnit}
                   onValueChange={value => setFormData(prev => ({ ...prev, durationUnit: value as any }))}
+                  disabled={isActivityLoading || activityError || (isEditing && !isValidActivityId)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -275,6 +654,7 @@ export default function AdminActivityForm() {
                 max="10"
                 value={formData.lifeImpact}
                 onChange={e => setFormData(prev => ({ ...prev, lifeImpact: parseInt(e.target.value) }))}
+                disabled={isActivityLoading || activityError || (isEditing && !isValidActivityId)}
               />
             </div>
 
@@ -283,6 +663,7 @@ export default function AdminActivityForm() {
               <Input 
                 value={formData.emoji || ''}
                 onChange={e => setFormData(prev => ({ ...prev, emoji: e.target.value }))}
+                disabled={isActivityLoading || activityError || (isEditing && !isValidActivityId)}
               />
             </div>
 
@@ -414,12 +795,17 @@ export default function AdminActivityForm() {
           </Button>
           <Button 
             onClick={() => saveMutation.mutate()} 
-            disabled={isUploading}
+            disabled={isUploading || isActivityLoading || (isEditing && activityError)}
           >
             {isUploading ? (
               <>
                 <Upload className="mr-2 h-4 w-4 animate-spin" />
                 {isEditing ? 'Updating...' : 'Creating...'}
+              </>
+            ) : isActivityLoading ? (
+              <>
+                <span className="mr-2">⏳</span>
+                Loading...
               </>
             ) : (
               isEditing ? 'Update Activity' : 'Create Activity'

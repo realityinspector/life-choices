@@ -11,11 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, BookOpen, Trash2, Edit2, Check } from "lucide-react";
+import { Search, Plus, BookOpen, Trash2, Edit2, Check, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ImageGeneratorModal } from "@/components/ui/image-generator-modal";
 
 export default function BookPage() {
-  const { userData } = useUser();
+  const { userData, isAdmin } = useUser();
   const { toast } = useToast();
   const {
     books,
@@ -39,6 +40,12 @@ export default function BookPage() {
   const [showNewBookDialog, setShowNewBookDialog] = useState(false);
   const [newBookName, setNewBookName] = useState("");
   const [editingBook, setEditingBook] = useState<{ id: number; name: string } | null>(null);
+  const [imageGeneratorOpen, setImageGeneratorOpen] = useState(false);
+  const [selectedActivityForImage, setSelectedActivityForImage] = useState<{
+    id: number;
+    name: string;
+    imageUrl: string | null;
+  } | null>(null);
 
   // Fetch all activities with images
   const { data: activitiesWithImages = [] } = useQuery<(Activity & { images: ActivityImage[] })[]>({
@@ -170,6 +177,47 @@ export default function BookPage() {
         title: "Error",
         description: "Failed to add activities to book",
         variant: "destructive"
+      });
+    }
+  };
+
+  const handleOpenImageGenerator = (e: React.MouseEvent, activity: Activity, imageUrl: string | null) => {
+    e.stopPropagation();
+    setSelectedActivityForImage({
+      id: activity.id,
+      name: activity.name,
+      imageUrl
+    });
+    setImageGeneratorOpen(true);
+  };
+
+  const handleImageGenerated = async (newImageUrl: string) => {
+    if (selectedActivityForImage) {
+      // Update the UI immediately
+      const updatedActivities = activitiesWithImages.map(activity => {
+        if (activity.id === selectedActivityForImage.id) {
+          // Create a new image object or update the existing one
+          const newImage = {
+            activityId: activity.id,
+            path: newImageUrl,
+            filename: newImageUrl.split('/').pop() || '',
+            id: activity.images[0]?.id || 0
+          };
+          
+          // Return updated activity with new image
+          return {
+            ...activity,
+            images: [newImage]
+          };
+        }
+        return activity;
+      });
+      
+      // No need to set the state as the page will refresh on its own
+      
+      toast({
+        title: "Success",
+        description: `Image for "${selectedActivityForImage.name}" has been updated`
       });
     }
   };
@@ -432,6 +480,18 @@ export default function BookPage() {
                       </Button>
                     </>
                   )}
+                  
+                  {/* Add image generation button for admin users */}
+                  {isAdmin && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute top-2 left-2"
+                      onClick={(e) => handleOpenImageGenerator(e, activity, activityImage?.path || null)}
+                    >
+                      <Image className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 <div className="p-2">
                   <h3 className="text-sm font-medium truncate">{activity.name}</h3>
@@ -451,6 +511,18 @@ export default function BookPage() {
           </div>
         )}
       </main>
+
+      {/* Image Generator Modal */}
+      {selectedActivityForImage && (
+        <ImageGeneratorModal
+          open={imageGeneratorOpen}
+          onOpenChange={setImageGeneratorOpen}
+          activityId={selectedActivityForImage.id}
+          activityName={selectedActivityForImage.name}
+          currentImageUrl={selectedActivityForImage.imageUrl}
+          onImageGenerated={handleImageGenerated}
+        />
+      )}
     </div>
   );
 } 

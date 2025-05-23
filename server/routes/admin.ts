@@ -7,6 +7,8 @@ import { Together } from "together-ai";
 import { ActivityImage, InsertActivityImage, Activity } from "../../shared/schema";
 import { db } from "../db";
 import { activities } from "../../shared/schema";
+import { services } from "../services";
+import { activityRecipes } from "../../shared/schema";
 
 // Set up storage for uploaded files
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -147,9 +149,49 @@ adminRouter.get("/activities", async (req: AuthenticatedRequest, res) => {
       .from(activities)
       .orderBy(activities.id);
 
+    // Fetch all recipes
+    const allRecipes = await db.select().from(activityRecipes);
+    
+    // Parse recipe ingredients from string to array if needed
+    const parsedRecipes = allRecipes.map(recipe => {
+      try {
+        if (typeof recipe.ingredients === 'string') {
+          const parsedIngredients = JSON.parse(recipe.ingredients);
+          return {
+            ...recipe,
+            ingredients: Array.isArray(parsedIngredients) ? parsedIngredients : [recipe.ingredients]
+          };
+        }
+        return recipe;
+      } catch (error) {
+        // If parsing fails, ensure it's in array format
+        return {
+          ...recipe,
+          ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [recipe.ingredients]
+        };
+      }
+    });
+    
+    // Map activity names to recipes (using name matching since we don't have an activityId foreign key)
+    const activitiesWithRecipes = dbActivities.map(activity => {
+      // Find recipes with names that match or are similar to the activity name
+      const matchingRecipes = parsedRecipes.filter(recipe => {
+        // Simple matching logic - recipe name contains activity name or vice versa
+        const recipeNameLower = recipe.name.toLowerCase();
+        const activityNameLower = activity.name.toLowerCase();
+        return recipeNameLower.includes(activityNameLower) || 
+               activityNameLower.includes(recipeNameLower);
+      });
+      
+      return {
+        ...activity,
+        recipes: matchingRecipes.length > 0 ? matchingRecipes : undefined
+      };
+    });
+
     console.log("Admin activities fetch:", dbActivities.length, "activities found (samples excluded)");
 
-    res.json(dbActivities);
+    res.json(activitiesWithRecipes);
   } catch (error) {
     console.error("Error fetching activities:", error);
     res.status(500).json({ error: "Failed to fetch activities" });
@@ -563,5 +605,60 @@ adminRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
   } catch (error) {
     console.error('Error deleting activity:', error);
     res.status(500).json({ message: "Failed to delete activity" });
+  }
+});
+
+// Generate image for activity using a custom prompt
+adminRouter.post("/generate-activity-image", async (req: AuthenticatedRequest, res) => {
+  try {
+    const { activityId, customPrompt } = req.body;
+    
+    if (!activityId || !customPrompt) {
+      return res.status(400).json({ error: "Activity ID and custom prompt are required" });
+    }
+    
+    // Get the activity
+    const activity = await storage.getActivity(activityId);
+    if (!activity) {
+      return res.status(404).json({ error: "Activity not found" });
+    }
+    
+    console.log(`Generating image for activity ${activity.id} with custom prompt: ${customPrompt}`);
+    
+    // Create a modified activity with the custom prompt as the name for the image generation
+    const modifiedActivity = {
+      ...activity,
+      name: customPrompt
+    };
+    
+    // Generate the image using the Together AI service
+    const imageResponse = await services.togetherAI.generateImageForActivity(modifiedActivity);
+    
+    if (!imageResponse) {
+      return res.status(500).json({ error: "Failed to generate image" });
+    }
+    
+    // Save the image to the database
+    const newImage = await storage.createActivityImage({
+      activityId: activity.id,
+      filename: imageResponse.filename,
+      originalFilename: imageResponse.originalFilename,
+      path: imageResponse.path.startsWith('/') ? imageResponse.path : `/${imageResponse.path}`,
+      mimeType: imageResponse.mimeType
+    });
+    
+    // Get full image URL to return
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers.host;
+    const baseUrl = `${protocol}://${host}`;
+    const fullImageUrl = `${baseUrl}${newImage.path.startsWith('/') ? '' : '/'}${newImage.path}`;
+    
+    res.status(201).json({
+      ...newImage,
+      fullUrl: fullImageUrl
+    });
+  } catch (error) {
+    console.error("Error generating activity image:", error);
+    res.status(500).json({ error: "Failed to generate activity image" });
   }
 });

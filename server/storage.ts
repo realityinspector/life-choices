@@ -97,24 +97,21 @@ export interface IStorage {
   createLLMMessage(message: InsertLLMMessage): Promise<LLMMessage>;
 
   // Activity recipe methods
-  createActivityRecipe(recipe: InsertActivityRecipe): Promise<ActivityRecipe>;
+  createActivityRecipe(recipe: Recipe): Promise<ActivityRecipe>;
   getActivityRecipes(activityId: number): Promise<ActivityRecipe[]>;
+  getActivityRecipe(id: number): Promise<ActivityRecipe | undefined>;
+  updateActivityRecipe(id: number, data: Partial<Recipe>): Promise<ActivityRecipe>;
+  deleteActivityRecipe(id: number): Promise<void>;
 
   // Session store
   sessionStore: session.Store;
 }
 
 interface Recipe {
-  activityId: number;
+  activityId?: number;  // Not stored in the database anymore
   name: string;
-  description: string;
-  ingredients: string[];
-  instructions: string[];
-  prepTime: number;
-  cookTime: number;
-  servings: number;
-  difficulty: 'easy' | 'medium' | 'hard';
-  tags: string[];
+  ingredients: string[];  // Changed to array of strings
+  instructions: string;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -703,20 +700,36 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createActivityRecipe(recipe: Recipe): Promise<void> {
+  async createActivityRecipe(recipe: Recipe): Promise<ActivityRecipe> {
     try {
-      await db.insert(activityRecipes).values({
-        activityId: recipe.activityId,
-        name: recipe.name,
-        description: recipe.description,
-        ingredients: recipe.ingredients,
-        instructions: recipe.instructions,
-        prepTime: recipe.prepTime,
-        cookTime: recipe.cookTime,
-        servings: recipe.servings,
-        difficulty: recipe.difficulty,
-        tags: recipe.tags
-      });
+      // Get the activity name if activityId is provided
+      let recipeName = recipe.name;
+      if (recipe.activityId) {
+        const activity = await this.getActivity(recipe.activityId);
+        if (activity) {
+          // Prefix the recipe name with the activity name for better matching
+          recipeName = `${activity.name}: ${recipe.name}`;
+        }
+      }
+      
+      // Serialize the ingredients array into a string for storage
+      // Use a special delimiter to make sure we can split it back
+      const ingredientsString = JSON.stringify(recipe.ingredients);
+      
+      // Use the raw SQL query approach since we still need to associate with activities
+      const { rows } = await pool.query(
+        `INSERT INTO activity_recipes 
+        (name, ingredients, instructions) 
+        VALUES ($1, $2, $3) 
+        RETURNING *`,
+        [
+          recipeName,
+          ingredientsString,
+          recipe.instructions
+        ]
+      );
+      
+      return rows[0];
     } catch (error) {
       console.error('Error creating activity recipe:', error);
       throw error;
@@ -724,10 +737,183 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActivityRecipes(activityId: number): Promise<ActivityRecipe[]> {
-    return db.select()
-      .from(activityRecipes)
-      .where(eq(activityRecipes.activityId, activityId))
-      .orderBy(activityRecipes.orderIndex);
+    try {
+      // Since there's no relationship to activities anymore, 
+      // we can't filter by activityId, so just return all recipes
+      const { rows } = await pool.query(
+        `SELECT * FROM activity_recipes`
+      );
+      
+      // Parse the ingredients string back into an array for each recipe
+      return rows.map(row => {
+        try {
+          // If the ingredients is a string that looks like JSON, parse it
+          if (typeof row.ingredients === 'string' && 
+              (row.ingredients.startsWith('[') || row.ingredients.startsWith('\"'))) {
+            const parsedIngredients = JSON.parse(row.ingredients);
+            return {
+              ...row,
+              ingredients: Array.isArray(parsedIngredients) ? parsedIngredients : [row.ingredients]
+            };
+          }
+          // Otherwise, keep it as a string but wrap in array
+          return {
+            ...row,
+            ingredients: [row.ingredients]
+          };
+        } catch (error) {
+          console.error('Error parsing recipe ingredients:', error);
+          // If parsing fails, return the original string wrapped in array
+          return {
+            ...row,
+            ingredients: [row.ingredients]
+          };
+        }
+      });
+    } catch (error) {
+      console.error('Error getting activity recipes:', error);
+      return [];
+    }
+  }
+
+  async getActivityRecipe(id: number): Promise<ActivityRecipe | undefined> {
+    try {
+      const { rows } = await pool.query(
+        `SELECT * FROM activity_recipes WHERE id = $1`,
+        [id]
+      );
+      
+      if (rows.length === 0) {
+        return undefined;
+      }
+      
+      // Parse the ingredients string back into an array
+      const recipe = rows[0];
+      
+      try {
+        // If the ingredients is a string that looks like JSON, parse it
+        if (typeof recipe.ingredients === 'string' && 
+            (recipe.ingredients.startsWith('[') || recipe.ingredients.startsWith('\"'))) {
+          const parsedIngredients = JSON.parse(recipe.ingredients);
+          return {
+            ...recipe,
+            ingredients: Array.isArray(parsedIngredients) ? parsedIngredients : [recipe.ingredients]
+          };
+        }
+        // Otherwise, keep it as a string but wrap in array
+        return {
+          ...recipe,
+          ingredients: [recipe.ingredients]
+        };
+      } catch (error) {
+        console.error('Error parsing recipe ingredients:', error);
+        // If parsing fails, return the original string wrapped in array
+        return {
+          ...recipe,
+          ingredients: [recipe.ingredients]
+        };
+      }
+    } catch (error) {
+      console.error('Error getting activity recipe:', error);
+      throw error;
+    }
+  }
+
+  async updateActivityRecipe(id: number, data: Partial<Recipe>): Promise<ActivityRecipe> {
+    try {
+      // Build the update query dynamically based on provided fields
+      const updates: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+      
+      // Add name to updates if provided
+      if (data.name !== undefined) {
+        updates.push(`name = $${paramIndex++}`);
+        values.push(data.name);
+      }
+      
+      // Add instructions to updates if provided
+      if (data.instructions !== undefined) {
+        updates.push(`instructions = $${paramIndex++}`);
+        values.push(data.instructions);
+      }
+      
+      // Add ingredients to updates if provided
+      if (data.ingredients !== undefined) {
+        updates.push(`ingredients = $${paramIndex++}`);
+        // Serialize the ingredients array to JSON
+        values.push(JSON.stringify(data.ingredients));
+      }
+      
+      // Return early if no updates
+      if (updates.length === 0) {
+        // Fetch and return the current recipe if no updates
+        const currentRecipe = await this.getActivityRecipe(id);
+        if (!currentRecipe) {
+          throw new Error('Recipe not found');
+        }
+        return currentRecipe;
+      }
+      
+      // Add updated_at timestamp
+      updates.push(`updated_at = $${paramIndex++}`);
+      values.push(new Date());
+      
+      // Add the ID to the values array
+      values.push(id);
+      
+      // Execute the update query
+      const { rows } = await pool.query(
+        `UPDATE activity_recipes SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+        values
+      );
+      
+      if (rows.length === 0) {
+        throw new Error('Recipe not found');
+      }
+      
+      // Parse the ingredients like in getActivityRecipe
+      const recipe = rows[0];
+      
+      try {
+        // If the ingredients is a string that looks like JSON, parse it
+        if (typeof recipe.ingredients === 'string' && 
+            (recipe.ingredients.startsWith('[') || recipe.ingredients.startsWith('\"'))) {
+          const parsedIngredients = JSON.parse(recipe.ingredients);
+          return {
+            ...recipe,
+            ingredients: Array.isArray(parsedIngredients) ? parsedIngredients : [recipe.ingredients]
+          };
+        }
+        // Otherwise, keep it as a string but wrap in array
+        return {
+          ...recipe,
+          ingredients: [recipe.ingredients]
+        };
+      } catch (error) {
+        console.error('Error parsing recipe ingredients:', error);
+        // If parsing fails, return the original string wrapped in array
+        return {
+          ...recipe,
+          ingredients: [recipe.ingredients]
+        };
+      }
+    } catch (error) {
+      console.error('Error updating activity recipe:', error);
+      throw error;
+    }
+  }
+
+  async deleteActivityRecipe(id: number): Promise<void> {
+    try {
+      await pool.query(
+        `DELETE FROM activity_recipes WHERE id = $1`,
+        [id]
+      );
+    } catch (error) {
+      console.error('Error deleting activity recipe:', error);
+      throw error;
+    }
   }
 }
 

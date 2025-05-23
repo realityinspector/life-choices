@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { storage } from "../storage";
 import { togetherAIService } from "../services/together-ai";
-import { ActivityRecipe } from "@shared/schema";
+import { ActivityRecipe, Activity } from "@shared/schema";
 import { AuthenticatedRequest } from "../auth";
 import fs from "fs";
 import path from "path";
@@ -18,23 +18,35 @@ const systemPrompts = JSON.parse(
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+interface Recipe {
+  activityId?: number; // Not stored in database anymore
+  name: string;
+  ingredients: string[]; // Changed to an array of strings
+  instructions: string;
+}
+
 async function generateRecipeWithRetry(activity: Activity, retries = 3): Promise<Recipe> {
   for (let i = 0; i < retries; i++) {
     try {
-      const prompt = `Generate a recipe for the activity "${activity.name}" in the following JSON format:
+      // Modified prompt to generate activity steps instead of cooking recipes
+      const prompt = `Generate a sequential plan for the activity "${activity.name}" in the following JSON format:
 {
   "name": "string",
-  "description": "string",
-  "ingredients": ["string"],
-  "instructions": ["string"],
-  "prepTime": number,
-  "cookTime": number,
-  "servings": number,
-  "difficulty": "easy" | "medium" | "hard",
-  "tags": ["string"]
+  "ingredients": ["string", "string", "string"],
+  "instructions": "string"
 }
 
-Ensure the response is valid JSON and follows this exact structure.`;
+The "name" should be a concise title for the activity plan.
+The "ingredients" should be an array of distinct steps or materials needed for the activity, with EACH ITEM stored as a separate string in the array. Each ingredient should be a standalone piece of information.
+The "instructions" should be a string detailing the execution steps.
+
+Make sure each ingredient is stored as a separate entry in the array.
+Each ingredient should be a concise, focused item (ideally under 50 characters). 
+Include at least 3-5 distinct ingredients for the activity.
+
+It's crucial that your response is valid JSON that can be parsed with JSON.parse(). 
+Do not include any markdown formatting, code blocks, or explanations.
+Only return the JSON object itself.`;
 
       const response = await togetherAIService.client.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
@@ -43,35 +55,53 @@ Ensure the response is valid JSON and follows this exact structure.`;
         max_tokens: 1000
       });
       
-      // Clean the response to ensure it's valid JSON
-      const cleanedResponse = response.choices[0]?.message?.content?.trim()
-        .replace(/^```json\s*/, '') // Remove JSON code block markers
-        .replace(/\s*```$/, '')
-        .replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control characters
+      // Get the response content
+      let content = response.choices[0]?.message?.content?.trim() || '';
+      
+      // More aggressive cleaning to extract JSON
+      // First, remove any markdown code block formatting
+      content = content.replace(/^```(?:json)?\s*/g, '').replace(/\s*```$/g, '');
+      
+      // Remove any control characters that would break JSON parsing
+      content = content.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+      
+      // Try to find JSON object boundaries if there's extra text
+      const jsonStartIndex = content.indexOf('{');
+      const jsonEndIndex = content.lastIndexOf('}');
+      
+      if (jsonStartIndex >= 0 && jsonEndIndex >= 0 && jsonEndIndex > jsonStartIndex) {
+        content = content.substring(jsonStartIndex, jsonEndIndex + 1);
+      }
 
+      console.log(`Attempt ${i + 1} cleaned response:`, content.substring(0, 100) + '...');
+      
       try {
-        const recipe = JSON.parse(cleanedResponse);
+        const recipe = JSON.parse(content);
         
-        // Validate the recipe structure
-        if (!recipe.name || !recipe.description || !Array.isArray(recipe.ingredients) || 
-            !Array.isArray(recipe.instructions) || typeof recipe.prepTime !== 'number' || 
-            typeof recipe.cookTime !== 'number' || typeof recipe.servings !== 'number' || 
-            !['easy', 'medium', 'hard'].includes(recipe.difficulty) || !Array.isArray(recipe.tags)) {
-          throw new Error('Invalid recipe structure');
-        }
+        // Schema validation using a more structured approach
+        const RecipeSchema = z.object({
+          name: z.string(),
+          ingredients: z.array(z.string()),
+          instructions: z.string()
+        });
+        
+        // Validate and coerce the recipe data
+        const validatedRecipe = RecipeSchema.parse(recipe);
 
         return {
-          ...recipe,
+          ...validatedRecipe,
           activityId: activity.id
         };
       } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        console.error('Raw response:', response.choices[0]?.message?.content);
-        console.error('Cleaned response:', cleanedResponse);
+        console.error(`JSON parse error (attempt ${i + 1}):`, parseError);
+        console.error('First 200 chars of response:', content.substring(0, 200));
         
         if (i === retries - 1) {
-          throw new Error(`Failed to parse LLM response after ${retries} attempts`);
+          throw new Error(`Failed to parse LLM response after ${retries} attempts: ${parseError.message}`);
         }
+        
+        // Increase wait time between retries
+        await sleep(1000 * Math.pow(2, i));
         continue;
       }
     } catch (error) {
@@ -79,8 +109,8 @@ Ensure the response is valid JSON and follows this exact structure.`;
       if (i === retries - 1) {
         throw error;
       }
-      // Wait before retrying
-      await sleep(1000 * (i + 1));
+      // Wait before retrying with exponential backoff
+      await sleep(1000 * Math.pow(2, i));
     }
   }
   throw new Error('Failed to generate recipe after all retries');

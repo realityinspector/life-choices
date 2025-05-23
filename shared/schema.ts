@@ -291,21 +291,15 @@ export const bookActivitiesUniqueConstraint = uniqueIndex('book_activities_uniqu
 // Activity Recipes schema
 export const activityRecipes = pgTable('activity_recipes', {
   id: serial('id').primaryKey(),
-  activityId: integer('activity_id').notNull().references(() => activities.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
-  description: text('description').notNull(),
-  ingredients: text('ingredients').array().notNull(),
-  instructions: text('instructions').array().notNull(),
-  prepTime: integer('prepTime').notNull(),
-  cookTime: integer('cookTime').notNull(),
-  servings: integer('servings').notNull(),
-  difficulty: text('difficulty', { enum: ['easy', 'medium', 'hard'] }).notNull(),
-  tags: text('tags').array().notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+  ingredients: text('ingredients'),
+  instructions: text('instructions')
 });
 
-export type ActivityRecipe = typeof activityRecipes.$inferSelect;
+export type ActivityRecipe = typeof activityRecipes.$inferSelect & {
+  // Override the type to represent how we handle it in the application
+  ingredients: string[];
+};
 export type InsertActivityRecipe = typeof activityRecipes.$inferInsert;
 
 export type Book = typeof books.$inferSelect;

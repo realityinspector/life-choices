@@ -3,6 +3,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 import fs from "fs";
+// Import services to ensure they're initialized
+import { services } from "./services";
 
 const app = express();
 

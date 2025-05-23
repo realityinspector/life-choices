@@ -39,7 +39,16 @@ if (typeof window !== 'undefined') {
 
 // Activity Card component for consistency across tabs
 interface ActivityCardProps {
-  activity: Required<ActivityInsert> | (Activity & { description?: string; completed?: boolean });
+  activity: Required<ActivityInsert> | (Activity & { 
+    description?: string; 
+    completed?: boolean;
+    recipes?: Array<{
+      id: number;
+      name: string;
+      ingredients: string[];
+      instructions: string;
+    }>;
+  });
   onAddToCart: (activity: ActivityInsert) => void;
   onAddNow: (activity: ActivityInsert) => void;
   onComplete?: (activity: Activity) => void;
@@ -247,6 +256,16 @@ const ActivityCard = ({
               <span className="flex items-center">
                 <span className="mr-1">•</span> {activity.frequency} x {activity.frequencyUnit}
               </span>
+            </div>
+          )}
+          
+          {/* Display instructions if they exist */}
+          {'recipes' in activity && activity.recipes && activity.recipes.length > 0 && activity.recipes[0].instructions && (
+            <div className="mt-2 border-t pt-2">
+              <h4 className="text-xs font-medium mb-1">Instructions:</h4>
+              <p className="text-xs text-gray-600 line-clamp-3">
+                {activity.recipes[0].instructions}
+              </p>
             </div>
           )}
         </CardContent>

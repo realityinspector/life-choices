@@ -182,11 +182,37 @@ activityRouter.get('/shop/with-images', async (req, res) => {
     // Pass undefined as userId to fetch all activities with images without filtering
     const activitiesWithImages = await storage.getActivitiesWithImages();
 
+    // Fetch all recipes
+    const allRecipes = await storage.getActivityRecipes(0); // We'll ignore the parameter and get all recipes
+
+    // Parse recipe ingredients from string to array if needed
+    const parsedRecipes = allRecipes.map(recipe => {
+      // Ingredients are already parsed to arrays in getActivityRecipes method
+      return recipe;
+    });
+    
+    // Add recipes to activities
+    const activitiesWithImagesAndRecipes = activitiesWithImages.map(activity => {
+      // Find recipes with names that match or are similar to the activity name
+      const matchingRecipes = parsedRecipes.filter(recipe => {
+        // Simple matching logic - recipe name contains activity name or vice versa
+        const recipeNameLower = recipe.name.toLowerCase();
+        const activityNameLower = activity.name.toLowerCase();
+        return recipeNameLower.includes(activityNameLower) || 
+               activityNameLower.includes(recipeNameLower);
+      });
+      
+      return {
+        ...activity,
+        recipes: matchingRecipes.length > 0 ? matchingRecipes : undefined
+      };
+    });
+
     // Get query parameters for additional filtering
     const { category, impact, duration } = req.query;
 
     // Apply server-side filtering if requested
-    let filteredActivities = [...activitiesWithImages];
+    let filteredActivities = [...activitiesWithImagesAndRecipes];
 
     // Filter by category if specified
     if (category && typeof category === 'string') {

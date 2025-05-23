@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Activity } from "@shared/schema";
@@ -13,6 +12,16 @@ import { Alert } from "@/components/ui/alert";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
+// Extend Activity type to include recipes property
+interface ActivityWithRecipes extends Activity {
+  recipes?: Array<{
+    id: number;
+    name: string;
+    ingredients: string[];
+    instructions: string;
+  }>;
+}
+
 export default function AdminRecipes() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -21,7 +30,7 @@ export default function AdminRecipes() {
   const [progress, setProgress] = useState<{current: number; total: number}>({ current: 0, total: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const { data: activities } = useQuery<Activity[]>({
+  const { data: activities } = useQuery<ActivityWithRecipes[]>({
     queryKey: ['/api/admin/activities'],
     queryFn: async () => {
       try {
@@ -69,8 +78,8 @@ export default function AdminRecipes() {
       setProgress({ current: 0, total: 0 });
       setIsProcessing(false);
       
-      const successful = data.results.filter(r => r.status === 'success').length;
-      const failed = data.results.filter(r => r.status === 'failed').length;
+      const successful = data.results.filter((r: { status: string }) => r.status === 'success').length;
+      const failed = data.results.filter((r: { status: string }) => r.status === 'failed').length;
       
       toast({
         title: "Recipe Generation Complete",
@@ -78,7 +87,10 @@ export default function AdminRecipes() {
         variant: successful ? "default" : "destructive"
       });
 
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
+      // Set a small delay before refreshing the data to ensure DB operations complete
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/activities'] });
+      }, 1000);
     },
     onError: (error: Error) => {
       setIsProcessing(false);
@@ -117,7 +129,7 @@ export default function AdminRecipes() {
   const handleSelectMissing = () => {
     if (!activities) return;
     const missingRecipes = activities
-      .filter(a => !a.recipes || a.recipes.length === 0)
+      .filter((a: ActivityWithRecipes) => !a.recipes || a.recipes.length === 0)
       .map(a => a.id);
     setSelectedActivities(new Set(missingRecipes));
   };
@@ -177,7 +189,7 @@ export default function AdminRecipes() {
       )}
 
       <div className="grid gap-4">
-        {activities?.map(activity => (
+        {activities?.map((activity: ActivityWithRecipes) => (
           <Card key={activity.id} className="p-4">
             <div className="flex items-start gap-4">
               <Checkbox 
@@ -197,9 +209,14 @@ export default function AdminRecipes() {
                 <p className="text-sm text-muted-foreground">
                   Category: {activity.category}
                 </p>
-                {activity.recipes && (
-                  <p className="text-sm text-muted-foreground">
+                {activity.recipes && activity.recipes.length > 0 ? (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <span className="text-green-500">✅</span>
                     {activity.recipes.length} existing recipes
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-gray-400">
+                    No ingredients yet
                   </p>
                 )}
               </div>

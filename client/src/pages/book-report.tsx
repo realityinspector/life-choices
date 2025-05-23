@@ -134,6 +134,27 @@ export default function BookReportPage() {
                 console.error(`Failed to load image for activity ${activity.name}:`, error);
               }
             }
+
+            // Display recipe ingredients if they exist
+            if (activity.recipes && activity.recipes.length > 0 && activity.recipes[0].ingredients) {
+              const ingredients = activity.recipes[0].ingredients;
+              const truncatedIngredients = ingredients.slice(0, 3).map(ingredient => {
+                if (ingredient.length > 42) {
+                  return `${ingredient.substring(0, 42)}...`;
+                }
+                return ingredient;
+              });
+              pdf.setFontSize(12);
+              pdf.text(`Ingredients: ${truncatedIngredients.join(', ')}`, 20, 50);
+            }
+
+            // Display recipe instructions if they exist
+            if (activity.recipes && activity.recipes.length > 0 && activity.recipes[0].instructions) {
+              const instructions = activity.recipes[0].instructions;
+              const truncatedInstructions = instructions.length > 150 ? `${instructions.substring(0, 150)}...` : instructions;
+              pdf.setFontSize(12);
+              pdf.text(`Instructions: ${truncatedInstructions}`, 20, 60);
+            }
           }
 
           const filename = `${currentBook.name.replace(/\s+/g, '-').toLowerCase()}-report.pdf`;
@@ -226,6 +247,38 @@ export default function BookReportPage() {
                   <h3 className="text-lg font-medium mb-2">{activity.name}</h3>
                   <div className="space-y-2 text-sm text-gray-600">
                     <p><span className="font-medium">Category:</span> {activity.category}</p>
+                    
+                    {/* Display recipe ingredients if they exist */}
+                    {activity.recipes && activity.recipes.length > 0 && activity.recipes[0].ingredients && (
+                      <div className="mt-3">
+                        <h4 className="font-medium text-sm mb-2">Activity Steps:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {/* Show up to 3 ingredients, truncated to 42 chars */}
+                          {activity.recipes[0].ingredients.slice(0, 3).map((ingredient, index) => (
+                            <div key={index} className="px-2 py-1 bg-gray-100 rounded-md text-xs">
+                              {ingredient.length > 42 ? `${ingredient.substring(0, 42)}...` : ingredient}
+                            </div>
+                          ))}
+                          
+                          {/* Show ellipsis if there are more than 3 ingredients */}
+                          {activity.recipes[0].ingredients.length > 3 && (
+                            <div className="px-2 py-1 bg-gray-100 rounded-md text-xs">...</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Display recipe instructions if they exist */}
+                    {activity.recipes && activity.recipes.length > 0 && activity.recipes[0].instructions && (
+                      <div className="mt-3">
+                        <h4 className="font-medium text-sm mb-2">Instructions:</h4>
+                        <div className="bg-gray-100 rounded-md p-2 text-xs">
+                          {activity.recipes[0].instructions.length > 150 
+                            ? `${activity.recipes[0].instructions.substring(0, 150)}...` 
+                            : activity.recipes[0].instructions}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
