@@ -242,9 +242,6 @@ export default function BookReportExportPage() {
         // Responsive margins
         const margin = isPhone ? 10 : 20;
         currentY = margin; // Reset Y position for new page with defined margin
-
-        // Responsive margins
-        const margin = isPhone ? 10 : 20;
         const contentWidth = pageWidth - (2 * margin);
         const spacing = config.contentDensity === "compact" ? 5 : 
                        config.contentDensity === "spacious" ? 15 : 10;
