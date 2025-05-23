@@ -579,12 +579,7 @@ activityRouter.post('/share', async (req: AuthenticatedRequest, res) => {
 
     // Create invitation token for sharing
     const invitationToken = uuidv4();
-    // In production, use lifechoices.app, otherwise use Repl or local URL
-    const deploymentUrl = process.env.NODE_ENV === 'production' ?
-      'https://lifechoices.app' :
-      process.env.REPL_SLUG ? 
-        `https://${process.env.REPL_SLUG}.replit.app` : 
-        'http://localhost:5000';
+    const deploymentUrl = 'https://lifechoices-aotlabs.replit.app';
 
     const invitation = await storage.createActivityInvitation({
       activityId: createdActivity.id,
