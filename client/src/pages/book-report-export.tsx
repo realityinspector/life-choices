@@ -363,7 +363,10 @@ export default function BookReportExportPage() {
               let contentStartX = margin;
               let imageStartY = currentY;
 
-              // If logo exists, create exclusion zones
+              // Add minimum spacing buffer before checking logo overlap
+              const minVerticalSpacing = spacing * 2; // Increased from just 'spacing'
+
+              // If logo exists, create exclusion zones with proper spacing
               if (logoInfo) {
                 const logoLeft = logoInfo.bgX;
                 const logoRight = logoInfo.bgX + logoInfo.bgWidth;
@@ -396,76 +399,81 @@ export default function BookReportExportPage() {
                 const imageLeftEdge = imageCenterX;
                 const imageRightEdge = imageCenterX + tempImgWidth;
 
-                // Check for overlap and adjust accordingly
-                const horizontalOverlap = !(imageRightEdge < logoLeft || imageLeftEdge > logoRight);
-                const verticalOverlap = !(imageBottom < logoTop || imageTop > logoBottom);
+                // Check for overlap with INCREASED spacing requirements
+                const horizontalOverlap = !(imageRightEdge < logoLeft - minVerticalSpacing || imageLeftEdge > logoRight + minVerticalSpacing);
+                const verticalOverlap = !(imageBottom < logoTop - minVerticalSpacing || imageTop > logoBottom + minVerticalSpacing);
 
                 if (horizontalOverlap && verticalOverlap) {
-                  // There is overlap - we need to fix this
+                  // There is overlap - we need to fix this with better spacing
 
                   if (config.logoCorner === "topLeft") {
-                    // Move image to the right of logo or below it
-                    const spaceToRight = pageWidth - margin - logoRight - spacing;
-                    const spaceBelow = pageHeight - logoBottom - spacing - margin;
+                    // Move image to the right of logo or below it with proper spacing
+                    const spaceToRight = pageWidth - margin - logoRight - (minVerticalSpacing * 2);
 
                     if (spaceToRight >= tempImgWidth * 0.5) {
-                      // Move to right of logo
-                      contentStartX = logoRight + spacing;
+                      // Move to right of logo with extra spacing
+                      contentStartX = logoRight + (minVerticalSpacing * 2);
                       availableWidth = pageWidth - contentStartX - margin;
                     } else {
-                      // Move below logo
-                      imageStartY = logoBottom + spacing;
+                      // Move below logo with extra spacing
+                      imageStartY = logoBottom + (minVerticalSpacing * 2);
                       availableHeight = pageHeight - imageStartY - margin - 40;
                     }
                   }
                   else if (config.logoCorner === "topRight") {
-                    // Move image to the left of logo or below it
-                    const spaceToLeft = logoLeft - margin - spacing;
-                    const spaceBelow = pageHeight - logoBottom - spacing - margin;
+                    // Move image to the left of logo or below it with proper spacing
+                    const spaceToLeft = logoLeft - margin - (minVerticalSpacing * 2);
 
                     if (spaceToLeft >= tempImgWidth * 0.5) {
-                      // Keep left aligned but reduce width
-                      availableWidth = logoLeft - margin - spacing;
+                      // Keep left aligned but reduce width with extra spacing buffer
+                      availableWidth = logoLeft - margin - (minVerticalSpacing * 2);
                     } else {
-                      // Move below logo
-                      imageStartY = logoBottom + spacing;
+                      // Move below logo with extra spacing
+                      imageStartY = logoBottom + (minVerticalSpacing * 2);
                       availableHeight = pageHeight - imageStartY - margin - 40;
                     }
                   }
                   else if (config.logoCorner === "bottomLeft") {
-                    // Move image to the right of logo or above it
-                    const spaceToRight = pageWidth - margin - logoRight - spacing;
-                    const spaceAbove = logoTop - currentY - spacing;
+                    // Move image to the right of logo or ensure it stays above with spacing
+                    const spaceToRight = pageWidth - margin - logoRight - (minVerticalSpacing * 2);
+                    const spaceAbove = logoTop - currentY - (minVerticalSpacing * 2);
 
                     if (spaceToRight >= tempImgWidth * 0.5) {
-                      // Move to right of logo
-                      contentStartX = logoRight + spacing;
+                      // Move to right of logo with extra spacing
+                      contentStartX = logoRight + (minVerticalSpacing * 2);
                       availableWidth = pageWidth - contentStartX - margin;
-                    } else if (spaceAbove >= tempImgHeight) {
-                      // Keep current position but reduce height
-                      availableHeight = logoTop - currentY - spacing;
+                    } else if (spaceAbove >= tempImgHeight + (minVerticalSpacing * 2)) {
+                      // Keep current position but ensure height doesn't go into logo area
+                      availableHeight = logoTop - currentY - (minVerticalSpacing * 2);
                     } else {
-                      // Force to right with smaller size
-                      contentStartX = logoRight + spacing;
+                      // Force to right with smaller size and extra spacing
+                      contentStartX = logoRight + (minVerticalSpacing * 2);
                       availableWidth = pageWidth - contentStartX - margin;
                     }
                   }
                   else if (config.logoCorner === "bottomRight") {
-                    // Move image to the left of logo or above it
-                    const spaceToLeft = logoLeft - margin - spacing;
-                    const spaceAbove = logoTop - currentY - spacing;
+                    // Move image to the left of logo or ensure it stays above with spacing
+                    const spaceToLeft = logoLeft - margin - (minVerticalSpacing * 2);
+                    const spaceAbove = logoTop - currentY - (minVerticalSpacing * 2);
 
                     if (spaceToLeft >= tempImgWidth * 0.5) {
-                      // Reduce width to fit left of logo
-                      availableWidth = logoLeft - margin - spacing;
-                    } else if (spaceAbove >= tempImgHeight) {
-                      // Keep current position but reduce height
-                      availableHeight = logoTop - currentY - spacing;
+                      // Reduce width to fit left of logo with extra spacing
+                      availableWidth = logoLeft - margin - (minVerticalSpacing * 2);
+                    } else if (spaceAbove >= tempImgHeight + (minVerticalSpacing * 2)) {
+                      // Keep current position but ensure height doesn't go into logo area
+                      availableHeight = logoTop - currentY - (minVerticalSpacing * 2);
                     } else {
-                      // Force smaller width
-                      availableWidth = logoLeft - margin - spacing;
+                      // Force smaller width with extra spacing
+                      availableWidth = logoLeft - margin - (minVerticalSpacing * 2);
                     }
                   }
+                }
+
+                // Additional safety check: if we're still too close to top logos, add more vertical spacing
+                const isTopLogo = config.logoCorner === "topLeft" || config.logoCorner === "topRight";
+                if (isTopLogo && imageStartY < logoBottom + minVerticalSpacing) {
+                  imageStartY = logoBottom + minVerticalSpacing;
+                  availableHeight = pageHeight - imageStartY - margin - 40;
                 }
               }
 
@@ -747,7 +755,7 @@ export default function BookReportExportPage() {
                       type="color"
                       value={config.textColor}
                       onChange={(e) => setConfig({...config, textColor: e.target.value})}
-                      className="h-10 w-20"
+                      className="h-10w-20"
                     />
                     <span className="text-sm text-gray-600">{config.textColor}</span>
                   </div>
