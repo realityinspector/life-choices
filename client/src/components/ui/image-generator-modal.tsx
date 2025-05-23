@@ -13,6 +13,10 @@ interface ImageGeneratorModalProps {
   activityId: number;
   activityName: string;
   currentImageUrl: string | null;
+  description?: string;
+  category?: string;
+  instructions?: string;
+  ingredients?: string[];
   onImageGenerated: (newImageUrl: string) => void;
 }
 

@@ -481,16 +481,40 @@ export default function BookPage() {
                     </>
                   )}
                   
-                  {/* Add image generation button for admin users */}
+                  {/* Add image generation buttons for admin users */}
                   {isAdmin && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="absolute top-2 left-2"
-                      onClick={(e) => handleOpenImageGenerator(e, activity, activityImage?.path || null)}
-                    >
-                      <Image className="h-4 w-4" />
-                    </Button>
+                    <div className="absolute top-2 left-2 flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={(e) => handleOpenImageGenerator(e, activity, activityImage?.path || null)}
+                      >
+                        <Image className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          // Fetch activity details including recipes
+                          const response = await apiRequest(`/api/activity-recipes/${activity.id}`);
+                          const details = await response.json();
+                          
+                          setSelectedActivityForImage({
+                            id: activity.id,
+                            name: activity.name,
+                            imageUrl: activityImage?.path || null,
+                            description: activity.description,
+                            category: activity.category,
+                            instructions: details.instructions,
+                            ingredients: details.ingredients
+                          });
+                          setImageGeneratorOpen(true);
+                        }}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
                 <div className="p-2">
