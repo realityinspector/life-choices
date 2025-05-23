@@ -234,11 +234,14 @@ export default function BookReportExportPage() {
         
         // Add new page and reset coordinate system
         pdf.addPage();
-        currentY = margin; // Reset Y position for new page
-
+        
         const pageWidth = pdf.internal.pageSize.width;
         const pageHeight = pdf.internal.pageSize.height;
         const isPhone = config.format === "phone";
+
+        // Responsive margins
+        const margin = isPhone ? 10 : 20;
+        currentY = margin; // Reset Y position for new page with defined margin
 
         // Responsive margins
         const margin = isPhone ? 10 : 20;
