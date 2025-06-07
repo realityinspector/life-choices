@@ -165,17 +165,27 @@ export default function BookReportExportPage() {
       let currentY = 0; // Initialize currentY at the start
 
       // Load AOT logo
-      const aotLogo = new Image();
-      aotLogo.crossOrigin = "anonymous";
-      aotLogo.src = '/src/images/aot-logo.png';
-      await new Promise((resolve, reject) => {
-        aotLogo.onload = resolve;
-        aotLogo.onerror = (e) => {
-          console.error('Error loading AOT logo:', e);
-          resolve(null); // Continue without logo
-        };
-        setTimeout(() => resolve(null), 5000);
-      });
+      let aotLogo = null;
+      try {
+        const logoImg = new Image();
+        logoImg.crossOrigin = "anonymous";
+        logoImg.src = '/client/src/images/aot-logo.png';
+        await new Promise((resolve) => {
+          logoImg.onload = () => resolve(logoImg);
+          logoImg.onerror = () => {
+            console.warn('AOT logo failed to load - continuing without logo');
+            resolve(null);
+          };
+          setTimeout(() => {
+            console.warn('AOT logo load timed out - continuing without logo');
+            resolve(null);
+          }, 5000);
+        });
+        aotLogo = logoImg;
+      } catch (error) {
+        console.warn('Error loading AOT logo:', error);
+        // Continue without logo
+      }
 
       // Parse colors helper
       const parseColor = (hex: string) => {
@@ -216,20 +226,25 @@ export default function BookReportExportPage() {
       pdf.text(date, (pageWidth - dateWidth) / 2, titleY + 20);
 
       // Add AOT logo to cover
-      if (aotLogo && aotLogo.complete) {
-        const logoWidth = 60;
-        const logoHeight = (234/227) * logoWidth;
-        const logoX = (pageWidth - logoWidth) / 2;
-        const logoY = titleY - 100;
+      if (aotLogo && aotLogo.complete && aotLogo.width > 0) {
+        try {
+          const logoWidth = 60;
+          const logoHeight = (234/227) * logoWidth;
+          const logoX = (pageWidth - logoWidth) / 2;
+          const logoY = titleY - 100;
 
-        // Black background for logo
-        pdf.setFillColor(0, 0, 0);
-        const bgPadding = 8;
-        pdf.roundedRect(logoX - bgPadding, logoY - bgPadding, 
+          // Black background for logo
+          pdf.setFillColor(0, 0, 0);
+          const bgPadding = 8;
+          pdf.roundedRect(logoX - bgPadding, logoY - bgPadding, 
                        logoWidth + (bgPadding * 2), 
                        logoHeight + (bgPadding * 2), 3, 3, 'F');
 
-        pdf.addImage(aotLogo, 'PNG', logoX, logoY, logoWidth, logoHeight);
+          pdf.addImage(aotLogo, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        } catch (error) {
+          console.warn('Failed to add logo to cover page:', error);
+          // Continue without logo
+        }
       }
 
       // Process each activity starting on new page
@@ -332,20 +347,25 @@ export default function BookReportExportPage() {
         currentY += titleLines.length * (titleFontSize * 0.4) + spacing;
 
         // Add logo in corner with black rounded background
-        if (logoInfo) {
-          // Draw black rounded square background
-          pdf.setFillColor(0, 0, 0); // Black background
-          pdf.roundedRect(logoInfo.bgX, logoInfo.bgY, logoInfo.bgWidth, logoInfo.bgHeight, 3, 3, 'F');
+        if (logoInfo && aotLogo && aotLogo.complete && aotLogo.width > 0) {
+          try {
+            // Draw black rounded square background
+            pdf.setFillColor(0, 0, 0); // Black background
+            pdf.roundedRect(logoInfo.bgX, logoInfo.bgY, logoInfo.bgWidth, logoInfo.bgHeight, 3, 3, 'F');
 
-          if (config.logoAsWatermark) {
-            pdf.saveGraphicsState();
-            pdf.setGState(new pdf.GState({ opacity: 0.2 }));
-          }
+            if (config.logoAsWatermark) {
+              pdf.saveGraphicsState();
+              pdf.setGState(new pdf.GState({ opacity: 0.2 }));
+            }
 
-          pdf.addImage(aotLogo, 'PNG', logoInfo.logoX, logoInfo.logoY, logoInfo.logoWidth, logoInfo.logoHeight);
+            pdf.addImage(aotLogo, 'PNG', logoInfo.logoX, logoInfo.logoY, logoInfo.logoWidth, logoInfo.logoHeight);
 
-          if (config.logoAsWatermark) {
-            pdf.restoreGraphicsState();
+            if (config.logoAsWatermark) {
+              pdf.restoreGraphicsState();
+            }
+          } catch (error) {
+            console.warn('Failed to add logo to page:', error);
+            // Continue without logo
           }
         }
 
