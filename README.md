@@ -1,60 +1,77 @@
-# Sundial: Life Time Management Application
+# LIFE CHOICES by ALL ONE THING
 
-![Sundial Logo](./generated-icon.png)
+![LIFE CHOICES Logo](./generated-icon.png)
 
 ## Overview
 
-Sundial is a sophisticated lifetime management application that transforms time perception through an advanced, interactive sundial visualization. Empowering users to visualize and optimize their time allocation at a lifetime scale, Sundial offers a unique perspective on how daily activities accumulate and impact one's life journey.
+LIFE CHOICES by ALL ONE THING is a revolutionary timeline management application that helps you visualize and design your future through purposeful choice-making. Built with a fractal approach to time management, the app transforms how you think about daily decisions by showing their interconnected impact on your life's trajectory.
 
 ## Features
 
-### 📊 Interactive Sundial Visualization
-- Visual representation of life progress on a 12-hour clock (6am to 6pm) metaphor
-- Real-time calculation of life percentage lived and remaining
-- Color-coded activity bands showing proportion of lifetime allocated to each pursuit
+### 🌟 Fractal Timeline Visualization
+- Interactive timeline that shows how choices create ripple effects throughout your life
+- Beautiful fractal animation background representing the interconnected nature of decisions
+- Present moment focus with clear visualization of choice junctions
+- Timeline navigation through past, present, and future perspectives
 
-### ⏱️ Budget of Conscious Hours (BCH)
-- Calculates total waking hours in your lifetime based on age, life expectancy, and sleep patterns
-- Tracks used and remaining conscious hours
-- Visualizes how your planned activities will consume your remaining time
+### 📱 Mobile-First Design
+- Touch-friendly interface optimized for mobile devices
+- Swipe gestures for intuitive navigation
+- Bottom navigation bar for easy access
+- Responsive design that works across all screen sizes
 
-### 🎯 Activity Management
-- Create, edit, and track regular activities with customizable:
-  - Frequency (daily, weekly, monthly, yearly)
-  - Duration (minutes or hours)
-  - Life impact (positive or negative effect on life expectancy)
-  - Color-coding for visual organization
-- Pre-defined templates for common activities (Work, Exercise, Family Time, Learning)
-- Activity statistics showing lifetime hours and percentage allocation
+### 🎯 Activity Management & Shopping
+- Browse and discover life activities through an intuitive shopping interface
+- Activity categories including Health, Learning, Career, Relationships, and more
+- Smart activity recommendations based on your goals
+- Shopping cart functionality for selecting multiple activities
+- Activity sharing via shareable links for social onboarding
 
-### 🔮 Time Machine Projections
-- Project your time allocation to any future age
-- Visualize how your current activities will accumulate over time
-- Calculate projected life impact and updated life expectancy
-- See allocation breakdown at different life stages
+### 📚 Life Choice Books
+- Create custom "books" - collections of related activities
+- Organize activities into meaningful clusters (e.g., "Fitness Journey", "Career Growth")
+- Generate clean, printable book reports
+- Book management with creation, editing, and organization features
 
-### 👤 User Profile Management
-- Personalize calculations based on your age, life expectancy, and sleep patterns
-- Track changes to your life parameters over time
+### 🔮 "What's Next" Recommendations
+- Intelligent algorithm suggests your next activity based on your current routine
+- Skip/shuffle functionality for alternative suggestions
+- Balanced rotation between different life areas
+- Focus on actionable next steps rather than overwhelming planning
+
+### 👤 Profile & Personalization
+- User profile management with personal preferences
+- Activity tracking and history
+- Customizable experience based on your life goals
+- Progress tracking across different life areas
+
+### 📊 Analytics & Insights
+- Activity completion statistics and trends
+- Time allocation visualization
+- Pattern recognition for habit formation
+- Progress reports and goal achievement tracking
 
 ## Technology Stack
 
 ### Frontend
-- React with TypeScript for type-safe component development
-- D3.js for advanced data visualization and interactive sundial
-- Tailwind CSS with ShadCN UI components for responsive design
-- React Query for efficient data fetching and state management
-- React Hook Form for form handling with Zod validation
+- **React with TypeScript** for type-safe, component-based development
+- **Tailwind CSS** with ShadCN UI components for modern, responsive design
+- **React Query** for efficient data fetching and state management
+- **React Hook Form** with Zod validation for robust form handling
+- **Canvas API** for fractal timeline animations
 
 ### Backend
-- Express.js server with TypeScript
-- PostgreSQL database with Drizzle ORM
-- RESTful API architecture with secure user authentication
-- Session-based authentication with Passport.js
+- **Express.js** server with TypeScript
+- **PostgreSQL** database with Drizzle ORM
+- **RESTful API** architecture with secure authentication
+- **Session-based authentication** with Passport.js
+- **File upload handling** for activity images
 
-### Data Modeling & Calculations
-- Sophisticated algorithms for time projections and lifetime calculations
-- Detailed metrics for lifetime hour allocation and life impact assessment
+### Data Management
+- **Activity recipes** system for smart activity suggestions
+- **Book management** for organizing activity collections
+- **Image generation** capabilities for activity visualization
+- **CSV import/export** functionality for data management
 
 ## Getting Started
 
@@ -65,100 +82,117 @@ Sundial is a sophisticated lifetime management application that transforms time 
 ### Installation
 
 1. Clone the repository
-   ```
-   git clone https://github.com/your-username/sundial-app.git
-   cd sundial-app
+   ```bash
+   git clone <your-repository-url>
+   cd life-choices-app
    ```
 
 2. Install dependencies
-   ```
+   ```bash
    npm install
    ```
 
 3. Set up environment variables (create a `.env` file in the project root)
    ```
-   DATABASE_URL=postgresql://username:password@localhost:5432/sundial
+   DATABASE_URL=postgresql://username:password@localhost:5432/lifechoices
    ```
 
-4. Push the database schema
-   ```
+4. Run database migrations
+   ```bash
    npm run db:push
    ```
 
 5. Start the development server
-   ```
+   ```bash
    npm run dev
    ```
 
-6. Open your browser and navigate to `http://localhost:8000`
+6. Open your browser and navigate to `http://localhost:5000`
 
 ## Usage Guide
 
-### Account Setup
-1. Create a new account with username and password
-2. Enter your basic information:
-   - Name
-   - Current age
-   - Estimated life expectancy
-   - Average daily sleep hours
-
-### Dashboard
-- View your life sundial visualization
-- Check key metrics like percentage of life lived and remaining years
-- See your Budget of Conscious Hours (BCH) statistics
-- Access quick actions to manage activities and profile
+### Getting Started
+1. Create a new account or sign in
+2. Complete your profile setup
+3. Explore the landing page to understand the fractal timeline concept
+4. Browse available activities in the Shop Activities section
 
 ### Managing Activities
-1. Navigate to the Activities tab
-2. Add new activities with:
-   - Name and category
-   - Frequency and duration
-   - Estimated life impact (positive or negative)
-   - Color coding
-3. View activity statistics and summaries
-4. Edit or delete activities as needed
+1. **Browse Activities**: Navigate to Shop Activities to discover new life choices
+2. **Add to Cart**: Select activities that align with your goals
+3. **Create Books**: Organize related activities into themed collections
+4. **Track Progress**: Monitor your activity completion and patterns
 
-### Using the Time Machine
-1. Go to the Time Machine tab
-2. Adjust the age slider to project to a specific future point
-3. View projected statistics, including:
-   - Life percentage completed at that age
-   - Conscious hours used and remaining
-   - Activity accumulation and allocation percentages
-   - Net life impact and adjusted life expectancy
+### Timeline Navigation
+- **Present Moment**: Focus on current choice junctions and immediate next steps
+- **Past View**: Reflect on previous decisions and their outcomes
+- **Future Projection**: Visualize how current choices will impact your future
+- **What's Next**: Get intelligent recommendations for your next activity
 
-### Profile Management
-- Update your personal information as needed
-- Adjust life expectancy or sleep patterns to refine calculations
+### Book Management
+1. Navigate to the Book section
+2. Create new books for different life areas
+3. Add activities from your collection to relevant books
+4. Generate book reports for planning and reflection
 
-## Core Concepts
+### Social Features
+- Share activities with friends via generated links
+- Onboard new users through shared activity experiences
+- Collaborate on life choice journeys
 
-### Budget of Conscious Hours (BCH)
-BCH represents your total waking hours throughout your lifetime. It's calculated by:
+## Core Philosophy
+
+### Fractal Time Management
+LIFE CHOICES operates on the principle that small decisions create profound ripple effects throughout your life. Like fractals in nature, your choices branch and interconnect, forming the unique pattern of your existence.
+
+### Choice-Centric Design
+Rather than focusing on time scarcity or life expectancy, the app emphasizes the power of conscious choice-making in the present moment. Every choice is a junction point that shapes your future timeline.
+
+### Purpose-Driven Living
+The application helps you align daily activities with deeper life purposes, ensuring that your choices contribute to meaningful growth and fulfillment.
+
+## Development
+
+### Scripts
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run test` - Run test suite
+- `npm run db:push` - Push database schema changes
+
+### Project Structure
 ```
-Total Life in Hours (Life Expectancy × 365 × 24) - Total Sleep (Life Expectancy × 365 × Daily Sleep Hours)
+├── client/          # React frontend application
+├── server/          # Express.js backend API
+├── shared/          # Shared TypeScript types and schemas
+├── scripts/         # Database and utility scripts
+├── uploads/         # File upload storage
+└── backups/         # Database backup files
 ```
-
-### Activity Lifetime Hours
-For each activity, lifetime hours are calculated based on frequency, duration, and your remaining lifespan:
-```
-Hours Per Year = Duration (in hours) × Frequency × Time Units Per Year
-Lifetime Hours = Hours Per Year × (Life Expectancy - Current Age)
-```
-
-### Life Impact
-Activities can positively or negatively impact your life expectancy. The net impact is calculated by summing the individual impacts of all activities.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! Please feel free to submit a Pull Request. Make sure to:
+
+1. Follow the existing code style and patterns
+2. Add tests for new functionality
+3. Update documentation as needed
+4. Test across different screen sizes and devices
+
+## Deployment
+
+This application is designed to run on Replit's platform. The included configuration files (`.replit`, `replit.nix`) provide the necessary setup for seamless deployment.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 ## Acknowledgments
 
-- D3.js community for visualization tools
-- React ecosystem for powerful frontend capabilities
-- All contributors who have helped shape this project
+- The fractal mathematics community for inspiration on interconnected systems
+- React and TypeScript ecosystems for powerful development tools
+- ALL ONE THING philosophy for the holistic approach to life design
+- The open source community for continuous innovation
+
+---
+
+*"Shape your timeline, design your future. Make every choice count."*
