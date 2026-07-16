@@ -34,6 +34,11 @@ Life Choices is a mobile-friendly task management application that helps users t
 - Life event tracking and categorization
 - Milestone visualization and planning
 - Impact analysis on overall time allocation
+- Value scoring via `calculateEventValue()` (`shared/event-scoring.ts`), combining the
+  value range, cost, hours, frequency, and the people / timeVortex / lovePriority
+  multipliers into a 0–100 ranking score
+- Pre-scored seed data in `scripts/data/life-events-seed.csv`, loaded by
+  `scripts/seed-life-events.ts`
 
 ## 3. Technical Architecture
 
@@ -99,6 +104,8 @@ Life Choices is a mobile-friendly task management application that helps users t
 - Core user authentication and profile management
 - Basic activity tracking and management
 - Life events tracking foundation
+- Restored pre-scored seed data for activities and life events (CSV-driven, under `scripts/data/`)
+- Life-events value formula (`calculateEventValue()`) consuming the value/cost/multiplier fields
 
 ### 5.2. In Progress
 - Mobile-first UI with swipe interface

@@ -159,12 +159,43 @@ The application helps you align daily activities with deeper life purposes, ensu
 - `npm run test` - Run test suite
 - `npm run db:push` - Push database schema changes
 
+### Seed Data & Scoring
+
+The app ships with pre-scored seed data for both scoring models. Data lives in
+CSV files under `scripts/data/` and is loaded by dedicated importer scripts.
+
+| Model | Seed CSV | Importer | Scoring |
+| --- | --- | --- | --- |
+| **Activities** | `scripts/data/activities-seed.csv` | `scripts/import-activities.ts` | `lifeImpact` (−5 → +5) and `priority` (1–5), derived from the `lifePoints` / `emotion` / `longevity` selectors |
+| **Life events** | `scripts/data/life-events-seed.csv` | `scripts/seed-life-events.ts` | `calculateEventValue()` in `shared/event-scoring.ts` |
+
+Run the seeders (requires `DATABASE_URL`):
+
+```bash
+tsx scripts/import-activities.ts   # activities model (pass a userId, see importActivities())
+tsx scripts/seed-life-events.ts    # life_events value model
+```
+
+**The value formula** (`shared/event-scoring.ts`) turns a life event's value range,
+cost, hours, frequency, and the three multipliers (`peopleValueMultiplier`,
+`timeVortexMultiplier`, `lovePriorityMultiplier`) into `baseValue`, `adjustedValue`,
+`netValue`, `valuePerHour`, `annualValue`, and a 0–100 `score` for ranking:
+
+```
+baseValue     = midpoint(valueMin, valueMaxPersonal)
+adjustedValue = baseValue × peopleValueMultiplier × lovePriorityMultiplier ÷ timeVortexMultiplier
+netValue      = adjustedValue − avg(cost)
+annualValue   = netValue × eventsPerYear
+score         = clamp(0, 100, round(20 · log10(annualValue)))
+```
+
 ### Project Structure
 ```
 ├── client/          # React frontend application
 ├── server/          # Express.js backend API
-├── shared/          # Shared TypeScript types and schemas
+├── shared/          # Shared TypeScript types, schemas, and scoring (event-scoring.ts)
 ├── scripts/         # Database and utility scripts
+│   └── data/        # Pre-scored seed CSVs (activities, life events)
 ├── uploads/         # File upload storage
 └── backups/         # Database backup files
 ```
