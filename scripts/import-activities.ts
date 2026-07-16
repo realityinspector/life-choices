@@ -127,7 +127,7 @@ function calculateLifeImpact(
 export async function importActivities(userId: number): Promise<number> {
   try {
     // Read the CSV file
-    const csvPath = path.join(process.cwd(), 'shared', 'this-file-is-not-there-if-you-are-trying-to-use-it-the-file-was-deleted-this-is-a-note-explaining-that.csv');
+    const csvPath = path.join(process.cwd(), 'scripts', 'data', 'activities-seed.csv');
     const fileContent = fs.readFileSync(csvPath, { encoding: 'utf-8' });
     
     console.log(`Reading CSV file from ${csvPath}`);
