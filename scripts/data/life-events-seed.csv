@@ -1,0 +1,26 @@
+label,relationship,category,emoji,eventsPerYear,hoursMin,hoursMax,costMin,costMax,valueMin,valueMaxPersonal,peopleValueMultiplier,timeVortexMultiplier,lovePriorityMultiplier,ageStart,ageStop,motivator,lifePoints,emotionValue,longevityImpact,isCalendared
+Morning Meditation,,Personal,🧘,365,0.25,0.5,0,0,20,60,1,0.9,1,12,100,Calm,medium,Good,adds some life,0
+Deep Work Session,,Personal,💻,250,1,3,0,0,80,400,1,1.4,1,16,80,Mastery,large,Great,,1
+Gym Workout,,Personal,🏋️,156,0.75,1.5,0,15,60,200,1,1,1,14,90,Health,large,Good,adds much life,1
+Sleep 8 Hours,,Personal,😴,365,7,9,0,0,100,500,1,1,1,0,100,Recovery,large,Great,adds much life,0
+Therapy Session,,Personal,🛋️,52,1,1,60,200,120,500,1.2,1,1,16,100,Growth,large,Good,adds much life,1
+Doomscrolling,,Personal,📱,300,0.5,2,0,0,-80,0,1,1.6,1,10,100,Escape,negative,Negative,takes some life,0
+Date Night,with Partner,Relationship,💕,52,2,4,40,150,150,600,1.5,1.2,2,16,100,Connection,large,Great,adds some life,1
+Weekend Getaway,with Partner,Relationship,🧳,6,24,48,300,1200,400,2000,1.6,1.5,2.2,18,100,Adventure,rare,Life Goal,adds some life,1
+Difficult Conversation,with Partner,Relationship,💬,12,0.5,2,0,0,50,300,1.4,1,1.8,16,100,Honesty,small,Negative,,0
+Family Dinner,with Family,Family,🍽️,250,0.5,1.5,5,30,100,400,1.5,1,1.8,0,100,Belonging,large,Great,adds some life,0
+Read Bedtime Story,with Kids,Family,📖,300,0.25,0.5,0,0,120,500,1.6,1,2,20,60,Nurture,large,Great,adds some life,0
+Visit Grandparents,with Family,Family,👵,24,2,6,0,100,150,700,1.5,1.1,1.9,0,100,Legacy,large,Great,adds much life,1
+Family Vacation,with Family,Family,🏖️,2,40,120,800,5000,600,4000,1.8,1.6,2,0,100,Memories,rare,Life Goal,adds much life,1
+Coffee with a Friend,with Friends,Social,☕,40,1,2,5,20,60,200,1.3,1,1.3,14,100,Connection,medium,Good,adds some life,0
+Game Night,with Friends,Social,🎲,24,2,4,0,30,70,250,1.4,1.1,1.3,10,100,Play,medium,Great,adds some life,0
+Call Best Friend,with Best Friend,Social,📞,52,0.5,1,0,0,60,220,1.4,1,1.6,12,100,Connection,medium,Good,adds some life,0
+Ship a Project,for Work,Work,🚀,12,4,8,0,0,200,1500,1.2,1.5,1,18,75,Achievement,large,Great,,1
+Team Standup,for Work,Work,🗣️,250,0.1,0.5,0,0,10,50,1.1,1,1,18,75,Coordination,small,,,1
+Overtime Crunch,for Work,Work,🌙,30,2,5,0,0,-50,150,1,1.7,0.8,18,75,Duty,negative,Negative,takes some life,0
+Launch a Business,for Business,Work,💼,1,100,500,500,50000,1000,100000,1.3,2,1,18,80,Freedom,rare,Life Goal,,1
+Thanksgiving Dinner,for Holidays,Holidays,🦃,1,4,8,50,300,200,800,1.7,1.2,1.8,0,100,Gratitude,large,Great,adds some life,1
+New Year Resolution Setting,for Holidays,Holidays,🎆,1,1,2,0,0,100,500,1,1,1,12,100,Intention,medium,Good,adds some life,1
+Grocery Shopping,with Household,Household,🛒,52,1,2,40,200,30,100,1,1,1,16,100,Maintenance,small,Good,,0
+Pay Bills,with Household,Household,💵,12,0.5,1,0,0,20,80,1,1,1,18,100,Stability,small,Negative,,1
+Home Repair Project,with Household,Household,🔧,6,2,8,20,800,80,500,1.1,1.2,1,18,90,Pride,medium,Good,,0
