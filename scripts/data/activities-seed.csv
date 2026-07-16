@@ -1,0 +1,40 @@
+default eventLabelNoRelationship,default relationship Label,default label with relationship,default Expected or Desired Events / Year,default Hours Min,default Hours Max,default emoji,default lifePointsSelector,default emotionSelector,default longevityImpactSelector,default Calendared
+Morning Meditation,,Morning Meditation,365,0.25,0.5,🧘,medium,Good,adds some life,0
+Deep Work Session,,Deep Work Session,250,1,3,💻,large,Great,,1
+Reading a Book,,Reading a Book,100,0.5,1.5,📚,medium,Good,adds some life,0
+Journaling,,Journaling,300,0.1,0.3,✍️,small,Good,,0
+Doomscrolling,,Doomscrolling,300,0.5,2,📱,negative,Negative,takes some life,0
+Learn an Instrument,,Learn an Instrument,150,0.5,1,🎹,large,Great,adds some life,0
+Therapy Session,,Therapy Session,52,1,1,🛋️,large,Good,adds much life,1
+Gym Workout,,Gym Workout,156,0.75,1.5,🏋️,large,Good,adds much life,1
+Morning Run,,Morning Run,200,0.5,1,🏃,medium,Good,adds much life,0
+Cook a Healthy Meal,,Cook a Healthy Meal,300,0.5,1,🥗,medium,Good,adds some life,0
+Sleep 8 Hours,,Sleep 8 Hours,365,7,9,😴,large,Great,adds much life,0
+Late Night Junk Food,,Late Night Junk Food,100,0.25,0.5,🍔,negative,Good,takes some life,0
+Annual Health Checkup,,Annual Health Checkup,1,1,2,🩺,medium,,adds much life,1
+Date Night,with Partner,Date Night with Partner,52,2,4,💕,large,Great,adds some life,1
+Weekend Getaway,with Partner,Weekend Getaway with Partner,6,24,48,🧳,rare,Life Goal,adds some life,1
+Difficult Conversation,with Partner,Difficult Conversation with Partner,12,0.5,2,💬,small,Negative,,0
+Cook Dinner Together,with Partner,Cook Dinner Together with Partner,150,0.5,1.5,🍳,medium,Good,adds some life,0
+Family Dinner,with Family,Family Dinner with Family,250,0.5,1.5,🍽️,large,Great,adds some life,0
+Read Bedtime Story,with Kids,Read Bedtime Story with Kids,300,0.25,0.5,📖,large,Great,adds some life,0
+Visit Grandparents,with Family,Visit Grandparents with Family,24,2,6,👵,large,Great,adds much life,1
+Help with Homework,with Kids,Help with Homework with Kids,180,0.5,1,✏️,medium,Good,,0
+Family Vacation,with Family,Family Vacation with Family,2,40,120,🏖️,rare,Life Goal,adds much life,1
+Coffee with a Friend,with Friends,Coffee with a Friend,40,1,2,☕,medium,Good,adds some life,0
+Game Night,with Friends,Game Night with Friends,24,2,4,🎲,medium,Great,adds some life,0
+Call Best Friend,with Best Friend,Call Best Friend,52,0.5,1,📞,medium,Good,adds some life,0
+Attend a Party,with Friends,Attend a Party with Friends,12,2,5,🎉,small,Good,,0
+Networking Event,with Friends,Networking Event,12,1,3,🤝,small,,,1
+Ship a Project,for Work,Ship a Project for Work,12,4,8,🚀,large,Great,,1
+Team Standup,for Work,Team Standup for Work,250,0.1,0.5,🗣️,small,,,1
+Performance Review,for Work,Performance Review for Work,2,1,2,📊,medium,,,1
+Overtime Crunch,for Work,Overtime Crunch for Work,30,2,5,🌙,negative,Negative,takes some life,0
+Launch a Business,for Business,Launch a Business,1,100,500,💼,rare,Life Goal,,1
+Thanksgiving Dinner,for Holidays,Thanksgiving Dinner,1,4,8,🦃,large,Great,adds some life,1
+Holiday Gift Shopping,for Holidays,Holiday Gift Shopping,1,3,10,🎁,small,Good,,1
+New Year Resolution Setting,for Holidays,New Year Resolution Setting,1,1,2,🎆,medium,Good,adds some life,1
+Deep Clean the House,with Household,Deep Clean the House,12,2,4,🧹,small,,,0
+Grocery Shopping,with Household,Grocery Shopping,52,1,2,🛒,small,Good,,0
+Pay Bills,with Household,Pay Bills,12,0.5,1,💵,small,Negative,,1
+Home Repair Project,with Household,Home Repair Project,6,2,8,🔧,medium,Good,,0
