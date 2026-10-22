@@ -46,10 +46,18 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+function requireSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error("SESSION_SECRET must be set (e.g. `openssl rand -hex 32`).");
+  }
+  return secret;
+}
+
 export function setupAuth(app: Express) {
   const isDevelopment = process.env.NODE_ENV !== 'production';
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "REDACTED_SET_SESSION_SECRET_ENV",
+    secret: requireSessionSecret(),
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,

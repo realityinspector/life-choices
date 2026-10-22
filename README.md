@@ -184,7 +184,9 @@ This application is designed to run on Replit's platform. The included configura
 
 ## License
 
-This project is licensed under the MIT License.
+Licensed under the [Business Source License 1.1](LICENSE). Production use is free for organizations with under US $10M in annual revenue; larger organizations need a commercial license. On 2030-10-21 the code converts to Apache-2.0.
+
+Note: the original `uploads/` images, database backups and Replit `attached_assets/` were removed from this public history. Set `SESSION_SECRET` and `DATABASE_URL` before running.
 
 ## Acknowledgments
 

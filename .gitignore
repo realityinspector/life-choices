@@ -4,3 +4,11 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+# never commit secrets, DB dumps, or user/asset uploads
+.env
+.env.*
+uploads/
+backups/
+attached_assets/
+*.sql
+*.gz
