@@ -2,199 +2,118 @@
 
 ![LIFE CHOICES Logo](./generated-icon.png)
 
-## Overview
+**Turn your time into choices, and always know what to do next.**
 
-LIFE CHOICES by ALL ONE THING is a revolutionary timeline management application that helps you visualize and design your future through purposeful choice-making. Built with a fractal approach to time management, the app transforms how you think about daily decisions by showing their interconnected impact on your life's trajectory.
+Life Choices (2025–26) is a mobile-first app that treats your life as a set of activities and life events. Each one has a frequency, a duration and a value. Instead of a to-do list or a dashboard, it hands you **one next thing** and shows you what your habits add up to over the rest of your life.
 
-## Features
+It grew out of Sundial (2022), whose "your life as a single day" math it simplified. It was built fast on Replit with React, Express and Postgres.
 
-### 🌟 Fractal Timeline Visualization
-- Interactive timeline that shows how choices create ripple effects throughout your life
-- Beautiful fractal animation background representing the interconnected nature of decisions
-- Present moment focus with clear visualization of choice junctions
-- Timeline navigation through past, present, and future perspectives
+---
 
-### 📱 Mobile-First Design
-- Touch-friendly interface optimized for mobile devices
-- Swipe gestures for intuitive navigation
-- Bottom navigation bar for easy access
-- Responsive design that works across all screen sizes
+## What was great about it
 
-### 🎯 Activity Management & Shopping
-- Browse and discover life activities through an intuitive shopping interface
-- Activity categories including Health, Learning, Career, Relationships, and more
-- Smart activity recommendations based on your goals
-- Shopping cart functionality for selecting multiple activities
-- Activity sharing via shareable links for social onboarding
+### 1. What's Next: one card, one decision
+The home screen shows a single activity that's due now. Ordering:
+1. Overdue activities and ones with no due date come first.
+2. Ties are sorted by **priority**, then by **oldest due date**.
 
-### 📚 Life Choice Books
-- Create custom "books" - collections of related activities
-- Organize activities into meaningful clusters (e.g., "Fitness Journey", "Career Growth")
-- Generate clean, printable book reports
-- Book management with creation, editing, and organization features
+Skip it and you get the next one, without repeating the ones you just skipped. Completing or skipping moves `nextDue` forward by that activity's own frequency.
 
-### 🔮 "What's Next" Recommendations
-- Intelligent algorithm suggests your next activity based on your current routine
-- Skip/shuffle functionality for alternative suggestions
-- Balanced rotation between different life areas
-- Focus on actionable next steps rather than overwhelming planning
+See `client/src/pages/whats-next.tsx`, `client/src/context/user-context.tsx` and `storage.getNextActivity` in `server/storage.ts`.
 
-### 👤 Profile & Personalization
-- User profile management with personal preferences
-- Activity tracking and history
-- Customizable experience based on your life goals
-- Progress tracking across different life areas
+### 2. A value model for life events
+*This lives on the [`seed/life-events`](https://github.com/realityinspector/life-choices/tree/seed/life-events) branch.*
 
-### 📊 Analytics & Insights
-- Activity completion statistics and trends
-- Time allocation visualization
-- Pattern recognition for habit formation
-- Progress reports and goal achievement tracking
+Every life event (a gym session, date night, doomscrolling, a family vacation) carries a value range, a cost range, an hours range and three multipliers:
+- **people:** shared time is worth more.
+- **love priority:** relationship time is worth more.
+- **time vortex:** some things eat far more time than they look like they will.
 
-## Technology Stack
-
-### Frontend
-- **React with TypeScript** for type-safe, component-based development
-- **Tailwind CSS** with ShadCN UI components for modern, responsive design
-- **React Query** for efficient data fetching and state management
-- **React Hook Form** with Zod validation for robust form handling
-- **Canvas API** for fractal timeline animations
-
-### Backend
-- **Express.js** server with TypeScript
-- **PostgreSQL** database with Drizzle ORM
-- **RESTful API** architecture with secure authentication
-- **Session-based authentication** with Passport.js
-- **File upload handling** for activity images
-
-### Data Management
-- **Activity recipes** system for smart activity suggestions
-- **Book management** for organizing activity collections
-- **Image generation** capabilities for activity visualization
-- **CSV import/export** functionality for data management
-
-## Getting Started
-
-### Prerequisites
-- Node.js (version 18 or higher)
-- PostgreSQL database
-
-### Installation
-
-1. Clone the repository
-   ```bash
-   git clone <your-repository-url>
-   cd life-choices-app
-   ```
-
-2. Install dependencies
-   ```bash
-   npm install
-   ```
-
-3. Set up environment variables (create a `.env` file in the project root)
-   ```
-   DATABASE_URL=postgresql://username:password@localhost:5432/lifechoices
-   ```
-
-4. Run database migrations
-   ```bash
-   npm run db:push
-   ```
-
-5. Start the development server
-   ```bash
-   npm run dev
-   ```
-
-6. Open your browser and navigate to `http://localhost:5000`
-
-## Usage Guide
-
-### Getting Started
-1. Create a new account or sign in
-2. Complete your profile setup
-3. Explore the landing page to understand the fractal timeline concept
-4. Browse available activities in the Shop Activities section
-
-### Managing Activities
-1. **Browse Activities**: Navigate to Shop Activities to discover new life choices
-2. **Add to Cart**: Select activities that align with your goals
-3. **Create Books**: Organize related activities into themed collections
-4. **Track Progress**: Monitor your activity completion and patterns
-
-### Timeline Navigation
-- **Present Moment**: Focus on current choice junctions and immediate next steps
-- **Past View**: Reflect on previous decisions and their outcomes
-- **Future Projection**: Visualize how current choices will impact your future
-- **What's Next**: Get intelligent recommendations for your next activity
-
-### Book Management
-1. Navigate to the Book section
-2. Create new books for different life areas
-3. Add activities from your collection to relevant books
-4. Generate book reports for planning and reflection
-
-### Social Features
-- Share activities with friends via generated links
-- Onboard new users through shared activity experiences
-- Collaborate on life choice journeys
-
-## Core Philosophy
-
-### Fractal Time Management
-LIFE CHOICES operates on the principle that small decisions create profound ripple effects throughout your life. Like fractals in nature, your choices branch and interconnect, forming the unique pattern of your existence.
-
-### Choice-Centric Design
-Rather than focusing on time scarcity or life expectancy, the app emphasizes the power of conscious choice-making in the present moment. Every choice is a junction point that shapes your future timeline.
-
-### Purpose-Driven Living
-The application helps you align daily activities with deeper life purposes, ensuring that your choices contribute to meaningful growth and fulfillment.
-
-## Development
-
-### Scripts
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run test` - Run test suite
-- `npm run db:push` - Push database schema changes
-
-### Project Structure
 ```
-├── client/          # React frontend application
-├── server/          # Express.js backend API
-├── shared/          # Shared TypeScript types and schemas
-├── scripts/         # Database and utility scripts
-├── uploads/         # File upload storage
-└── backups/         # Database backup files
+adjusted     = mid(value) · people · love / time_vortex
+net          = adjusted − mid(cost)
+value / hour = net / mid(hours)
+annual       = net · events_per_year
+score 0–100  = clamp(round(20 · log10(max(annual, 1) + 1)), 0, 100)
 ```
 
-## Contributing
+Doomscrolling (value −80..0, vortex 1.6) scores 0. Date night (people 1.5, love 2) and a family vacation (people 1.8, love 2) rise to the top.
 
-We welcome contributions! Please feel free to submit a Pull Request. Make sure to:
+See `shared/event-scoring.ts`, with 25 pre-scored events in `scripts/data/life-events-seed.csv`.
 
-1. Follow the existing code style and patterns
-2. Add tests for new functionality
-3. Update documentation as needed
-4. Test across different screen sizes and devices
+### 3. A free sundial
+No account needed. Enter your age, life expectancy and sleep, and see what time it is in your life on a 6 AM to 6 PM dial. You also get your remaining conscious hours and how much of them each activity takes.
 
-## Deployment
+See `client/src/pages/free-sundial.tsx`, `client/src/components/ui/sundial-chart.tsx` and `client/src/lib/calculations.ts`.
 
-This application is designed to run on Replit's platform. The included configuration files (`.replit`, `replit.nix`) provide the necessary setup for seamless deployment.
+### 4. Time machine slider
+Drag from today to the end of your life expectancy and watch the hours pile up (`client/src/components/time-machine.tsx`).
+
+### 5. Clusters and books
+- **Clusters** bundle activities toward a goal ("Lose 10 lbs").
+- **Books** are ordered, printable collections of activities, with a clean report and PDF export.
+
+See `BOOK.md` and `client/src/pages/book*.tsx`.
+
+### 6. Shareable activities
+Any activity can be shared as a link (`/share/:token`), so a friend joins by trying the thing you sent them.
+
+### 7. AI-assisted catalog
+Admin tools use Together AI to generate activities, step-by-step "recipes" and images. The service is `server/services/together-ai.ts`, and the prompts are in `server/config/llm-prompts.json`.
+
+### 8. Reusable seed data
+- `scripts/data/activities-seed.csv` (on `seed/life-events`): 39 typical activities with frequency, hours, emoji, emotion and longevity impact.
+- `life-events-seed.csv`: calibrated multipliers (time vortex 0.9–1.6, people and love 1–2.2) that are useful anywhere you want to weigh how people spend their time.
+
+---
+
+## Status and known issues
+
+- **Last active:** July 2026. `main` is the June 2025 app. `seed/life-events` adds the value model and seed data.
+- **What works:** `npm run build` passes.
+- **Type errors:** `npm run check` reports about 190 errors. The first comes from JSX in a `.ts` file (`client/src/index.ts`).
+- **Tests:** they need the `canvas` package, which doesn't compile on Node 24. Use Node 20.
+- **Analytics page:** shows placeholder numbers, not real calculations.
+- **Admin access:** controlled by a hardcoded username list in `server/routes.ts`.
+- **Missing images:** the original images, database backups and Replit logs were removed from this public history, so activity images will be missing until you regenerate or upload your own.
+
+## Getting started
+
+Requirements: **Node 20** (for `canvas`) and **PostgreSQL**.
+
+```bash
+npm install                 # on Node 24: npm ci --ignore-scripts (tests won't run)
+npm run db:push             # create tables with Drizzle
+npm run dev                 # http://localhost:5000
+```
+
+| Variable | Needed for |
+|---|---|
+| `DATABASE_URL` | required |
+| `SESSION_SECRET` | required (e.g. `openssl rand -hex 32`) |
+| `TOGETHER_API_KEY` | optional: AI activity, recipe and image generation |
+| `OPENAI_API_KEY` | optional: LLM fallback |
+
+Seed data (on `seed/life-events`):
+
+```bash
+npx tsx scripts/seed-life-events.ts
+npx tsx scripts/import-activities.ts
+```
+
+## Project structure
+
+```
+client/   React + Vite frontend (wouter, TanStack Query, shadcn/ui, d3, recharts)
+server/   Express API, Passport sessions, Together AI / OpenAI services
+shared/   Drizzle schema and shared logic (event scoring)
+scripts/  seeders, importers and seed CSVs
+```
 
 ## License
 
 Licensed under the [Business Source License 1.1](LICENSE). Production use is free for organizations with under US $10M in annual revenue; larger organizations need a commercial license. On 2030-10-21 the code converts to Apache-2.0.
 
-Note: the original `uploads/` images, database backups and Replit `attached_assets/` were removed from this public history. Set `SESSION_SECRET` and `DATABASE_URL` before running.
+## Credits
 
-## Acknowledgments
-
-- The fractal mathematics community for inspiration on interconnected systems
-- React and TypeScript ecosystems for powerful development tools
-- ALL ONE THING philosophy for the holistic approach to life design
-- The open source community for continuous innovation
-
----
-
-*"Shape your timeline, design your future. Make every choice count."*
+Built by Sean McDonald ([realityinspector](https://github.com/realityinspector)) with Replit Agent, as part of ALL ONE THING.
